@@ -1,5 +1,5 @@
 # Software Requirements Specification (SRS)
-### Hotel Internal Operations Mobile App
+### Hotel Internal Operations Mobile App (ROOMS.io)
 ### Version 1.0 — MVP Scope
 ### Platform: Flutter (Android) + Supabase Backend
 
