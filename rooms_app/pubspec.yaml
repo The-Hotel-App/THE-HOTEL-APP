@@ -50,6 +50,26 @@ dev_dependencies:
   riverpod_generator: ^2.6.2
   freezed: ^2.5.7
   json_serializable: ^6.8.0
+  
+  # App icon and splash screen generation
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.1
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/new_images/yellow_logo_on_transparent_bg.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/new_images/yellow_logo_on_transparent_bg.png"
+
+flutter_native_splash:
+  color: "#000000"
+  image: assets/new_images/white_logo_on_black_bg.png
+  android: true
+  ios: false
+  android_12:
+    color: "#000000"
+    image: assets/new_images/white_logo_on_black_bg.png
 
 flutter:
   uses-material-design: true
@@ -58,3 +78,4 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/new_images/

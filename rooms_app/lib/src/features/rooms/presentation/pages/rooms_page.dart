@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/features/hotel_setup/presentation/providers/setup_providers.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
 
@@ -19,6 +20,7 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
     final roomsAsync = ref.watch(roomsProvider);
     final selectedFloor = ref.watch(selectedFloorFilterProvider);
     final selectedStatus = ref.watch(selectedStatusFilterProvider);
+    final hotel = ref.watch(currentHotelProvider).valueOrNull;
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -27,7 +29,16 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go(AppRoutes.home),
         ),
-        title: const Text('Rooms'),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/new_images/black_logo_on_yellow_bg_new_fixed_ratio.png',
+              height: 28,
+            ),
+            const SizedBox(width: 12),
+            Text(hotel?.name ?? 'Rooms'),
+          ],
+        ),
         backgroundColor: AppColors.black,
         foregroundColor: AppColors.white,
         actions: [

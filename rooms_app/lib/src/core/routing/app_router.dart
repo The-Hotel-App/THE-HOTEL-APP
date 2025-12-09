@@ -38,7 +38,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   ]);
 
   return GoRouter(
-    initialLocation: AppRoutes.login,
+    initialLocation: AppRoutes.setup,
     debugLogDiagnostics: true,
     refreshListenable: refreshNotifier,
     redirect: (context, state) {
@@ -47,7 +47,25 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoginRoute = state.matchedLocation == AppRoutes.login;
       final isSetupRoute = state.matchedLocation == AppRoutes.setup;
 
-      // Check auth state
+      // Check setup completion FIRST (before auth)
+      final setupStatus = ref.read(isSetupCompletedProvider);
+      final isSetupCompleted = setupStatus.valueOrNull ?? false;
+
+      debugPrint('⚙️  Setup completed: $isSetupCompleted');
+
+      // If setup not completed, force to setup page (regardless of auth)
+      if (!isSetupCompleted && !isSetupRoute) {
+        debugPrint('🔧 Setup not completed, redirecting to setup');
+        return AppRoutes.setup;
+      }
+
+      // If setup completed but on setup page, redirect to login
+      if (isSetupCompleted && isSetupRoute) {
+        debugPrint('✅ Setup complete, redirecting to login');
+        return AppRoutes.login;
+      }
+
+      // Check auth state (only after setup is complete)
       final authState = ref.read(currentUserProvider);
       final user = authState.valueOrNull;
       final isAuthenticated = user != null;
@@ -56,29 +74,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         '👤 Auth state: ${isAuthenticated ? 'Authenticated (${user.name})' : 'Not authenticated'}',
       );
 
-      // Check setup completion
-      final setupStatus = ref.read(isSetupCompletedProvider);
-      final isSetupCompleted = setupStatus.valueOrNull ?? false;
-
-      debugPrint('⚙️  Setup completed: $isSetupCompleted');
-
       // If not authenticated and trying to access protected route
-      if (!isAuthenticated && !isLoginRoute) {
+      if (!isAuthenticated && !isLoginRoute && !isSetupRoute) {
         debugPrint('🚫 Not authenticated, redirecting to login');
         return AppRoutes.login;
       }
 
-      // If authenticated but setup not completed, go to setup
-      if (isAuthenticated && !isSetupCompleted && !isSetupRoute) {
-        debugPrint('🔧 Setup not completed, redirecting to setup');
-        return AppRoutes.setup;
-      }
-
-      // If authenticated and setup completed, but on login or setup page
-      if (isAuthenticated &&
-          isSetupCompleted &&
-          (isLoginRoute || isSetupRoute)) {
-        debugPrint('✅ Authenticated and setup complete, redirecting to home');
+      // If authenticated and on login page, go to home
+      if (isAuthenticated && isLoginRoute) {
+        debugPrint('✅ Authenticated, redirecting to home');
         return AppRoutes.home;
       }
 

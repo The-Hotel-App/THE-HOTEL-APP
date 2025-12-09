@@ -5,6 +5,7 @@ import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/features/auth/domain/entities/user.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers.dart';
+import 'package:rooms/src/features/hotel_setup/presentation/providers/setup_providers.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -12,11 +13,21 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider).valueOrNull;
+    final hotel = ref.watch(currentHotelProvider).valueOrNull;
 
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: AppBar(
-        title: const Text('ROOMS.io'),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/new_images/black_logo_on_yellow_bg_new_fixed_ratio.png',
+              height: 32,
+            ),
+            const SizedBox(width: 12),
+            Text(hotel?.name ?? 'ROOMS.io'),
+          ],
+        ),
         backgroundColor: AppColors.black,
         foregroundColor: AppColors.white,
         actions: [

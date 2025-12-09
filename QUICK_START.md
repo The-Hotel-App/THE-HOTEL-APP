@@ -21,7 +21,7 @@ The app will open to a **Login Screen** with:
 2. Enter password: `owner123`
 3. Click "Login"
 
-#### Option B: Quick Demo Login
+#### Option B: Test Dummy Login
 1. Click the "Owner" button under "Quick Login (Demo)"
 2. Credentials auto-fill
 3. Click "Login"

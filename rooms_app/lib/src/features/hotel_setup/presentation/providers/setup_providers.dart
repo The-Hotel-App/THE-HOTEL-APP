@@ -25,3 +25,10 @@ final roomTypesProvider = FutureProvider<List<RoomType>>((ref) async {
   final repo = ref.read(hotelSetupRepositoryProvider);
   return repo.getRoomTypes();
 });
+
+/// Provider for all hotels
+final allHotelsProvider = FutureProvider<List<Hotel>>((ref) async {
+  final repo =
+      ref.read(hotelSetupRepositoryProvider) as LocalHotelSetupRepository;
+  return repo.getAllHotels();
+});

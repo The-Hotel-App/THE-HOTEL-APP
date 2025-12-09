@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/features/hotel_setup/data/repositories/local_hotel_setup_repository.dart';
 import 'package:rooms/src/features/hotel_setup/domain/entities/hotel.dart';
 import 'package:rooms/src/features/hotel_setup/presentation/providers/setup_providers.dart';
 
@@ -74,13 +76,19 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       isSetupCompleted: true,
     );
 
-    final repo = ref.read(hotelSetupRepositoryProvider);
-    await repo.saveHotelProfile(hotel);
+    final repo =
+        ref.read(hotelSetupRepositoryProvider) as LocalHotelSetupRepository;
+    await repo.addHotel(hotel);
     await repo.saveRoomTypes(_roomTypes);
     await repo.markSetupCompleted();
 
+    // Invalidate the setup provider to trigger router refresh
+    ref.invalidate(isSetupCompletedProvider);
+    ref.invalidate(currentHotelProvider);
+
     if (mounted) {
-      context.go('/');
+      // Navigate to login after setup is complete
+      context.go(AppRoutes.login);
     }
   }
 
@@ -91,41 +99,6 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // Modern Header with Logo
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Image.asset('assets/icons/icon_image.png', height: 60),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Hotel Setup',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Step ${_currentPage + 1} of $_totalPages',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.black.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
             // Progress Indicator
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -191,7 +164,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
                           : _nextPage,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.black,
-                        foregroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       child: Text(
