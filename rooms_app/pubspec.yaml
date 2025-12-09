@@ -1,0 +1,60 @@
+name: rooms
+description: "ROOMS.io - Hotel Internal Operations Mobile App"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.10.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+  
+  # Routing
+  go_router: ^14.6.2
+  
+  # Storage
+  shared_preferences: ^2.3.4
+  flutter_secure_storage: ^9.2.2
+  
+  # Network
+  dio: ^5.7.0
+  
+  # UI & Utilities
+  intl: ^0.20.1
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+  
+  # Forms
+  flutter_form_builder: 10.2.0
+  form_builder_validators: ^11.0.0
+  
+  # Biometrics (prepared for future)
+  local_auth: ^2.3.0
+  
+  # Image handling (for ID photos)
+  image_picker: ^1.1.2
+  cached_network_image: ^3.4.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  
+  # Code generation
+  build_runner: ^2.4.14
+  riverpod_generator: ^2.6.2
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true
+  
+  # Assets
+  assets:
+    - assets/images/
+    - assets/icons/
