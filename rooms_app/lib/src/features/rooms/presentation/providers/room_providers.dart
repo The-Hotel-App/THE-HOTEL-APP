@@ -42,6 +42,8 @@ final roomsByStatusProvider = FutureProvider.family<List<Room>, RoomStatus>((
   return roomRepo.getRoomsByStatus(hotelId, status);
 });
 
-/// Provider for selected room filter
-final selectedFloorFilterProvider = StateProvider<String?>((ref) => null);
+/// Provider for selected floor (for floor-wise view)
+final selectedFloorProvider = StateProvider<String?>((ref) => null);
+
+/// Provider for selected status filter (when viewing rooms in a floor)
 final selectedStatusFilterProvider = StateProvider<RoomStatus?>((ref) => null);

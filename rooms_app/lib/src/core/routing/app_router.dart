@@ -4,8 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:rooms/src/features/auth/presentation/pages/home_page.dart';
 import 'package:rooms/src/features/auth/presentation/pages/login_page.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers.dart';
+import 'package:rooms/src/features/bookings/presentation/pages/bookings_page.dart';
+import 'package:rooms/src/features/checkin/presentation/pages/checkin_flow_page.dart';
+import 'package:rooms/src/features/checkout/presentation/pages/checkout_flow_page.dart';
+import 'package:rooms/src/features/customers/presentation/pages/customers_page.dart';
+import 'package:rooms/src/features/daybook/presentation/pages/daybook_page.dart';
 import 'package:rooms/src/features/hotel_setup/presentation/pages/hotel_setup_wizard_page.dart';
 import 'package:rooms/src/features/hotel_setup/presentation/providers/setup_providers.dart';
+import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 import 'package:rooms/src/features/rooms/presentation/pages/rooms_page.dart';
 
 /// Route paths
@@ -14,6 +20,8 @@ class AppRoutes {
   static const String setup = '/setup';
   static const String home = '/';
   static const String rooms = '/rooms';
+  static const String checkin = '/checkin';
+  static const String checkout = '/checkout';
   static const String bookings = '/bookings';
   static const String customers = '/customers';
   static const String daybook = '/daybook';
@@ -41,6 +49,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: AppRoutes.setup,
     debugLogDiagnostics: true,
     refreshListenable: refreshNotifier,
+    errorPageBuilder: (context, state) => MaterialPage(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Error')),
+        body: Center(child: Text(state.error.toString())),
+      ),
+    ),
     redirect: (context, state) {
       debugPrint('🧭 Router redirect called for: ${state.matchedLocation}');
 
@@ -92,22 +106,61 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: AppRoutes.login,
-        pageBuilder: (context, state) => const MaterialPage(child: LoginPage()),
+        pageBuilder: (context, state) =>
+            const MaterialPage(child: LoginPage(), maintainState: true),
       ),
       GoRoute(
         path: AppRoutes.setup,
-        pageBuilder: (context, state) =>
-            const MaterialPage(child: HotelSetupWizardPage()),
+        pageBuilder: (context, state) => const MaterialPage(
+          child: HotelSetupWizardPage(),
+          maintainState: true,
+        ),
       ),
       GoRoute(
         path: AppRoutes.home,
-        pageBuilder: (context, state) => const MaterialPage(child: HomePage()),
+        pageBuilder: (context, state) =>
+            const MaterialPage(child: HomePage(), maintainState: true),
       ),
       GoRoute(
         path: AppRoutes.rooms,
-        pageBuilder: (context, state) => const MaterialPage(child: RoomsPage()),
+        pageBuilder: (context, state) =>
+            const MaterialPage(child: RoomsPage(), maintainState: true),
       ),
-      // TODO: Add more routes
+      GoRoute(
+        path: AppRoutes.checkin,
+        pageBuilder: (context, state) {
+          final room = state.extra as Room;
+          return MaterialPage(
+            child: CheckinFlowPage(room: room),
+            maintainState: true,
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.checkout,
+        pageBuilder: (context, state) {
+          final room = state.extra as Room;
+          return MaterialPage(
+            child: CheckoutFlowPage(room: room),
+            maintainState: true,
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.bookings,
+        pageBuilder: (context, state) =>
+            const MaterialPage(child: BookingsPage(), maintainState: true),
+      ),
+      GoRoute(
+        path: AppRoutes.customers,
+        pageBuilder: (context, state) =>
+            const MaterialPage(child: CustomersPage(), maintainState: true),
+      ),
+      GoRoute(
+        path: AppRoutes.daybook,
+        pageBuilder: (context, state) =>
+            const MaterialPage(child: DayBookPage(), maintainState: true),
+      ),
     ],
   );
 });

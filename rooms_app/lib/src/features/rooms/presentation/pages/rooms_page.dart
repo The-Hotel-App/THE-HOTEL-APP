@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
-import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/features/hotel_setup/presentation/providers/setup_providers.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
@@ -19,17 +18,23 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
   @override
   Widget build(BuildContext context) {
     final roomsAsync = ref.watch(roomsProvider);
-    final selectedFloor = ref.watch(selectedFloorFilterProvider);
-    final selectedStatus = ref.watch(selectedStatusFilterProvider);
+    final selectedFloor = ref.watch(selectedFloorProvider);
     final hotel = ref.watch(currentHotelProvider).valueOrNull;
 
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(AppRoutes.home),
-        ),
+        leading: selectedFloor != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  ref.read(selectedFloorProvider.notifier).state = null;
+                },
+              )
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              ),
         title: Row(
           children: [
             Image.asset(
@@ -37,64 +42,25 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
               height: 28,
             ),
             const SizedBox(width: 12),
-            Text(hotel?.name ?? 'Rooms'),
+            Text(
+              selectedFloor != null
+                  ? 'Floor $selectedFloor'
+                  : hotel?.name ?? 'Rooms',
+            ),
           ],
         ),
         backgroundColor: AppColors.black,
         foregroundColor: AppColors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _showFilterDialog,
-          ),
-        ],
       ),
       body: roomsAsync.when(
         data: (rooms) {
-          // Apply filters
-          var filteredRooms = rooms;
-          if (selectedFloor != null) {
-            filteredRooms = filteredRooms
-                .where((r) => r.floor == selectedFloor)
-                .toList();
+          if (selectedFloor == null) {
+            // Show floors view
+            return _buildFloorsView(rooms);
+          } else {
+            // Show rooms for selected floor
+            return _buildRoomsView(rooms);
           }
-          if (selectedStatus != null) {
-            filteredRooms = filteredRooms
-                .where((r) => r.status == selectedStatus)
-                .toList();
-          }
-
-          if (filteredRooms.isEmpty) {
-            return _buildEmptyState();
-          }
-
-          return Column(
-            children: [
-              // Stats Bar
-              _buildStatsBar(rooms),
-
-              // Active Filters
-              if (selectedFloor != null || selectedStatus != null)
-                _buildActiveFilters(),
-
-              // Room Grid
-              Expanded(
-                child: GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 0.85,
-                  ),
-                  itemCount: filteredRooms.length,
-                  itemBuilder: (context, index) {
-                    return _buildRoomCard(filteredRooms[index]);
-                  },
-                ),
-              ),
-            ],
-          );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
@@ -108,6 +74,212 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildFloorsView(List<Room> allRooms) {
+    // Get unique floors and sort them
+    final floors = allRooms.map((r) => r.floor).toSet().toList();
+    floors.sort((a, b) => int.parse(a).compareTo(int.parse(b)));
+
+    return Column(
+      children: [
+        // Stats Bar
+        _buildStatsBar(allRooms),
+
+        // Floors Grid
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.all(12),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.3,
+            ),
+            itemCount: floors.length,
+            itemBuilder: (context, index) {
+              final floor = floors[index];
+              final floorRooms = allRooms
+                  .where((r) => r.floor == floor)
+                  .toList();
+              return _buildFloorCard(floor, floorRooms);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFloorCard(String floor, List<Room> floorRooms) {
+    final freeCount = floorRooms
+        .where((r) => r.status == RoomStatus.free)
+        .length;
+    final occupiedCount = floorRooms
+        .where((r) => r.status == RoomStatus.occupied)
+        .length;
+    final cleaningCount = floorRooms
+        .where((r) => r.status == RoomStatus.cleaning)
+        .length;
+
+    return InkWell(
+      onTap: () {
+        ref.read(selectedFloorProvider.notifier).state = floor;
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.grey300, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Floor Number
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.black,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                floor,
+                style: const TextStyle(
+                  color: AppColors.warning,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Floor Label
+            Text(
+              'Floor $floor',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+
+            // Room Count Stats
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildFloorStatBadge(
+                  icon: Icons.check_circle,
+                  count: freeCount,
+                  color: AppColors.roomFree,
+                ),
+                _buildFloorStatBadge(
+                  icon: Icons.hotel,
+                  count: occupiedCount,
+                  color: AppColors.roomOccupied,
+                ),
+                _buildFloorStatBadge(
+                  icon: Icons.cleaning_services,
+                  count: cleaningCount,
+                  color: AppColors.roomCleaning,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFloorStatBadge({
+    required IconData icon,
+    required int count,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 16),
+        const SizedBox(height: 2),
+        Text(
+          '$count',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRoomsView(List<Room> allRooms) {
+    final selectedFloor = ref.watch(selectedFloorProvider);
+    final selectedStatus = ref.watch(selectedStatusFilterProvider);
+
+    var floorRooms = allRooms.where((r) => r.floor == selectedFloor).toList();
+    var filteredRooms = floorRooms;
+    if (selectedStatus != null) {
+      filteredRooms = filteredRooms
+          .where((r) => r.status == selectedStatus)
+          .toList();
+    }
+
+    if (filteredRooms.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return Column(
+      children: [
+        // Stats Bar for this floor
+        _buildStatsBar(floorRooms),
+
+        // Filter bar with status filter button
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              if (selectedStatus != null) ...[
+                Chip(
+                  label: Text(selectedStatus.displayName),
+                  onDeleted: () {
+                    ref.read(selectedStatusFilterProvider.notifier).state =
+                        null;
+                  },
+                  backgroundColor: Colors.white,
+                ),
+                const SizedBox(width: 8),
+              ],
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.filter_list),
+                onPressed: _showStatusFilterDialog,
+              ),
+            ],
+          ),
+        ),
+
+        // Room Grid
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.all(16),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.85,
+            ),
+            itemCount: filteredRooms.length,
+            itemBuilder: (context, index) {
+              return _buildRoomCard(filteredRooms[index]);
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -185,47 +357,6 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
           style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
       ],
-    );
-  }
-
-  Widget _buildActiveFilters() {
-    final selectedFloor = ref.watch(selectedFloorFilterProvider);
-    final selectedStatus = ref.watch(selectedStatusFilterProvider);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.black.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.filter_list, size: 20),
-          const SizedBox(width: 8),
-          const Text('Filters:', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(width: 8),
-          if (selectedFloor != null) ...[
-            Chip(
-              label: Text('Floor $selectedFloor'),
-              onDeleted: () {
-                ref.read(selectedFloorFilterProvider.notifier).state = null;
-              },
-              backgroundColor: Colors.white,
-            ),
-            const SizedBox(width: 8),
-          ],
-          if (selectedStatus != null) ...[
-            Chip(
-              label: Text(selectedStatus.displayName),
-              onDeleted: () {
-                ref.read(selectedStatusFilterProvider.notifier).state = null;
-              },
-              backgroundColor: Colors.white,
-            ),
-          ],
-        ],
-      ),
     );
   }
 
@@ -310,7 +441,6 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
-              ref.read(selectedFloorFilterProvider.notifier).state = null;
               ref.read(selectedStatusFilterProvider.notifier).state = null;
             },
             style: ElevatedButton.styleFrom(
@@ -339,48 +469,34 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
     }
   }
 
-  void _showFilterDialog() {
-    AppDialog.show(
+  void _showStatusFilterDialog() {
+    showDialog(
       context: context,
-      title: 'Filter Rooms',
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          DropdownButtonFormField<String>(
-            decoration: const InputDecoration(labelText: 'Floor'),
-            initialValue: ref.read(selectedFloorFilterProvider),
-            items: [
-              const DropdownMenuItem(value: null, child: Text('All Floors')),
-              ...['1', '2', '3'].map(
-                (floor) =>
-                    DropdownMenuItem(value: floor, child: Text('Floor $floor')),
-              ),
-            ],
-            onChanged: (value) {
-              ref.read(selectedFloorFilterProvider.notifier).state = value;
-            },
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<RoomStatus>(
-            decoration: const InputDecoration(labelText: 'Status'),
-            initialValue: ref.read(selectedStatusFilterProvider),
-            items: [
-              const DropdownMenuItem(value: null, child: Text('All Statuses')),
-              ...RoomStatus.values.map(
-                (status) => DropdownMenuItem(
-                  value: status,
-                  child: Text(status.displayName),
-                ),
-              ),
-            ],
-            onChanged: (value) {
-              ref.read(selectedStatusFilterProvider.notifier).state = value;
-            },
-          ),
-        ],
+      builder: (context) => AlertDialog(
+        title: const Text('Filter by Status'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('All Statuses'),
+              onTap: () {
+                ref.read(selectedStatusFilterProvider.notifier).state = null;
+                Navigator.pop(context);
+              },
+            ),
+            ...RoomStatus.values.map((status) {
+              return ListTile(
+                title: Text(status.displayName),
+                onTap: () {
+                  ref.read(selectedStatusFilterProvider.notifier).state =
+                      status;
+                  Navigator.pop(context);
+                },
+              );
+            }),
+          ],
+        ),
       ),
-      primaryButtonText: 'Done',
-      onPrimaryPressed: () => Navigator.pop(context),
     );
   }
 
@@ -404,7 +520,7 @@ class _RoomDetailsSheet extends ConsumerWidget {
     final statusColor = RoomStatusColors.getColor(room.status.name);
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
+      height: MediaQuery.of(context).size.height * 0.75,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -475,14 +591,20 @@ class _RoomDetailsSheet extends ConsumerWidget {
             ),
           ),
 
+          // Primary Action Button (Color-coded for illiterate users)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: _buildPrimaryAction(context, ref),
+          ),
+
           // Details
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.all(24),
               children: [
                 _buildDetailRow(Icons.layers, 'Floor', room.floor),
                 _buildDetailRow(
-                  Icons.attach_money,
+                  Icons.currency_rupee,
                   'Price/Night',
                   '₹${room.pricePerNight.toStringAsFixed(0)}',
                 ),
@@ -501,49 +623,151 @@ class _RoomDetailsSheet extends ConsumerWidget {
                 const Divider(),
                 const SizedBox(height: 16),
                 const Text(
-                  'Change Status',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  'Quick Status Change',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 16),
-                ...RoomStatus.values.map((status) {
-                  final isSelected = room.status == status;
-                  final color = RoomStatusColors.getColor(status.name);
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: ElevatedButton(
-                      onPressed: isSelected
-                          ? null
-                          : () async {
-                              await _updateRoomStatus(ref, room.id, status);
-                              if (context.mounted) Navigator.pop(context);
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: isSelected
-                            ? color
-                            : color.withValues(alpha: 0.1),
-                        foregroundColor: isSelected ? Colors.white : color,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (isSelected)
-                            const Icon(Icons.check, size: 20)
-                          else
-                            Icon(_getStatusIcon(status), size: 20),
-                          const SizedBox(width: 8),
-                          Text(status.displayName),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
+                const SizedBox(height: 12),
+                _buildQuickStatusButtons(context, ref),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// Primary action based on room status - BIG, COLOR-CODED button
+  Widget _buildPrimaryAction(BuildContext context, WidgetRef ref) {
+    switch (room.status) {
+      case RoomStatus.free:
+        // GREEN - Check In
+        return _buildBigActionButton(
+          context: context,
+          icon: Icons.login,
+          label: 'CHECK IN',
+          color: AppColors.roomFree,
+          onTap: () {
+            Navigator.pop(context);
+            context.push(AppRoutes.checkin, extra: room);
+          },
+        );
+      case RoomStatus.occupied:
+        // RED - Check Out
+        return _buildBigActionButton(
+          context: context,
+          icon: Icons.logout,
+          label: 'CHECK OUT',
+          color: AppColors.roomOccupied,
+          onTap: () {
+            Navigator.pop(context);
+            context.push(AppRoutes.checkout, extra: room);
+          },
+        );
+      case RoomStatus.cleaning:
+        // ORANGE - Mark as Free
+        return _buildBigActionButton(
+          context: context,
+          icon: Icons.check_circle,
+          label: 'CLEANING DONE',
+          color: AppColors.roomCleaning,
+          onTap: () async {
+            await _updateRoomStatus(ref, room.id, RoomStatus.free);
+            if (context.mounted) Navigator.pop(context);
+          },
+        );
+      case RoomStatus.maintenance:
+        // GREY - Mark as Free
+        return _buildBigActionButton(
+          context: context,
+          icon: Icons.check_circle,
+          label: 'REPAIR DONE',
+          color: AppColors.grey600,
+          onTap: () async {
+            await _updateRoomStatus(ref, room.id, RoomStatus.free);
+            if (context.mounted) Navigator.pop(context);
+          },
+        );
+      case RoomStatus.outOfService:
+        return _buildBigActionButton(
+          context: context,
+          icon: Icons.refresh,
+          label: 'RESTORE ROOM',
+          color: AppColors.grey600,
+          onTap: () async {
+            await _updateRoomStatus(ref, room.id, RoomStatus.free);
+            if (context.mounted) Navigator.pop(context);
+          },
+        );
+    }
+  }
+
+  Widget _buildBigActionButton({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 28),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickStatusButtons(BuildContext context, WidgetRef ref) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: RoomStatus.values.where((s) => s != room.status).map((status) {
+        final color = RoomStatusColors.getColor(status.name);
+        return InkWell(
+          onTap: () async {
+            await _updateRoomStatus(ref, room.id, status);
+            if (context.mounted) Navigator.pop(context);
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: color),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(_getStatusIcon(status), size: 18, color: color),
+                const SizedBox(width: 6),
+                Text(
+                  status.displayName,
+                  style: TextStyle(color: color, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
