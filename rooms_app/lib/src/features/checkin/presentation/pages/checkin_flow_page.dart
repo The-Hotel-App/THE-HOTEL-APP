@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/features/checkin/presentation/widgets/step_confirmation.dart';
 import 'package:rooms/src/features/checkin/presentation/widgets/step_customer_info.dart';
 import 'package:rooms/src/features/checkin/presentation/widgets/step_payment.dart';
@@ -229,29 +230,17 @@ class _CheckinFlowPageState extends ConsumerState<CheckinFlowPage> {
   }
 
   void _showExitConfirmation() {
-    showDialog(
+    AppDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cancel Check-In?'),
-        content: const Text('Your progress will be lost.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Continue'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.pop();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: AppColors.white,
-            ),
-            child: const Text('Exit'),
-          ),
-        ],
-      ),
+      title: 'Cancel Check-In?',
+      content: const Text('Your progress will be lost.'),
+      secondaryButtonText: 'Continue',
+      onSecondaryPressed: () => Navigator.pop(context),
+      primaryButtonText: 'Exit',
+      onPrimaryPressed: () {
+        Navigator.pop(context);
+        context.pop();
+      },
     );
   }
 }
