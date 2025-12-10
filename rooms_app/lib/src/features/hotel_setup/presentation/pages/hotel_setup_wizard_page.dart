@@ -28,14 +28,9 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
   int _currentPage = 0;
   final int _totalPages = 4;
 
-  // Step 0: Owner Registration
+  // Step 0: Owner Profile (user already logged in)
   final _ownerNameController = TextEditingController();
-  final _ownerEmailController = TextEditingController();
   final _ownerPhoneController = TextEditingController();
-  final _ownerPasswordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  bool _isPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
   String? _ownerId;
 
   // Step 1: Hotel Profile
@@ -59,13 +54,34 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
   final List<RoomType> _roomTypes = [];
 
   @override
+  void initState() {
+    super.initState();
+    // Get logged-in user's ID
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentUser = ref.read(auth_new.currentUserProvider).valueOrNull;
+      if (currentUser != null) {
+        setState(() {
+          _ownerId = currentUser.id;
+          // Pre-fill name if available
+          if (currentUser.name.isNotEmpty && currentUser.name != 'User') {
+            _ownerNameController.text = currentUser.name;
+          }
+          if (currentUser.phone != null && currentUser.phone!.isNotEmpty) {
+            _ownerPhoneController.text = currentUser.phone!;
+          }
+        });
+        debugPrint('✅ Logged-in user ID: $_ownerId');
+      } else {
+        debugPrint('⚠️ No logged-in user found');
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
     _ownerNameController.dispose();
-    _ownerEmailController.dispose();
     _ownerPhoneController.dispose();
-    _ownerPasswordController.dispose();
-    _confirmPasswordController.dispose();
     _nameController.dispose();
     _addressController.dispose();
     _phoneController.dispose();
@@ -102,26 +118,23 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
 
   Future<void> _nextPage() async {
     if (_currentPage == 0) {
-      if (_ownerNameController.text.isEmpty ||
-          _ownerEmailController.text.isEmpty ||
-          _ownerPhoneController.text.isEmpty ||
-          _ownerPasswordController.text.isEmpty) {
+      if (_ownerNameController.text.trim().isEmpty ||
+          _ownerPhoneController.text.trim().isEmpty) {
         _showErrorDialog('Please fill in all required fields');
         return;
       }
 
-      if (_ownerPasswordController.text != _confirmPasswordController.text) {
-        _showErrorDialog('Passwords do not match');
+      if (_ownerId == null) {
+        _showErrorDialog('You must be logged in to continue');
         return;
       }
 
-      if (_ownerPasswordController.text.length < 6) {
-        _showErrorDialog('Password must be at least 6 characters');
+      final success = await _updateOwnerProfile();
+      if (!success) {
+        debugPrint('❌ Profile update failed, not advancing page');
         return;
       }
-
-      await _registerOwner();
-      if (_ownerId == null) return;
+      debugPrint('✅ Profile updated for: $_ownerId, advancing to next page');
     }
 
     if (_currentPage < _totalPages - 1) {
@@ -152,34 +165,38 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
     );
   }
 
-  Future<void> _registerOwner() async {
+  Future<bool> _updateOwnerProfile() async {
     try {
+      debugPrint('� Updating owner profile...');
+
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
+        builder: (dialogContext) =>
+            const Center(child: CircularProgressIndicator()),
       );
 
       final authRepo = SupabaseAuthRepository();
-      final user = await authRepo.signUp(
-        email: _ownerEmailController.text.trim(),
-        password: _ownerPasswordController.text,
+      await authRepo.updateProfile(
+        userId: _ownerId!,
         name: _ownerNameController.text.trim(),
         phone: _ownerPhoneController.text.trim(),
       );
 
-      setState(() {
-        _ownerId = user.id;
-      });
+      debugPrint('✅ Profile updated for user: $_ownerId');
 
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.of(context).pop(); // Close loading dialog
       }
+
+      return true;
     } catch (e) {
+      debugPrint('❌ Profile update error: $e');
       if (mounted) {
-        Navigator.pop(context);
-        _showErrorDialog('Registration failed: ${e.toString()}');
+        Navigator.of(context).pop(); // Close loading dialog
+        _showErrorDialog('Profile update failed: ${e.toString()}');
       }
+      return false;
     }
   }
 
@@ -189,11 +206,14 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       return;
     }
 
+    debugPrint('🏨 Starting hotel setup...');
+
     try {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
+        builder: (dialogContext) =>
+            const Center(child: CircularProgressIndicator()),
       );
 
       final floorConfigs = <hotel_new.FloorConfig>[];
@@ -206,6 +226,8 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
           );
         }
       }
+
+      debugPrint('📊 Creating hotel with ${floorConfigs.length} floors');
 
       final supabaseHotelRepo = SupabaseHotelSetupRepository();
       final createdHotel = await supabaseHotelRepo.createHotel(
@@ -222,9 +244,12 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         floorConfigs: floorConfigs,
       );
 
+      debugPrint('✅ Hotel created: ${createdHotel.id}');
+
       // Create room types
       List<hotel_new.RoomType> createdRoomTypes = [];
       if (_roomTypes.isNotEmpty) {
+        debugPrint('🛏️ Creating ${_roomTypes.length} room types...');
         final roomTypesData = _roomTypes
             .map(
               (rt) => hotel_new.RoomType(
@@ -244,6 +269,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         createdRoomTypes = await supabaseHotelRepo.getRoomTypes(
           createdHotel.id,
         );
+        debugPrint('✅ Room types created');
       }
 
       // Create rooms
@@ -261,6 +287,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         }
       }
 
+      debugPrint('🚪 Creating rooms...');
       await supabaseHotelRepo.createRooms(
         hotelId: createdHotel.id,
         floorConfigs: floorConfigs,
@@ -268,9 +295,10 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       );
 
       await supabaseHotelRepo.completeSetup(createdHotel.id);
+      debugPrint('✅ Hotel setup complete!');
 
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.of(context).pop(); // Close loading dialog
 
         ref.invalidate(auth_new.currentUserProvider);
         ref.invalidate(auth_new.userHotelsProvider);
@@ -283,7 +311,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
 
         await showDialog(
           context: context,
-          builder: (context) => AppDialog(
+          builder: (dialogContext) => AppDialog(
             title: 'Success!',
             content: Text(
               'Hotel "${_nameController.text}" has been created successfully!',
@@ -296,8 +324,9 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         }
       }
     } catch (e) {
+      debugPrint('❌ Hotel setup error: $e');
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.of(context).pop(); // Close loading dialog
         _showErrorDialog('Failed to create hotel: ${e.toString()}');
       }
     }
@@ -371,6 +400,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      resizeToAvoidBottomInset: false,
       appBar: _currentPage == 0
           ? AppBar(
               backgroundColor: AppColors.background,
@@ -480,14 +510,14 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '👤 Owner Account',
+            '👤 Owner Profile',
             style: Theme.of(
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
-            'Create your owner account to manage your hotel',
+            'Complete your profile to manage your hotel',
             style: Theme.of(
               context,
             ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
@@ -502,41 +532,12 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
           ),
           const SizedBox(height: 16),
           SetupTextField(
-            controller: _ownerEmailController,
-            label: 'Email',
-            hint: 'Enter your email',
-            icon: Icons.email,
-            keyboardType: TextInputType.emailAddress,
-            required: true,
-          ),
-          const SizedBox(height: 16),
-          SetupTextField(
             controller: _ownerPhoneController,
             label: 'Phone Number',
             hint: 'Enter your phone number',
             icon: Icons.phone,
             keyboardType: TextInputType.phone,
             required: true,
-          ),
-          const SizedBox(height: 16),
-          PasswordTextField(
-            controller: _ownerPasswordController,
-            label: 'Password',
-            hint: 'Enter password (min. 6 characters)',
-            isVisible: _isPasswordVisible,
-            onToggleVisibility: () =>
-                setState(() => _isPasswordVisible = !_isPasswordVisible),
-          ),
-          const SizedBox(height: 16),
-          PasswordTextField(
-            controller: _confirmPasswordController,
-            label: 'Confirm Password',
-            hint: 'Re-enter your password',
-            isVisible: _isConfirmPasswordVisible,
-            onToggleVisibility: () => setState(
-              () => _isConfirmPasswordVisible = !_isConfirmPasswordVisible,
-            ),
-            prefixIcon: Icons.lock_outline,
           ),
         ],
       ),
@@ -694,10 +695,35 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Define your room categories and pricing',
+            'Define your room categories, pricing, and max occupancy',
             style: Theme.of(
               context,
             ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: AppColors.primary, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'You can always customize room types, prices, and assignments from Settings → Room Types later.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppColors.primary),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 24),
           if (_roomTypes.isEmpty)
@@ -734,17 +760,27 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
           Icon(Icons.hotel, size: 48, color: AppColors.grey400),
           const SizedBox(height: 16),
           Text(
-            'No room types yet',
+            'No room types defined yet',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
-            'Add your first room type to continue',
+            'Add room types now, or skip this step and configure them later from Settings',
+            textAlign: TextAlign.center,
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Tap "Complete Setup" to skip, or add your first room type below.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.primary,
+              fontStyle: FontStyle.italic,
+            ),
           ),
         ],
       ),

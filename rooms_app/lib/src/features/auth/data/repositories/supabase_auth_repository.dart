@@ -100,7 +100,22 @@ class SupabaseAuthRepository implements AuthRepository {
       final userProfile = await _getUserProfile(response.user!.id);
 
       if (userProfile == null) {
-        throw Exception('User profile not found');
+        // Profile doesn't exist yet - create a minimal user from auth data
+        // This allows the router to redirect them to the setup page
+        debugPrint('⚠️ No profile found, creating minimal user for setup flow');
+        final authUser = response.user!;
+        return app.User(
+          id: authUser.id,
+          name:
+              authUser.userMetadata?['name'] as String? ??
+              authUser.email?.split('@').first ??
+              'User',
+          email: authUser.email ?? '',
+          phone: authUser.userMetadata?['phone'] as String?,
+          createdAt: DateTime.now(),
+          isActive: true,
+          hasBiometric: false,
+        );
       }
 
       if (!userProfile.isActive) {
@@ -143,7 +158,26 @@ class SupabaseAuthRepository implements AuthRepository {
       }
 
       debugPrint('ℹ️ Getting profile for user: ${authUser.id}');
-      return await _getUserProfile(authUser.id);
+      final userProfile = await _getUserProfile(authUser.id);
+
+      if (userProfile == null) {
+        // Profile doesn't exist yet - create minimal user for setup flow
+        debugPrint('⚠️ No profile found, creating minimal user for setup flow');
+        return app.User(
+          id: authUser.id,
+          name:
+              authUser.userMetadata?['name'] as String? ??
+              authUser.email?.split('@').first ??
+              'User',
+          email: authUser.email ?? '',
+          phone: authUser.userMetadata?['phone'] as String?,
+          createdAt: DateTime.now(),
+          isActive: true,
+          hasBiometric: false,
+        );
+      }
+
+      return userProfile;
     } catch (e) {
       debugPrint('❌ Error getting current user: $e');
       return null;
@@ -153,10 +187,29 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Stream<app.User?> authStateChanges() {
     return _client.auth.onAuthStateChange.asyncMap((state) async {
-      final user = state.session?.user;
-      if (user == null) return null;
+      final authUser = state.session?.user;
+      if (authUser == null) return null;
 
-      return await _getUserProfile(user.id);
+      final userProfile = await _getUserProfile(authUser.id);
+
+      if (userProfile == null) {
+        // Profile doesn't exist yet - create minimal user for setup flow
+        debugPrint('⚠️ No profile found in auth state, creating minimal user');
+        return app.User(
+          id: authUser.id,
+          name:
+              authUser.userMetadata?['name'] as String? ??
+              authUser.email?.split('@').first ??
+              'User',
+          email: authUser.email ?? '',
+          phone: authUser.userMetadata?['phone'] as String?,
+          createdAt: DateTime.now(),
+          isActive: true,
+          hasBiometric: false,
+        );
+      }
+
+      return userProfile;
     });
   }
 
