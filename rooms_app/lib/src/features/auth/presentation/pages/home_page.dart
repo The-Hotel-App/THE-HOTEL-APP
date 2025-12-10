@@ -250,9 +250,7 @@ class HomePage extends ConsumerWidget {
           icon: Icons.groups,
           label: 'Staff',
           color: AppColors.grey700,
-          onTap: () {
-            // TODO: Navigate to staff
-          },
+          onTap: () => context.push(AppRoutes.staff),
           compact: true,
         ),
         _buildActionCard(
@@ -260,9 +258,7 @@ class HomePage extends ConsumerWidget {
           icon: Icons.business,
           label: 'Hotel',
           color: AppColors.grey700,
-          onTap: () {
-            // TODO: Navigate to hotel settings
-          },
+          onTap: () => context.push(AppRoutes.hotelSettings),
           compact: true,
         ),
         _buildActionCard(
@@ -270,9 +266,7 @@ class HomePage extends ConsumerWidget {
           icon: Icons.notifications,
           label: 'Alerts',
           color: AppColors.grey700,
-          onTap: () {
-            // TODO: Navigate to notifications
-          },
+          onTap: () => context.push(AppRoutes.notifications),
           compact: true,
         ),
       ],

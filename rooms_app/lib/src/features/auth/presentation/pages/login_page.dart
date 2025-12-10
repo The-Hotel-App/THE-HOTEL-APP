@@ -4,9 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/constants/app_constants.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
-import 'package:rooms/src/features/auth/presentation/providers/auth_providers.dart';
-import 'package:rooms/src/features/hotel_setup/data/repositories/local_hotel_setup_repository.dart';
-import 'package:rooms/src/features/hotel_setup/presentation/providers/setup_providers.dart';
+import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
+import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -44,7 +43,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
       debugPrint('📧 Email: $email');
-      debugPrint('🔑 Password: ${password.replaceAll(RegExp(r'.'), '*')}');
 
       final authRepo = ref.read(authRepositoryProvider);
       debugPrint('🏪 Auth repository obtained');
@@ -53,9 +51,46 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
       debugPrint('✅ Login successful!');
 
-      if (mounted) {
-        debugPrint('🧭 Navigation will be handled by GoRouter redirect');
+      if (!mounted) return;
+
+      // Get user's hotels before any navigation
+      final hotels = await ref.read(userHotelsProvider.future);
+
+      debugPrint('🏨 User has ${hotels.length} hotel(s)');
+
+      if (!mounted) return;
+
+      if (hotels.isEmpty) {
+        // User has no hotels - let router handle redirect to setup
+        debugPrint('⚠️  User has no hotels, router will redirect to setup');
         setState(() => _isLoading = false);
+        // Invalidate auth providers to trigger router refresh
+        ref.invalidate(currentUserProvider);
+        return;
+      }
+
+      if (hotels.length == 1) {
+        // Auto-select the only hotel
+        debugPrint('✅ Auto-selecting single hotel: ${hotels.first.hotelName}');
+        ref.read(selectedHotelIdProvider.notifier).state = hotels.first.hotelId;
+        setState(() => _isLoading = false);
+
+        if (mounted) {
+          // Invalidate to trigger router refresh, then navigate
+          ref.invalidate(currentUserProvider);
+          await Future.delayed(const Duration(milliseconds: 50));
+          if (mounted) {
+            context.go(AppRoutes.home);
+          }
+        }
+        return;
+      }
+
+      // Multiple hotels - show selector
+      debugPrint('🏨 Multiple hotels, showing selector');
+      setState(() => _isLoading = false);
+      if (mounted) {
+        await _showHotelSelector(hotels);
       }
     } catch (e, stackTrace) {
       debugPrint('❌ Login failed with error: $e');
@@ -73,105 +108,80 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
-  void _fillDemoCredentials(String role) {
-    setState(() {
-      switch (role) {
-        case 'owner':
-          _emailController.text = 'owner@rooms.io';
-          _passwordController.text = 'owner123';
-          break;
-        case 'manager':
-          _emailController.text = 'manager@rooms.io';
-          _passwordController.text = 'manager123';
-          break;
-        case 'staff':
-          _emailController.text = 'staff@rooms.io';
-          _passwordController.text = 'staff123';
-          break;
-      }
-    });
-  }
-
-  Future<void> _showHotelSwitcher() async {
-    final repo =
-        ref.read(hotelSetupRepositoryProvider) as LocalHotelSetupRepository;
-    final allHotels = await repo.getAllHotels();
-
-    if (!mounted) return;
-
+  Future<void> _showHotelSelector(List<UserHotel> hotels) async {
     await showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.white,
+      isDismissible: false,
+      enableDrag: false,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.business, color: AppColors.black),
-                const SizedBox(width: 12),
-                Text(
-                  'Switch Hotel',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            if (allHotels.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Text(
-                  'No other hotels registered',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textSecondary),
-                ),
-              )
-            else
-              ...allHotels.map(
-                (hotel) => ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.black,
-                    child: Icon(Icons.hotel, color: AppColors.white),
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.business, color: AppColors.black),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Select Hotel',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  title: Text(hotel.name),
-                  subtitle: Text(hotel.address),
-                  trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await repo.switchHotel(hotel.id);
-                    ref.invalidate(currentHotelProvider);
-                    ref.invalidate(isSetupCompletedProvider);
-                  },
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'You have access to multiple hotels. Please select one.',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 20),
+              ...hotels.map(
+                (hotel) => Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: hotel.isOwner
+                          ? AppColors.primary
+                          : AppColors.black,
+                      child: Icon(
+                        hotel.isOwner ? Icons.star : Icons.hotel,
+                        color: AppColors.white,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      hotel.hotelName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      hotel.role.displayName,
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                    trailing: Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: AppColors.black,
+                    ),
+                    onTap: () {
+                      debugPrint('🏨 Selected hotel: ${hotel.hotelName}');
+                      ref.read(selectedHotelIdProvider.notifier).state =
+                          hotel.hotelId;
+                      Navigator.pop(context);
+                      context.go(AppRoutes.home);
+                    },
+                  ),
                 ),
               ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: () async {
-                final navigator = Navigator.of(context);
-                final router = GoRouter.of(context);
-
-                navigator.pop();
-                await repo.clearCurrentHotel();
-                ref.invalidate(currentHotelProvider);
-                ref.invalidate(isSetupCompletedProvider);
-
-                router.go(AppRoutes.setup);
-              },
-              icon: Icon(Icons.add),
-              label: Text('Add New Hotel'),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: AppColors.black),
-                padding: EdgeInsets.symmetric(vertical: 16),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -179,10 +189,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final hotel = ref.watch(currentHotelProvider).valueOrNull;
-
     return Scaffold(
       backgroundColor: AppColors.white,
+      appBar: AppBar(
+        backgroundColor: AppColors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.black),
+          onPressed: () => context.go(AppRoutes.welcome),
+          tooltip: 'Back to Welcome',
+        ),
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -204,7 +221,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      hotel?.name ?? AppConstants.appName,
+                      AppConstants.appName,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineLarge
                           ?.copyWith(
@@ -213,17 +230,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             fontSize: 32,
                           ),
                     ),
-                    const SizedBox(height: 4),
-                    // Hotel Switcher Button
-                    if (hotel != null)
-                      TextButton.icon(
-                        onPressed: _showHotelSwitcher,
-                        icon: Icon(Icons.swap_horiz, size: 16),
-                        label: Text('Switch Hotel'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.white,
-                        ),
-                      ),
                     const SizedBox(height: 8),
                     Text(
                       'Hotel Operations Management',
@@ -354,100 +360,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               ),
                       ),
                     ),
-                    const SizedBox(height: 40),
-
-                    // Demo Credentials Section
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppColors.grey100,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 20,
-                                color: AppColors.white,
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Test Dummy Login',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildDemoButton(
-                                  label: 'Owner',
-                                  icon: Icons.admin_panel_settings,
-                                  onTap: () => _fillDemoCredentials('owner'),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _buildDemoButton(
-                                  label: 'Manager',
-                                  icon: Icons.manage_accounts,
-                                  onTap: () => _fillDemoCredentials('manager'),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _buildDemoButton(
-                                  label: 'Staff',
-                                  icon: Icons.person,
-                                  onTap: () => _fillDemoCredentials('staff'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDemoButton({
-    required String label,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.grey300),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 24, color: AppColors.black),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-            ),
-          ],
         ),
       ),
     );

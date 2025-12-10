@@ -21,6 +21,9 @@ dependencies:
   shared_preferences: ^2.3.4
   flutter_secure_storage: ^9.2.2
   
+  # Backend & Database
+  supabase_flutter: ^2.8.0
+  
   # Network
   dio: ^5.7.0
   

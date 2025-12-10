@@ -4,9 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/widgets/app_dialog.dart';
-import 'package:rooms/src/features/hotel_setup/data/repositories/local_hotel_setup_repository.dart';
 import 'package:rooms/src/features/hotel_setup/domain/entities/hotel.dart';
-import 'package:rooms/src/features/hotel_setup/presentation/providers/setup_providers.dart';
+import 'package:rooms/src/features/auth/data/repositories/supabase_auth_repository.dart';
+import 'package:rooms/src/features/hotel_setup/data/repositories/supabase_hotel_setup_repository.dart';
+import 'package:rooms/src/features/hotel_setup/domain/entities/hotel_new.dart'
+    as hotel_new;
+import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart'
+    as auth_new;
 
 class HotelSetupWizardPage extends ConsumerStatefulWidget {
   const HotelSetupWizardPage({super.key});
@@ -19,7 +23,17 @@ class HotelSetupWizardPage extends ConsumerStatefulWidget {
 class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
   final _pageController = PageController();
   int _currentPage = 0;
-  final int _totalPages = 3;
+  final int _totalPages = 4;
+
+  // Step 0: Owner Registration
+  final _ownerNameController = TextEditingController();
+  final _ownerEmailController = TextEditingController();
+  final _ownerPhoneController = TextEditingController();
+  final _ownerPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
+  String? _ownerId; // Will be set after registration
 
   // Step 1: Hotel Profile
   final _nameController = TextEditingController();
@@ -44,6 +58,11 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
   @override
   void dispose() {
     _pageController.dispose();
+    _ownerNameController.dispose();
+    _ownerEmailController.dispose();
+    _ownerPhoneController.dispose();
+    _ownerPasswordController.dispose();
+    _confirmPasswordController.dispose();
     _nameController.dispose();
     _addressController.dispose();
     _phoneController.dispose();
@@ -78,7 +97,33 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
     return total;
   }
 
-  void _nextPage() {
+  Future<void> _nextPage() async {
+    // Validate current step before proceeding
+    if (_currentPage == 0) {
+      // Validate owner registration
+      if (_ownerNameController.text.isEmpty ||
+          _ownerEmailController.text.isEmpty ||
+          _ownerPhoneController.text.isEmpty ||
+          _ownerPasswordController.text.isEmpty) {
+        _showErrorDialog('Please fill in all required fields');
+        return;
+      }
+
+      if (_ownerPasswordController.text != _confirmPasswordController.text) {
+        _showErrorDialog('Passwords do not match');
+        return;
+      }
+
+      if (_ownerPasswordController.text.length < 6) {
+        _showErrorDialog('Password must be at least 6 characters');
+        return;
+      }
+
+      // Register owner account
+      await _registerOwner();
+      if (_ownerId == null) return; // Registration failed
+    }
+
     if (_currentPage < _totalPages - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -96,47 +141,180 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
     }
   }
 
-  Future<void> _completeSetup() async {
-    final totalRooms = _getTotalRooms();
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AppDialog(
+        title: 'Error',
+        content: Text(message),
+        primaryButtonText: 'OK',
+      ),
+    );
+  }
 
-    // Build floor configurations
-    final floorConfigs = <FloorConfig>[];
-    for (int floor = 1; floor <= _totalFloors; floor++) {
-      final start = int.tryParse(_startRoomControllers[floor]?.text ?? '');
-      final end = int.tryParse(_endRoomControllers[floor]?.text ?? '');
-      if (start != null && end != null && end >= start) {
-        floorConfigs.add(
-          FloorConfig(floor: floor, startRoom: start, endRoom: end),
-        );
+  Future<void> _registerOwner() async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final authRepo = SupabaseAuthRepository();
+      final user = await authRepo.signUp(
+        email: _ownerEmailController.text.trim(),
+        password: _ownerPasswordController.text,
+        name: _ownerNameController.text.trim(),
+        phone: _ownerPhoneController.text.trim(),
+      );
+
+      setState(() {
+        _ownerId = user.id;
+      });
+
+      // Don't invalidate auth providers here - it causes router to redirect and lose state
+      // We'll invalidate after hotel creation is complete
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        _showErrorDialog('Registration failed: ${e.toString()}');
       }
     }
+  }
 
-    final hotel = Hotel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: _nameController.text,
-      address: _addressController.text,
-      phone: _phoneController.text.isEmpty ? null : _phoneController.text,
-      email: _emailController.text.isEmpty ? null : _emailController.text,
-      totalRooms: totalRooms,
-      totalFloors: _totalFloors,
-      floorConfigs: floorConfigs,
-      createdAt: DateTime.now(),
-      isSetupCompleted: true,
-    );
+  Future<void> _completeSetup() async {
+    if (_ownerId == null) {
+      _showErrorDialog('Owner registration required');
+      return;
+    }
 
-    final repo =
-        ref.read(hotelSetupRepositoryProvider) as LocalHotelSetupRepository;
-    await repo.addHotel(hotel);
-    await repo.saveRoomTypes(_roomTypes);
-    await repo.markSetupCompleted();
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
 
-    // Invalidate the setup provider to trigger router refresh
-    ref.invalidate(isSetupCompletedProvider);
-    ref.invalidate(currentHotelProvider);
+      // Build floor configurations for Supabase
+      final floorConfigs = <hotel_new.FloorConfig>[];
+      for (int floor = 1; floor <= _totalFloors; floor++) {
+        final start = int.tryParse(_startRoomControllers[floor]?.text ?? '');
+        final end = int.tryParse(_endRoomControllers[floor]?.text ?? '');
+        if (start != null && end != null && end >= start) {
+          floorConfigs.add(
+            hotel_new.FloorConfig(floor: floor, startRoom: start, endRoom: end),
+          );
+        }
+      }
 
-    if (mounted) {
-      // Navigate to login after setup is complete
-      context.go(AppRoutes.login);
+      // Create hotel in Supabase
+      final supabaseHotelRepo = SupabaseHotelSetupRepository();
+      final createdHotel = await supabaseHotelRepo.createHotel(
+        ownerId: _ownerId!,
+        name: _nameController.text.trim(),
+        address: _addressController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
+        email: _emailController.text.trim().isEmpty
+            ? null
+            : _emailController.text.trim(),
+        totalFloors: _totalFloors,
+        floorConfigs: floorConfigs,
+      );
+
+      // Create room types in Supabase
+      List<hotel_new.RoomType> createdRoomTypes = [];
+      if (_roomTypes.isNotEmpty) {
+        final roomTypesData = _roomTypes
+            .map(
+              (rt) => hotel_new.RoomType(
+                id: '', // Will be generated by DB
+                hotelId: createdHotel.id,
+                name: rt.name,
+                basePrice: rt.basePrice,
+                maxOccupancy: rt.maxOccupancy,
+                description: null,
+              ),
+            )
+            .toList();
+        await supabaseHotelRepo.createRoomTypes(
+          hotelId: createdHotel.id,
+          roomTypes: roomTypesData,
+        );
+        // Fetch created room types to get their IDs
+        createdRoomTypes = await supabaseHotelRepo.getRoomTypes(
+          createdHotel.id,
+        );
+      }
+
+      // Create rooms with floor configurations
+      // For now, assign all rooms to first room type or leave unassigned
+      final roomTypeAssignments = <String, String>{};
+      if (createdRoomTypes.isNotEmpty) {
+        final defaultRoomTypeId = createdRoomTypes.first.id;
+        for (final config in floorConfigs) {
+          for (
+            int roomNum = config.startRoom;
+            roomNum <= config.endRoom;
+            roomNum++
+          ) {
+            roomTypeAssignments[roomNum.toString()] = defaultRoomTypeId;
+          }
+        }
+      }
+
+      await supabaseHotelRepo.createRooms(
+        hotelId: createdHotel.id,
+        floorConfigs: floorConfigs,
+        roomTypeAssignments: roomTypeAssignments,
+      );
+
+      // Mark setup as complete
+      await supabaseHotelRepo.completeSetup(createdHotel.id);
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+
+        // Invalidate providers to refresh auth and hotel state
+        ref.invalidate(auth_new.currentUserProvider);
+        ref.invalidate(auth_new.userHotelsProvider);
+        ref.invalidate(auth_new.selectedHotelIdProvider);
+
+        // Set the hotel ID for the newly created hotel
+        ref.read(auth_new.selectedHotelIdProvider.notifier).state =
+            createdHotel.id;
+
+        // Wait for providers to update
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        // Show success message
+        await showDialog(
+          context: context,
+          builder: (context) => AppDialog(
+            title: 'Success!',
+            content: Text(
+              'Hotel "${_nameController.text}" has been created successfully!',
+            ),
+            primaryButtonText: 'Continue',
+          ),
+        );
+        if (mounted) {
+          // Navigate to home - user is already logged in with hotel selected
+          context.go(AppRoutes.home);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        _showErrorDialog('Failed to create hotel: ${e.toString()}');
+      }
     }
   }
 
@@ -144,6 +322,21 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: _currentPage == 0
+          ? AppBar(
+              backgroundColor: AppColors.background,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: AppColors.black),
+                onPressed: () => context.go(AppRoutes.welcome),
+                tooltip: 'Back to Welcome',
+              ),
+              title: const Text(
+                'Create New Hotel',
+                style: TextStyle(color: AppColors.black),
+              ),
+            )
+          : null,
       body: SafeArea(
         child: Column(
           children: [
@@ -170,6 +363,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
                   setState(() => _currentPage = page);
                 },
                 children: [
+                  _buildOwnerRegistrationPage(),
                   _buildHotelProfilePage(),
                   _buildFloorsRoomsPage(),
                   _buildRoomTypesPage(),
@@ -227,6 +421,100 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildOwnerRegistrationPage() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '👤 Owner Account',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Create your owner account to manage your hotel',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 32),
+          _buildTextField(
+            controller: _ownerNameController,
+            label: 'Full Name',
+            hint: 'Enter your full name',
+            icon: Icons.person,
+            required: true,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _ownerEmailController,
+            label: 'Email',
+            hint: 'Enter your email',
+            icon: Icons.email,
+            keyboardType: TextInputType.emailAddress,
+            required: true,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _ownerPhoneController,
+            label: 'Phone Number',
+            hint: 'Enter your phone number',
+            icon: Icons.phone,
+            keyboardType: TextInputType.phone,
+            required: true,
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _ownerPasswordController,
+            obscureText: !_isPasswordVisible,
+            decoration: InputDecoration(
+              labelText: 'Password *',
+              hintText: 'Enter password (min. 6 characters)',
+              prefixIcon: const Icon(Icons.lock),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _isPasswordVisible = !_isPasswordVisible;
+                  });
+                },
+              ),
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _confirmPasswordController,
+            obscureText: !_isConfirmPasswordVisible,
+            decoration: InputDecoration(
+              labelText: 'Confirm Password *',
+              hintText: 'Re-enter your password',
+              prefixIcon: const Icon(Icons.lock_outline),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _isConfirmPasswordVisible
+                      ? Icons.visibility_off
+                      : Icons.visibility,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                  });
+                },
+              ),
+              border: const OutlineInputBorder(),
+            ),
+          ),
+        ],
       ),
     );
   }
