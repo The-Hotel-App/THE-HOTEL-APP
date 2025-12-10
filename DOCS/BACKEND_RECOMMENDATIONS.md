@@ -16,9 +16,7 @@
 |---------|-----------|------|------|
 | **Supabase** | 50K MAU | Built-in RLS, PostgreSQL security, JWT tokens | Requires custom biometric flow implementation |
 | **Firebase** | 50K MAU | Mature SDKs, device-level biometric integration | No raw biometric storage (device-only) |
-| **AWS Amplify** | 50K MAU (Cognito) | Deep AWS integration, flexible IAM | Complex setup, steep learning curve |
-| **Appwrite** | 50K MAU | GDPR/CCPA compliant, custom token generation | Limited biometric documentation |
-| **PocketBase** | Unlimited (self-hosted) | Full control, no vendor lock-in | Manual implementation, no built-in support |
+| **AWS Cognito** | 50K MAU | Deep AWS integration, flexible IAM | Complex setup, steep learning curve |
 
 **✅ CHOICE: Supabase** - Best balance of security (RLS), free tier generosity, and developer experience
 
@@ -30,9 +28,7 @@
 |---------|-----------|------|------|
 | **Supabase** | 500MB, unlimited API | PostgreSQL RLS, real-time subscriptions, SQL power | SQL learning curve for NoSQL devs |
 | **Firebase** | 1GB, 50K reads/20K writes daily | Offline-first, automatic sync, mature ecosystem | NoSQL only, quota limits hit fast |
-| **AWS Amplify** | DynamoDB 25GB | Highly scalable, GraphQL subscriptions | Multi-service complexity, cost unpredictability |
-| **Appwrite** | 500MB | Built-in teams/permissions, unified API | 2 projects max on free tier |
-| **PocketBase** | Unlimited (self-hosted) | SQLite simplicity, embedded database | Single-server only, no horizontal scaling |
+| **AWS DynamoDB** | 25GB | Highly scalable, GraphQL subscriptions | Multi-service complexity, cost unpredictability |
 
 **✅ CHOICE: Supabase** - Database-level RLS enforcement, unlimited API requests, real-time built-in
 
@@ -44,9 +40,7 @@
 |---------|-----------|------|------|
 | **Supabase** | 1GB storage, 2GB bandwidth | S3-compatible, signed URLs, RLS integration | Limited bandwidth on free tier |
 | **Firebase** | ❌ Requires Blaze (paid) | Deep auth integration, CDN delivery | **NO FREE TIER** since Sept 2024 |
-| **AWS Amplify** | S3 credits | Unlimited scalability, granular IAM | Credits expire, complex pricing |
-| **Appwrite** | 1GB storage | Bucket-level permissions, simple API | Same storage limits as Supabase |
-| **PocketBase** | Unlimited (self-hosted) | No storage costs, full control | Manual backup/CDN setup required |
+| **AWS S3** | 5GB (12 months) | Unlimited scalability, granular IAM | Credits expire, complex pricing |
 
 **✅ CHOICE: Supabase** - Firebase eliminated (no free tier), Supabase offers best free option
 
@@ -58,9 +52,7 @@
 |---------|-----------|------|------|
 | **Firebase** | Unlimited FCM | Industry standard, unlimited free, topic-based | Requires separate FCM setup |
 | **Supabase** | Via FCM integration | Trigger from DB events, Edge Functions | Not built-in, requires FCM anyway |
-| **AWS Amplify** | 1M/month (SNS) | FIFO support, AWS integration | Charges after 1M, complex setup |
-| **Appwrite** | 1K/month free, unlimited on Pro | Built-in messaging, multi-channel (push/email/SMS) | Only 1K free messages |
-| **PocketBase** | ❌ None | N/A | Manual FCM integration required |
+| **AWS SNS** | 1M/month | FIFO support, AWS integration | Charges after 1M, complex setup |
 
 **✅ CHOICE: Firebase (FCM)** - Unlimited free, use with Supabase via Edge Functions
 
@@ -72,9 +64,7 @@
 |---------|-----------|------|------|
 | **Supabase** | Full RLS support | Database-enforced isolation, hotel_id filtering | Requires RLS policy design |
 | **Firebase** | Security Rules | Document-level isolation, role-based access | Rules complexity for nested logic |
-| **AWS Amplify** | IAM/Cognito | Fine-grained permissions, enterprise-grade | Steep learning curve |
-| **Appwrite** | Built-in Teams | Native team concept, automatic filtering | 2 projects limit on free tier |
-| **PocketBase** | Manual implementation | Full customization | No built-in multi-tenancy |
+| **AWS IAM/Cognito** | Included | Fine-grained permissions, enterprise-grade | Steep learning curve |
 
 **✅ CHOICE: Supabase** - Database-level RLS is most secure, prevents data leakage
 
@@ -82,17 +72,17 @@
 
 ## 📊 Overall Comparison
 
-| Feature | Supabase | Firebase | AWS Amplify | Appwrite | PocketBase |
-|---------|----------|----------|-------------|----------|------------|
-| **Auth** | ✅ 50K MAU | ✅ 50K MAU | ✅ 50K MAU | ✅ 50K MAU | ✅ Unlimited |
-| **Database** | ✅ 500MB | ⚠️ 1GB (quota limits) | ⚠️ Complex | ✅ 500MB | ✅ Unlimited |
-| **Storage** | ✅ 1GB | ❌ Paid only | ⚠️ Credits | ✅ 1GB | ✅ Unlimited |
-| **Push** | ⚠️ Via FCM | ✅ Unlimited | ⚠️ 1M/month | ⚠️ 1K/month | ❌ Manual |
-| **Real-time** | ✅ Built-in | ✅ Built-in | ✅ AppSync | ✅ Built-in | ✅ Built-in |
-| **RLS/Security** | ✅ PostgreSQL RLS | ✅ Security Rules | ⚠️ IAM | ✅ Teams | ⚠️ Manual |
-| **Scalability** | ✅ Excellent | ⚠️ Quota limits | ✅ Excellent | ⚠️ 2 projects | ❌ Single server |
-| **Complexity** | ⭐⭐ Medium | ⭐ Easy | ⭐⭐⭐⭐ Hard | ⭐⭐ Medium | ⭐⭐⭐ Medium-Hard |
-| **Free Tier** | ✅ Generous | ⚠️ Limited | ⚠️ Credits expire | ⚠️ 2 projects | ✅ Unlimited |
+| Feature | Supabase | Firebase | AWS |
+|---------|----------|----------|-----|
+| **Auth** | ✅ 50K MAU | ✅ 50K MAU | ✅ 50K MAU |
+| **Database** | ✅ 500MB | ⚠️ 1GB (quota limits) | ⚠️ Complex |
+| **Storage** | ✅ 1GB | ❌ Paid only | ⚠️ Credits |
+| **Push** | ⚠️ Via FCM | ✅ Unlimited | ⚠️ 1M/month |
+| **Real-time** | ✅ Built-in | ✅ Built-in | ✅ AppSync |
+| **RLS/Security** | ✅ PostgreSQL RLS | ✅ Security Rules | ⚠️ IAM |
+| **Scalability** | ✅ Excellent | ⚠️ Quota limits | ✅ Excellent |
+| **Complexity** | ⭐⭐ Medium | ⭐ Easy | ⭐⭐⭐⭐ Hard |
+| **Free Tier** | ✅ Generous | ⚠️ Limited | ⚠️ Credits expire |
 
 ---
 
@@ -189,9 +179,7 @@ USING (
 ## ⚠️ Why NOT Others?
 
 - **Firebase:** Storage no longer free, quota limits too restrictive
-- **AWS Amplify:** Too complex, credits expire, unpredictable costs
-- **Appwrite:** 2 projects limit kills dev/staging/prod workflow
-- **PocketBase:** No horizontal scaling, manual push notifications, DevOps overhead
+- **AWS:** Too complex, credits expire, unpredictable costs
 
 ---
 
