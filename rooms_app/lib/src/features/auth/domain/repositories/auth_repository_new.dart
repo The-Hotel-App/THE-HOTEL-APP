@@ -40,4 +40,20 @@ abstract class AuthRepository {
 
   /// Check if email already exists
   Future<bool> emailExists(String email);
+
+  /// Change current user's password
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
+
+  /// Create a staff account (owner only)
+  Future<void> createStaffAccount({
+    required String email,
+    required String password,
+    required String name,
+    String? phone,
+    required UserRole role,
+    required String hotelId,
+  });
 }

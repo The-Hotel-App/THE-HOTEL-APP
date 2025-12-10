@@ -1,22 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/pages/home_page.dart';
 import 'package:rooms/src/features/auth/presentation/pages/login_page.dart';
 import 'package:rooms/src/features/auth/presentation/pages/welcome_screen.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart'
     as auth_new;
+import 'package:rooms/src/features/bookings/presentation/pages/booking_search_page.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/bookings_page.dart';
 import 'package:rooms/src/features/checkin/presentation/pages/checkin_flow_page.dart';
 import 'package:rooms/src/features/checkout/presentation/pages/checkout_flow_page.dart';
 import 'package:rooms/src/features/customers/presentation/pages/customers_page.dart';
+import 'package:rooms/src/features/dashboards/presentation/pages/kitchen_dashboard_page.dart';
+import 'package:rooms/src/features/dashboards/presentation/pages/manager_dashboard_page.dart';
+import 'package:rooms/src/features/dashboards/presentation/pages/owner_dashboard_page.dart';
+import 'package:rooms/src/features/dashboards/presentation/pages/staff_dashboard_page.dart';
 import 'package:rooms/src/features/daybook/presentation/pages/daybook_page.dart';
 import 'package:rooms/src/features/hotel_setup/presentation/pages/hotel_setup_wizard_page.dart';
+import 'package:rooms/src/features/rooms/domain/entities/room.dart';
+import 'package:rooms/src/features/rooms/presentation/pages/rooms_management_page.dart';
+import 'package:rooms/src/features/rooms/presentation/pages/rooms_page.dart';
+import 'package:rooms/src/features/settings/presentation/pages/change_password_page.dart';
+import 'package:rooms/src/features/settings/presentation/pages/create_staff_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/hotel_settings_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/notifications_page.dart';
+import 'package:rooms/src/features/settings/presentation/pages/room_types_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/staff_page.dart';
-import 'package:rooms/src/features/rooms/domain/entities/room.dart';
-import 'package:rooms/src/features/rooms/presentation/pages/rooms_page.dart';
 
 /// Route paths
 class AppRoutes {
@@ -33,6 +43,16 @@ class AppRoutes {
   static const String staff = '/staff';
   static const String hotelSettings = '/hotel-settings';
   static const String notifications = '/notifications';
+  // New routes for role-based dashboards
+  static const String bookingSearch = '/booking-search';
+  static const String ownerDashboard = '/owner-dashboard';
+  static const String managerDashboard = '/manager-dashboard';
+  static const String staffDashboard = '/staff-dashboard';
+  static const String kitchenDashboard = '/kitchen-dashboard';
+  static const String changePassword = '/change-password';
+  static const String createStaff = '/create-staff';
+  static const String roomTypes = '/room-types';
+  static const String roomsManagement = '/rooms-management';
 }
 
 /// Refresh notifier for GoRouter
@@ -104,18 +124,34 @@ final routerProvider = Provider<GoRouter>((ref) {
           return null;
         }
 
-        // If user has hotel and is on welcome/login, redirect to home
+        // If user has hotel and is on welcome/login, redirect to role-based dashboard
         if (hasHotel && (isWelcomeRoute || isLoginRoute)) {
-          debugPrint('✅ Has hotel, redirecting to home');
-          return AppRoutes.home;
+          final role = selectedHotelAsync.role;
+          debugPrint('✅ Has hotel with role: $role, redirecting to dashboard');
+
+          switch (role) {
+            case UserRole.owner:
+              return AppRoutes.ownerDashboard;
+            case UserRole.manager:
+              return AppRoutes.managerDashboard;
+            case UserRole.staff:
+              return AppRoutes.staffDashboard;
+            case UserRole.kitchenManager:
+              return AppRoutes.kitchenDashboard;
+          }
         }
       }
 
       // If not authenticated and trying to access protected route
+      // Allow booking-search and checkin without authentication (for biometric verification later)
+      final isPublicRoute =
+          state.matchedLocation == AppRoutes.bookingSearch ||
+          state.matchedLocation == AppRoutes.checkin;
       if (!isAuthenticated &&
           !isWelcomeRoute &&
           !isLoginRoute &&
-          !isSetupRoute) {
+          !isSetupRoute &&
+          !isPublicRoute) {
         debugPrint('🚫 Not authenticated, redirecting to welcome');
         return AppRoutes.welcome;
       }
@@ -387,6 +423,151 @@ final routerProvider = Provider<GoRouter>((ref) {
               begin: begin,
               end: end,
             ).chain(CurveTween(curve: curve));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      // New routes for booking search and dashboards
+      GoRoute(
+        path: AppRoutes.bookingSearch,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const BookingSearchPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            final tween = Tween(
+              begin: begin,
+              end: end,
+            ).chain(CurveTween(curve: Curves.easeInOut));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerDashboard,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const OwnerDashboardPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.managerDashboard,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const ManagerDashboardPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.staffDashboard,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const StaffDashboardPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.kitchenDashboard,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const KitchenDashboardPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.changePassword,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const ChangePasswordPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            final tween = Tween(
+              begin: begin,
+              end: end,
+            ).chain(CurveTween(curve: Curves.easeInOut));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.createStaff,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const CreateStaffPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            final tween = Tween(
+              begin: begin,
+              end: end,
+            ).chain(CurveTween(curve: Curves.easeInOut));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.roomTypes,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const RoomTypesPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            final tween = Tween(
+              begin: begin,
+              end: end,
+            ).chain(CurveTween(curve: Curves.easeInOut));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.roomsManagement,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const RoomsManagementPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            final tween = Tween(
+              begin: begin,
+              end: end,
+            ).chain(CurveTween(curve: Curves.easeInOut));
             return SlideTransition(
               position: animation.drive(tween),
               child: child,

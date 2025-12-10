@@ -293,7 +293,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
 
         // Wait for providers to update
         await Future.delayed(const Duration(milliseconds: 100));
-
+        if (!mounted) return;
         // Show success message
         await showDialog(
           context: context,
