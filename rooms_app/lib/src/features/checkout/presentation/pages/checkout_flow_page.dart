@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/features/auth/presentation/providers/auth_providers.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
 
@@ -27,6 +28,8 @@ class _CheckoutFlowPageState extends ConsumerState<CheckoutFlowPage> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = ref.watch(currentUserProvider).valueOrNull;
+    final canViewMoney = currentUser?.role.canViewMoneyDetails ?? false;
     return Scaffold(
       backgroundColor: AppColors.grey100,
       appBar: AppBar(
@@ -50,8 +53,10 @@ class _CheckoutFlowPageState extends ConsumerState<CheckoutFlowPage> {
           children: [
             _buildRoomCard(),
             const SizedBox(height: 24),
-            _buildAdditionalCharges(),
-            const SizedBox(height: 24),
+            if (canViewMoney) ...[
+              _buildAdditionalCharges(),
+              const SizedBox(height: 24),
+            ],
             _buildRoomStatusSelector(),
             const SizedBox(height: 32),
             _buildCheckoutButton(),

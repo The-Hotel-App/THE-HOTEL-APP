@@ -38,6 +38,10 @@ enum UserRole {
   bool get canEditPastDayBook {
     return this == UserRole.owner;
   }
+
+  bool get canViewMoneyDetails {
+    return this == UserRole.owner;
+  }
 }
 
 /// User entity

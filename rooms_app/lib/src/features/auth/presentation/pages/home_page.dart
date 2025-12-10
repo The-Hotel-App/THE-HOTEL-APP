@@ -7,8 +7,6 @@ import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/features/auth/domain/entities/user.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers.dart';
 import 'package:rooms/src/features/hotel_setup/presentation/providers/setup_providers.dart';
-import 'package:rooms/src/features/rooms/domain/entities/room.dart';
-import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -17,7 +15,6 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider).valueOrNull;
     final hotel = ref.watch(currentHotelProvider).valueOrNull;
-    final roomsAsync = ref.watch(roomsProvider);
 
     // Get role for conditional UI
     final role = currentUser?.role ?? UserRole.staff;
@@ -59,14 +56,6 @@ class HomePage extends ConsumerWidget {
             // Welcome Card with Role Badge
             _buildWelcomeCard(context, currentUser),
             const SizedBox(height: 20),
-
-            // Room Status Summary (Color-coded for quick glance)
-            roomsAsync.when(
-              data: (rooms) => _buildRoomStatusSummary(context, rooms),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, _) => const SizedBox.shrink(),
-            ),
-            const SizedBox(height: 24),
 
             // Quick Actions - Color coded, large icons for illiterate users
             _buildSectionTitle(context, 'Quick Actions', Icons.flash_on),
@@ -166,114 +155,6 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildRoomStatusSummary(BuildContext context, List<Room> rooms) {
-    final freeCount = rooms.where((r) => r.status == RoomStatus.free).length;
-    final occupiedCount = rooms
-        .where((r) => r.status == RoomStatus.occupied)
-        .length;
-    final cleaningCount = rooms
-        .where((r) => r.status == RoomStatus.cleaning)
-        .length;
-    final maintenanceCount = rooms
-        .where((r) => r.status == RoomStatus.maintenance)
-        .length;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.hotel, color: AppColors.black),
-              const SizedBox(width: 8),
-              const Text(
-                'Room Status',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              _buildStatusChip(
-                icon: Icons.check_circle,
-                label: '$freeCount',
-                sublabel: 'Free',
-                color: AppColors.roomFree,
-              ),
-              _buildStatusChip(
-                icon: Icons.hotel,
-                label: '$occupiedCount',
-                sublabel: 'Occupied',
-                color: AppColors.roomOccupied,
-              ),
-              _buildStatusChip(
-                icon: Icons.cleaning_services,
-                label: '$cleaningCount',
-                sublabel: 'Cleaning',
-                color: AppColors.roomCleaning,
-              ),
-              _buildStatusChip(
-                icon: Icons.build,
-                label: '$maintenanceCount',
-                sublabel: 'Repair',
-                color: AppColors.grey600,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusChip({
-    required IconData icon,
-    required String label,
-    required String sublabel,
-    required Color color,
-  }) {
-    return Expanded(
-      child: Column(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 28),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(
-            sublabel,
-            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSectionTitle(BuildContext context, String title, IconData icon) {
     return Row(
       children: [
@@ -308,33 +189,6 @@ class HomePage extends ConsumerWidget {
           color: AppColors.black,
           onTap: () => context.push(AppRoutes.rooms),
         ),
-        // CHECK-IN - Green (Free room action)
-        _buildActionCard(
-          context,
-          icon: Icons.login,
-          label: 'Check In',
-          color: AppColors.roomFree,
-          onTap: () =>
-              context.push(AppRoutes.rooms), // Will filter to free rooms
-        ),
-        // CHECK-OUT - Red (Occupied room action)
-        _buildActionCard(
-          context,
-          icon: Icons.logout,
-          label: 'Check Out',
-          color: AppColors.roomOccupied,
-          onTap: () =>
-              context.push(AppRoutes.rooms), // Will filter to occupied rooms
-        ),
-        // CLEANING - Orange
-        _buildActionCard(
-          context,
-          icon: Icons.cleaning_services,
-          label: 'Cleaning',
-          color: AppColors.roomCleaning,
-          onTap: () =>
-              context.push(AppRoutes.rooms), // Will filter to cleaning rooms
-        ),
       ],
     );
   }
@@ -368,14 +222,16 @@ class HomePage extends ConsumerWidget {
           onTap: () => context.push(AppRoutes.customers),
           compact: true,
         ),
-        _buildActionCard(
-          context,
-          icon: Icons.menu_book,
-          label: 'Day Book',
-          color: AppColors.warning,
-          onTap: () => context.push(AppRoutes.daybook),
-          compact: true,
-        ),
+        // Day Book - Owner only (money-related)
+        if (role == UserRole.owner)
+          _buildActionCard(
+            context,
+            icon: Icons.menu_book,
+            label: 'Day Book',
+            color: AppColors.warning,
+            onTap: () => context.push(AppRoutes.daybook),
+            compact: true,
+          ),
       ],
     );
   }

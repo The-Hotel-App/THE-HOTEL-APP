@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
-import 'package:rooms/src/core/widgets/app_dialog.dart';
+import 'package:rooms/src/features/auth/domain/entities/user.dart';
+import 'package:rooms/src/features/auth/presentation/providers/auth_providers.dart';
 import 'package:rooms/src/features/hotel_setup/presentation/providers/setup_providers.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
@@ -177,13 +178,13 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
 
   Widget _buildRoomsView(List<Room> allRooms) {
     final selectedFloor = ref.watch(selectedFloorProvider);
-    final selectedStatus = ref.watch(selectedStatusFilterProvider);
+    final selectedStatuses = ref.watch(selectedStatusFilterProvider);
 
     var floorRooms = allRooms.where((r) => r.floor == selectedFloor).toList();
     var filteredRooms = floorRooms;
-    if (selectedStatus != null) {
+    if (selectedStatuses.isNotEmpty) {
       filteredRooms = filteredRooms
-          .where((r) => r.status == selectedStatus)
+          .where((r) => selectedStatuses.contains(r.status))
           .toList();
     }
 
@@ -209,18 +210,78 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
             padding: const EdgeInsets.only(bottom: 12),
             child: Row(
               children: [
-                if (selectedStatus != null) ...[
-                  Chip(
-                    label: Text(selectedStatus.displayName),
-                    onDeleted: () {
-                      ref.read(selectedStatusFilterProvider.notifier).state =
-                          null;
-                    },
-                    backgroundColor: Colors.white,
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        ...selectedStatuses.map((status) {
+                          final statusColor = RoomStatusColors.getColor(
+                            status.name,
+                          );
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.15),
+                                border: Border.all(color: statusColor),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: statusColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    status.displayName,
+                                    style: TextStyle(
+                                      color: statusColor,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  GestureDetector(
+                                    onTap: () {
+                                      final updated = Set<RoomStatus>.from(
+                                        selectedStatuses,
+                                      );
+                                      updated.remove(status);
+                                      ref
+                                              .read(
+                                                selectedStatusFilterProvider
+                                                    .notifier,
+                                              )
+                                              .state =
+                                          updated;
+                                    },
+                                    child: Icon(
+                                      Icons.close,
+                                      size: 14,
+                                      color: statusColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                ],
-                const Spacer(),
+                ),
+                const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.filter_list),
                   onPressed: _showStatusFilterDialog,
@@ -388,7 +449,7 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
-              ref.read(selectedStatusFilterProvider.notifier).state = null;
+              ref.read(selectedStatusFilterProvider.notifier).state = {};
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.black,
@@ -402,31 +463,7 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
   }
 
   void _showStatusFilterDialog() {
-    AppDialog.show(
-      context: context,
-      title: 'Filter by Status',
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            title: const Text('All Statuses'),
-            onTap: () {
-              ref.read(selectedStatusFilterProvider.notifier).state = null;
-              Navigator.pop(context);
-            },
-          ),
-          ...RoomStatus.values.map((status) {
-            return ListTile(
-              title: Text(status.displayName),
-              onTap: () {
-                ref.read(selectedStatusFilterProvider.notifier).state = status;
-                Navigator.pop(context);
-              },
-            );
-          }),
-        ],
-      ),
-    );
+    showDialog(context: context, builder: (context) => _StatusFilterDialog());
   }
 
   void _showRoomDetails(Room room) {
@@ -447,6 +484,8 @@ class _RoomDetailsSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statusColor = RoomStatusColors.getColor(room.status.name);
+    final currentUser = ref.watch(currentUserProvider).valueOrNull;
+    final canViewMoney = currentUser?.role.canViewMoneyDetails ?? false;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
@@ -532,11 +571,12 @@ class _RoomDetailsSheet extends ConsumerWidget {
               padding: const EdgeInsets.all(24),
               children: [
                 _buildDetailRow(Icons.layers, 'Floor', room.floor),
-                _buildDetailRow(
-                  Icons.currency_rupee,
-                  'Price/Night',
-                  '₹${room.pricePerNight.toStringAsFixed(0)}',
-                ),
+                if (canViewMoney)
+                  _buildDetailRow(
+                    Icons.currency_rupee,
+                    'Price/Night',
+                    '₹${room.pricePerNight.toStringAsFixed(0)}',
+                  ),
                 _buildDetailRow(
                   Icons.people,
                   'Max Occupancy',
@@ -665,38 +705,57 @@ class _RoomDetailsSheet extends ConsumerWidget {
   }
 
   Widget _buildQuickStatusButtons(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider).valueOrNull;
+    final isStaff = currentUser?.role == UserRole.staff;
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: RoomStatus.values.where((s) => s != room.status).map((status) {
-        final color = RoomStatusColors.getColor(status.name);
-        return InkWell(
-          onTap: () async {
-            await _updateRoomStatus(ref, room.id, status);
-            if (context.mounted) Navigator.pop(context);
-          },
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
+      children: RoomStatus.values
+          .where((s) => s != room.status)
+          .where((s) {
+            // Staff can only change to Cleaning or Free
+            if (isStaff) {
+              return s == RoomStatus.cleaning || s == RoomStatus.free;
+            }
+            return true;
+          })
+          .map((status) {
+            final color = RoomStatusColors.getColor(status.name);
+            return InkWell(
+              onTap: () async {
+                await _updateRoomStatus(ref, room.id, status);
+                if (context.mounted) Navigator.pop(context);
+              },
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: color),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(_getStatusIcon(status), size: 18, color: color),
-                const SizedBox(width: 6),
-                Text(
-                  status.displayName,
-                  style: TextStyle(color: color, fontWeight: FontWeight.w600),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
                 ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: color),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_getStatusIcon(status), size: 18, color: color),
+                    const SizedBox(width: 6),
+                    Text(
+                      status.displayName,
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          })
+          .toList(),
     );
   }
 
@@ -767,5 +826,124 @@ class _RoomDetailsSheet extends ConsumerWidget {
       case RoomStatus.outOfService:
         return Icons.block;
     }
+  }
+}
+
+class _StatusFilterDialog extends ConsumerStatefulWidget {
+  const _StatusFilterDialog();
+
+  @override
+  ConsumerState<_StatusFilterDialog> createState() =>
+      _StatusFilterDialogState();
+}
+
+class _StatusFilterDialogState extends ConsumerState<_StatusFilterDialog> {
+  late Set<RoomStatus> localSelected;
+
+  @override
+  void initState() {
+    super.initState();
+    localSelected = Set.from(ref.read(selectedStatusFilterProvider));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Filter by Status',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          // Filter options
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                ...RoomStatus.values.map((status) {
+                  final isSelected = localSelected.contains(status);
+                  final statusColor = RoomStatusColors.getColor(status.name);
+                  return CheckboxListTile(
+                    value: isSelected,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        if (value == true) {
+                          localSelected.add(status);
+                        } else {
+                          localSelected.remove(status);
+                        }
+                      });
+                    },
+                    title: Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: statusColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(status.displayName),
+                      ],
+                    ),
+                    activeColor: statusColor,
+                  );
+                }),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          // Action buttons
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() => localSelected.clear());
+                    },
+                    child: const Text('Clear All'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.black,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () {
+                      ref.read(selectedStatusFilterProvider.notifier).state =
+                          localSelected;
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Apply'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

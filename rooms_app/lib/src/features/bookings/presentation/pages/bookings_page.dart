@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/features/auth/presentation/providers/auth_providers.dart';
 import 'package:rooms/src/features/bookings/domain/entities/booking.dart';
 import 'package:rooms/src/features/bookings/presentation/providers/booking_providers.dart';
 
@@ -11,6 +12,8 @@ class BookingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bookingsAsync = ref.watch(bookingsProvider);
+    final currentUser = ref.watch(currentUserProvider).valueOrNull;
+    final canViewMoney = currentUser?.role.canViewMoneyDetails ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.grey100,
@@ -30,14 +33,18 @@ class BookingsPage extends ConsumerWidget {
         ),
       ),
       body: bookingsAsync.when(
-        data: (bookings) => _buildBookingsList(context, bookings),
+        data: (bookings) => _buildBookingsList(context, bookings, canViewMoney),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
   }
 
-  Widget _buildBookingsList(BuildContext context, List<Booking> bookings) {
+  Widget _buildBookingsList(
+    BuildContext context,
+    List<Booking> bookings,
+    bool canViewMoney,
+  ) {
     if (bookings.isEmpty) {
       return Center(
         child: Column(
@@ -79,7 +86,9 @@ class BookingsPage extends ConsumerWidget {
             AppColors.roomOccupied,
             activeBookings.length,
           ),
-          ...activeBookings.map((b) => _buildBookingCard(context, b)),
+          ...activeBookings.map(
+            (b) => _buildBookingCard(context, b, canViewMoney),
+          ),
           const SizedBox(height: 16),
         ],
         if (confirmedBookings.isNotEmpty) ...[
@@ -89,7 +98,9 @@ class BookingsPage extends ConsumerWidget {
             AppColors.info,
             confirmedBookings.length,
           ),
-          ...confirmedBookings.map((b) => _buildBookingCard(context, b)),
+          ...confirmedBookings.map(
+            (b) => _buildBookingCard(context, b, canViewMoney),
+          ),
           const SizedBox(height: 16),
         ],
         if (pastBookings.isNotEmpty) ...[
@@ -99,7 +110,9 @@ class BookingsPage extends ConsumerWidget {
             AppColors.grey600,
             pastBookings.length,
           ),
-          ...pastBookings.map((b) => _buildBookingCard(context, b)),
+          ...pastBookings.map(
+            (b) => _buildBookingCard(context, b, canViewMoney),
+          ),
         ],
       ],
     );
@@ -142,7 +155,11 @@ class BookingsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildBookingCard(BuildContext context, Booking booking) {
+  Widget _buildBookingCard(
+    BuildContext context,
+    Booking booking,
+    bool canViewMoney,
+  ) {
     final statusColor = _getStatusColor(booking.status);
     final paymentColor = _getPaymentColor(booking.paymentStatus);
 
@@ -161,7 +178,7 @@ class BookingsPage extends ConsumerWidget {
         ],
       ),
       child: InkWell(
-        onTap: () => _showBookingDetails(context, booking),
+        onTap: () => _showBookingDetails(context, booking, canViewMoney),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -259,37 +276,38 @@ class BookingsPage extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  // Payment status
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: paymentColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.currency_rupee,
-                          size: 12,
-                          color: paymentColor,
-                        ),
-                        Text(
-                          booking.isFullyPaid
-                              ? 'Paid'
-                              : '₹${booking.pendingAmount.toStringAsFixed(0)} due',
-                          style: TextStyle(
+                  // Payment status (Owner only)
+                  if (canViewMoney)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: paymentColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.currency_rupee,
+                            size: 12,
                             color: paymentColor,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
                           ),
-                        ),
-                      ],
+                          Text(
+                            booking.isFullyPaid
+                                ? 'Paid'
+                                : '₹${booking.pendingAmount.toStringAsFixed(0)} due',
+                            style: TextStyle(
+                              color: paymentColor,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                 ],
               ),
             ],
@@ -299,7 +317,11 @@ class BookingsPage extends ConsumerWidget {
     );
   }
 
-  void _showBookingDetails(BuildContext context, Booking booking) {
+  void _showBookingDetails(
+    BuildContext context,
+    Booking booking,
+    bool canViewMoney,
+  ) {
     final statusColor = _getStatusColor(booking.status);
     showModalBottomSheet(
       context: context,
@@ -400,23 +422,25 @@ class BookingsPage extends ConsumerWidget {
                     'Guests',
                     '${booking.guestCount}',
                   ),
-                  const Divider(height: 32),
-                  _buildDetailRow(
-                    Icons.currency_rupee,
-                    'Total',
-                    '₹${booking.totalAmount.toStringAsFixed(0)}',
-                  ),
-                  _buildDetailRow(
-                    Icons.check_circle,
-                    'Paid',
-                    '₹${booking.paidAmount.toStringAsFixed(0)}',
-                  ),
-                  if (!booking.isFullyPaid)
+                  if (canViewMoney) ...[
+                    const Divider(height: 32),
                     _buildDetailRow(
-                      Icons.warning,
-                      'Pending',
-                      '₹${booking.pendingAmount.toStringAsFixed(0)}',
+                      Icons.currency_rupee,
+                      'Total',
+                      '₹${booking.totalAmount.toStringAsFixed(0)}',
                     ),
+                    _buildDetailRow(
+                      Icons.check_circle,
+                      'Paid',
+                      '₹${booking.paidAmount.toStringAsFixed(0)}',
+                    ),
+                    if (!booking.isFullyPaid)
+                      _buildDetailRow(
+                        Icons.warning,
+                        'Pending',
+                        '₹${booking.pendingAmount.toStringAsFixed(0)}',
+                      ),
+                  ],
                 ],
               ),
             ),
