@@ -228,7 +228,44 @@ All data separated by `hotel_id`.
 
 ---
 
-## 8. Future Enhancements (Not in MVP)
+## 8. MVP Implementation Timeline
+
+### Week 1: User & Lodge Setup
+- User registration and login flow
+- Biometric enrollment for users
+- Lodge/Hotel configuration by owner
+  - Hotel name, address, contact
+  - Number of floors
+  - Room types and ranges per floor
+- Database initialization per hotel
+- Basic role assignment (Owner, Manager, Staff)
+
+### Week 2: Customer Documentation & Booking
+- Customer onboarding workflow (≤20 seconds)
+- Government ID scanning with OCR
+- Biometric confirmation for check-in
+- Reservation and booking creation
+- Reservation notifications to owner
+- Payment recording on check-in
+
+### Week 3: Room Operations & Notifications
+- Room swap / upgrade functionality with payment adjustments
+- Room rating / feedback system
+- Housekeeping notifications for cleaning/maintenance
+- Emergency button (owner receives immediate notification)
+- Maintenance workflow with biometric verification
+- Real-time room status updates
+
+### Week 4: Customization & Polish
+- Hotel settings customization
+- Day-Book configuration
+- Notification preferences per role
+- UI/UX refinements based on feedback
+- Performance optimization
+
+---
+
+## 9. Future Enhancements (Post-MVP)
 
 - Multi-hotel staff roles (same staff in multiple hotels)
 - Guest special requests / alerts
@@ -242,7 +279,7 @@ All data separated by `hotel_id`.
 
 ---
 
-## 9. Constraints & Risks
+## 10. Constraints & Risks
 
 - Handling biometric templates must follow strong security best practices
 - All fingerprint operations must be **device-side**

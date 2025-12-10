@@ -1,3 +1,18 @@
+/// Floor configuration with room range
+class FloorConfig {
+  final int floor;
+  final int startRoom;
+  final int endRoom;
+
+  const FloorConfig({
+    required this.floor,
+    required this.startRoom,
+    required this.endRoom,
+  });
+
+  int get roomCount => endRoom - startRoom + 1;
+}
+
 /// Hotel entity
 class Hotel {
   final String id;
@@ -7,6 +22,7 @@ class Hotel {
   final String? email;
   final int totalRooms;
   final int totalFloors;
+  final List<FloorConfig>? floorConfigs;
   final DateTime createdAt;
   final bool isSetupCompleted;
 
@@ -18,6 +34,7 @@ class Hotel {
     this.email,
     required this.totalRooms,
     required this.totalFloors,
+    this.floorConfigs,
     required this.createdAt,
     this.isSetupCompleted = false,
   });
@@ -30,6 +47,7 @@ class Hotel {
     String? email,
     int? totalRooms,
     int? totalFloors,
+    List<FloorConfig>? floorConfigs,
     DateTime? createdAt,
     bool? isSetupCompleted,
   }) {
@@ -41,6 +59,7 @@ class Hotel {
       email: email ?? this.email,
       totalRooms: totalRooms ?? this.totalRooms,
       totalFloors: totalFloors ?? this.totalFloors,
+      floorConfigs: floorConfigs ?? this.floorConfigs,
       createdAt: createdAt ?? this.createdAt,
       isSetupCompleted: isSetupCompleted ?? this.isSetupCompleted,
     );

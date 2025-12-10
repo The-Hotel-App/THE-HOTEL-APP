@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/features/auth/domain/entities/user.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers.dart';
 import 'package:rooms/src/features/hotel_setup/presentation/providers/setup_providers.dart';
@@ -33,9 +34,8 @@ class HomePage extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              final authRepo = ref.read(authRepositoryProvider);
-              await authRepo.logout();
+            onPressed: () {
+              _showSignOutConfirmation(context, ref);
             },
           ),
         ],
@@ -154,6 +154,23 @@ class HomePage extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  void _showSignOutConfirmation(BuildContext context, WidgetRef ref) {
+    AppDialog.show(
+      context: context,
+      title: 'Sign Out?',
+      content: const Text(
+        'Are you sure you want to sign out?',
+      ),
+      secondaryButtonText: 'Cancel',
+      primaryButtonText: 'Sign Out',
+      onPrimaryPressed: () async {
+        Navigator.of(context).pop();
+        final authRepo = ref.read(authRepositoryProvider);
+        await authRepo.logout();
+      },
     );
   }
 

@@ -137,8 +137,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ...allHotels.map(
                 (hotel) => ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: AppColors.accent,
-                    child: Icon(Icons.hotel, color: AppColors.black),
+                    backgroundColor: AppColors.black,
+                    child: Icon(Icons.hotel, color: AppColors.white),
                   ),
                   title: Text(hotel.name),
                   subtitle: Text(hotel.address),
@@ -221,7 +221,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         icon: Icon(Icons.swap_horiz, size: 16),
                         label: Text('Switch Hotel'),
                         style: TextButton.styleFrom(
-                          foregroundColor: AppColors.accent,
+                          foregroundColor: AppColors.white,
                         ),
                       ),
                     const SizedBox(height: 8),
@@ -370,7 +370,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               Icon(
                                 Icons.info_outline,
                                 size: 20,
-                                color: AppColors.accent,
+                                color: AppColors.white,
                               ),
                               const SizedBox(width: 8),
                               const Text(

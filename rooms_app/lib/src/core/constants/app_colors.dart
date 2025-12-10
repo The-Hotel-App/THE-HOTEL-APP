@@ -8,7 +8,7 @@ class AppColors {
   static const Color primary = Color(0xFF000000); // Black
   static const Color primaryDark = Color(0xFF1A1A1A);
   static const Color primaryLight = Color(0xFF333333);
-  static const Color accent = Color(0xFFE4D96F); // Yellow accent (minimal use)
+  static const Color accent = Color(0xFFFFFFFF); // White accent
 
   // Room Status Colors (High Contrast)
   static const Color roomFree = Color(0xFF4CAF50); // Green

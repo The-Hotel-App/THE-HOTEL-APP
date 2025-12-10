@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/features/hotel_setup/data/repositories/local_hotel_setup_repository.dart';
 import 'package:rooms/src/features/hotel_setup/domain/entities/hotel.dart';
 import 'package:rooms/src/features/hotel_setup/presentation/providers/setup_providers.dart';
@@ -28,7 +29,14 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
 
   // Step 2: Floors & Rooms
   int _totalFloors = 1;
-  final Map<int, int> _roomsPerFloor = {1: 10};
+  final Map<int, TextEditingController> _startRoomControllers = {
+    1: TextEditingController(text: '101'),
+  };
+  final Map<int, TextEditingController> _endRoomControllers = {
+    1: TextEditingController(text: '110'),
+  };
+  final Map<int, FocusNode> _startRoomFocusNodes = {1: FocusNode()};
+  final Map<int, FocusNode> _endRoomFocusNodes = {1: FocusNode()};
 
   // Step 3: Room Types
   final List<RoomType> _roomTypes = [];
@@ -40,7 +48,34 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
     _addressController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
+    for (var c in _startRoomControllers.values) {
+      c.dispose();
+    }
+    for (var c in _endRoomControllers.values) {
+      c.dispose();
+    }
+    for (var f in _startRoomFocusNodes.values) {
+      f.dispose();
+    }
+    for (var f in _endRoomFocusNodes.values) {
+      f.dispose();
+    }
     super.dispose();
+  }
+
+  int _getRoomCount(int floor) {
+    final start = int.tryParse(_startRoomControllers[floor]?.text ?? '');
+    final end = int.tryParse(_endRoomControllers[floor]?.text ?? '');
+    if (start == null || end == null || end < start) return 0;
+    return end - start + 1;
+  }
+
+  int _getTotalRooms() {
+    int total = 0;
+    for (int i = 1; i <= _totalFloors; i++) {
+      total += _getRoomCount(i);
+    }
+    return total;
   }
 
   void _nextPage() {
@@ -62,7 +97,19 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
   }
 
   Future<void> _completeSetup() async {
-    final totalRooms = _roomsPerFloor.values.reduce((a, b) => a + b);
+    final totalRooms = _getTotalRooms();
+
+    // Build floor configurations
+    final floorConfigs = <FloorConfig>[];
+    for (int floor = 1; floor <= _totalFloors; floor++) {
+      final start = int.tryParse(_startRoomControllers[floor]?.text ?? '');
+      final end = int.tryParse(_endRoomControllers[floor]?.text ?? '');
+      if (start != null && end != null && end >= start) {
+        floorConfigs.add(
+          FloorConfig(floor: floor, startRoom: start, endRoom: end),
+        );
+      }
+    }
 
     final hotel = Hotel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -72,6 +119,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       email: _emailController.text.isEmpty ? null : _emailController.text,
       totalRooms: totalRooms,
       totalFloors: _totalFloors,
+      floorConfigs: floorConfigs,
       createdAt: DateTime.now(),
       isSetupCompleted: true,
     );
@@ -241,80 +289,239 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
   }
 
   Widget _buildFloorsRoomsPage() {
+    final totalRooms = _getTotalRooms();
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '🏢 Floors & Rooms',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '🏢 Floors & Rooms',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Define room ranges for each floor',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (totalRooms > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.black,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$totalRooms rooms',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: AppColors.white,
+                    ),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Configure your hotel structure',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
           _buildNumberSelector(
             label: 'Total Floors',
             value: _totalFloors,
             onChanged: (val) {
               setState(() {
+                final oldFloors = _totalFloors;
                 _totalFloors = val;
-                // Adjust rooms per floor map
-                for (int i = 1; i <= _totalFloors; i++) {
-                  _roomsPerFloor.putIfAbsent(i, () => 10);
+
+                // Add controllers for new floors
+                for (int i = oldFloors + 1; i <= _totalFloors; i++) {
+                  final floorPrefix = i * 100;
+                  _startRoomControllers[i] = TextEditingController(
+                    text: '${floorPrefix + 1}',
+                  );
+                  _endRoomControllers[i] = TextEditingController(
+                    text: '${floorPrefix + 10}',
+                  );
+                  _startRoomFocusNodes[i] = FocusNode();
+                  _endRoomFocusNodes[i] = FocusNode();
                 }
-                _roomsPerFloor.removeWhere((key, value) => key > _totalFloors);
+
+                // Remove controllers for removed floors
+                for (int i = _totalFloors + 1; i <= oldFloors; i++) {
+                  _startRoomControllers[i]?.dispose();
+                  _endRoomControllers[i]?.dispose();
+                  _startRoomFocusNodes[i]?.dispose();
+                  _endRoomFocusNodes[i]?.dispose();
+                  _startRoomControllers.remove(i);
+                  _endRoomControllers.remove(i);
+                  _startRoomFocusNodes.remove(i);
+                  _endRoomFocusNodes.remove(i);
+                }
               });
             },
             min: 1,
             max: 20,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           ...List.generate(_totalFloors, (index) {
             final floor = index + 1;
             return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: _buildNumberSelector(
-                label: 'Floor $floor - Number of Rooms',
-                value: _roomsPerFloor[floor] ?? 10,
-                onChanged: (val) {
-                  setState(() {
-                    _roomsPerFloor[floor] = val;
-                  });
-                },
-                min: 1,
-                max: 50,
-              ),
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildFloorRangeInput(floor),
             );
           }),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary),
+        ],
+      ),
+    );
+  }
+
+  String _getDefaultStartRoom(int floor) => '${floor * 100 + 1}';
+  String _getDefaultEndRoom(int floor) => '${floor * 100 + 10}';
+
+  void _validateAndRestoreDefaults(int floor) {
+    final startController = _startRoomControllers[floor];
+    final endController = _endRoomControllers[floor];
+
+    if (startController == null || endController == null) return;
+
+    final startText = startController.text.trim();
+    final endText = endController.text.trim();
+
+    // If both are empty, restore defaults
+    if (startText.isEmpty && endText.isEmpty) {
+      startController.text = _getDefaultStartRoom(floor);
+      endController.text = _getDefaultEndRoom(floor);
+      return;
+    }
+
+    // Parse values
+    final start = int.tryParse(startText);
+    final end = int.tryParse(endText);
+
+    // Validation: both must be valid numbers
+    if (start == null || end == null) {
+      startController.text = _getDefaultStartRoom(floor);
+      endController.text = _getDefaultEndRoom(floor);
+      return;
+    }
+
+    // Validation: end must be >= start
+    if (end < start) {
+      endController.text = _getDefaultEndRoom(floor);
+      return;
+    }
+
+    // Validation: range should be reasonable (1-9999)
+    if (start < 1 || end > 9999) {
+      startController.text = _getDefaultStartRoom(floor);
+      endController.text = _getDefaultEndRoom(floor);
+      return;
+    }
+
+    setState(() {});
+  }
+
+  Widget _buildFloorRangeInput(int floor) {
+    final roomCount = _getRoomCount(floor);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.grey300),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 60,
+            child: Text(
+              'Floor $floor',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
             ),
+          ),
+          Expanded(
             child: Row(
               children: [
-                const Icon(Icons.info_outline, color: AppColors.black),
-                const SizedBox(width: 12),
                 Expanded(
+                  child: TextField(
+                    controller: _startRoomControllers[floor],
+                    focusNode: _startRoomFocusNodes[floor],
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      hintText: _getDefaultStartRoom(floor),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                    onSubmitted: (_) => _validateAndRestoreDefaults(floor),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
                   child: Text(
-                    'Total Rooms: ${_roomsPerFloor.values.isEmpty ? 0 : _roomsPerFloor.values.reduce((a, b) => a + b)}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                    '—',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ),
+                Expanded(
+                  child: TextField(
+                    controller: _endRoomControllers[floor],
+                    focusNode: _endRoomFocusNodes[floor],
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      hintText: _getDefaultEndRoom(floor),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                    onSubmitted: (_) => _validateAndRestoreDefaults(floor),
+                  ),
+                ),
               ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 65,
+            child: Text(
+              '$roomCount rooms',
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
         ],
@@ -377,11 +584,11 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.black,
                     child: Text(
                       '${index + 1}',
                       style: const TextStyle(
-                        color: AppColors.black,
+                        color: AppColors.white,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -468,29 +675,50 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
             ),
           ),
-          IconButton(
-            onPressed: value > min ? () => onChanged(value - 1) : null,
-            icon: const Icon(Icons.remove_circle_outline),
-            color: AppColors.black,
-          ),
+          const SizedBox(width: 16),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.2),
+              border: Border.all(color: AppColors.grey300),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(
-              '$value',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: value > min ? () => onChanged(value - 1) : null,
+                    icon: const Icon(Icons.remove, size: 20),
+                    color: AppColors.black,
+                  ),
+                ),
+                Container(
+                  width: 50,
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$value',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: value < max ? () => onChanged(value + 1) : null,
+                    icon: const Icon(Icons.add, size: 20),
+                    color: AppColors.black,
+                  ),
+                ),
+              ],
             ),
-          ),
-          IconButton(
-            onPressed: value < max ? () => onChanged(value + 1) : null,
-            icon: const Icon(Icons.add_circle_outline),
-            color: AppColors.black,
           ),
         ],
       ),
@@ -505,8 +733,8 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add Room Type'),
+        builder: (context, setDialogState) => AppDialog(
+          title: 'Add Room Type',
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -555,35 +783,24 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (nameController.text.isNotEmpty &&
-                    priceController.text.isNotEmpty) {
-                  setState(() {
-                    _roomTypes.add(
-                      RoomType(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        name: nameController.text,
-                        basePrice: double.parse(priceController.text),
-                        maxOccupancy: maxOccupancy,
-                      ),
-                    );
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.black,
-                foregroundColor: AppColors.primary,
-              ),
-              child: const Text('Add'),
-            ),
-          ],
+          secondaryButtonText: 'Cancel',
+          primaryButtonText: 'Add',
+          onPrimaryPressed: () {
+            if (nameController.text.isNotEmpty &&
+                priceController.text.isNotEmpty) {
+              setState(() {
+                _roomTypes.add(
+                  RoomType(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    name: nameController.text,
+                    basePrice: double.parse(priceController.text),
+                    maxOccupancy: maxOccupancy,
+                  ),
+                );
+              });
+              Navigator.pop(context);
+            }
+          },
         ),
       ),
     );

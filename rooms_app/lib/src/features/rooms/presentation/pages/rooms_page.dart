@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/features/hotel_setup/presentation/providers/setup_providers.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
@@ -195,7 +196,7 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.2),
+        color: AppColors.black.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -314,7 +315,7 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.black,
-              foregroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
             ),
             child: const Text('Clear Filters'),
           ),
@@ -339,58 +340,47 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
   }
 
   void _showFilterDialog() {
-    showDialog(
+    AppDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Filter Rooms'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Floor'),
-              initialValue: ref.read(selectedFloorFilterProvider),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('All Floors')),
-                ...['1', '2', '3'].map(
-                  (floor) => DropdownMenuItem(
-                    value: floor,
-                    child: Text('Floor $floor'),
-                  ),
+      title: 'Filter Rooms',
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownButtonFormField<String>(
+            decoration: const InputDecoration(labelText: 'Floor'),
+            initialValue: ref.read(selectedFloorFilterProvider),
+            items: [
+              const DropdownMenuItem(value: null, child: Text('All Floors')),
+              ...['1', '2', '3'].map(
+                (floor) =>
+                    DropdownMenuItem(value: floor, child: Text('Floor $floor')),
+              ),
+            ],
+            onChanged: (value) {
+              ref.read(selectedFloorFilterProvider.notifier).state = value;
+            },
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<RoomStatus>(
+            decoration: const InputDecoration(labelText: 'Status'),
+            initialValue: ref.read(selectedStatusFilterProvider),
+            items: [
+              const DropdownMenuItem(value: null, child: Text('All Statuses')),
+              ...RoomStatus.values.map(
+                (status) => DropdownMenuItem(
+                  value: status,
+                  child: Text(status.displayName),
                 ),
-              ],
-              onChanged: (value) {
-                ref.read(selectedFloorFilterProvider.notifier).state = value;
-              },
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<RoomStatus>(
-              decoration: const InputDecoration(labelText: 'Status'),
-              initialValue: ref.read(selectedStatusFilterProvider),
-              items: [
-                const DropdownMenuItem(
-                  value: null,
-                  child: Text('All Statuses'),
-                ),
-                ...RoomStatus.values.map(
-                  (status) => DropdownMenuItem(
-                    value: status,
-                    child: Text(status.displayName),
-                  ),
-                ),
-              ],
-              onChanged: (value) {
-                ref.read(selectedStatusFilterProvider.notifier).state = value;
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Done'),
+              ),
+            ],
+            onChanged: (value) {
+              ref.read(selectedStatusFilterProvider.notifier).state = value;
+            },
           ),
         ],
       ),
+      primaryButtonText: 'Done',
+      onPrimaryPressed: () => Navigator.pop(context),
     );
   }
 
