@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/routing/app_router.dart';
 
 /// Welcome screen - first screen shown when app opens
-/// User can choose to login to existing hotel or create new hotel
+/// User can choose to login or create a booking (without login for biometric verification later)
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
@@ -62,11 +63,11 @@ class WelcomeScreen extends StatelessWidget {
                       child: ElevatedButton.icon(
                         onPressed: () {
                           debugPrint('🔘 Login button tapped');
-                          context.go('/login');
+                          context.go(AppRoutes.login);
                         },
                         icon: Icon(Icons.login, color: AppColors.black),
                         label: Text(
-                          'Login to Your Hotel',
+                          'Login',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -74,8 +75,7 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors
-                              .warning, // Changed from primary (black) to warning (yellow)
+                          backgroundColor: AppColors.warning,
                           foregroundColor: AppColors.black,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -85,27 +85,22 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
-                    // Create hotel button
+                    // Create Booking button (for quick booking without login)
                     SizedBox(
                       width: double.infinity,
                       height: 56,
                       child: OutlinedButton.icon(
                         onPressed: () {
-                          debugPrint('🔘 Create Hotel button tapped');
-                          context.go('/setup');
+                          debugPrint('🔘 Create Booking button tapped');
+                          context.go(AppRoutes.bookingSearch);
                         },
-                        icon: Icon(
-                          Icons.add_business,
-                          color: AppColors
-                              .warning, // Changed from primary to warning
-                        ),
+                        icon: Icon(Icons.book_online, color: AppColors.warning),
                         label: Text(
-                          'Create New Hotel',
+                          'Create Booking',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: AppColors
-                                .warning, // Changed from primary to warning
+                            color: AppColors.warning,
                           ),
                         ),
                         style: OutlinedButton.styleFrom(

@@ -42,6 +42,9 @@ dependencies:
   # Image handling (for ID photos)
   image_picker: ^1.1.2
   cached_network_image: ^3.4.1
+  
+  # OCR for Aadhaar card
+  google_mlkit_text_recognition: ^0.14.0
 
 dev_dependencies:
   flutter_test:

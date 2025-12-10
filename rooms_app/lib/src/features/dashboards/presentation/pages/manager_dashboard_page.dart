@@ -1,0 +1,239 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
+
+/// Manager Dashboard - Access to rooms, bookings, customers (current only), no money details
+class ManagerDashboardPage extends ConsumerWidget {
+  const ManagerDashboardPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hotel = ref.watch(currentHotelProvider);
+    final user = ref.watch(currentUserProvider).valueOrNull;
+
+    return Scaffold(
+      backgroundColor: AppColors.grey100,
+      appBar: AppBar(
+        backgroundColor: AppColors.info,
+        foregroundColor: AppColors.white,
+        title: Row(
+          children: [
+            Icon(Icons.manage_accounts, size: 24),
+            const SizedBox(width: 8),
+            Text(hotel?.hotelName ?? 'Manager Dashboard'),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await ref.read(authRepositoryProvider).logout();
+              if (context.mounted) context.go(AppRoutes.welcome);
+            },
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Welcome section
+            _buildWelcomeCard(user?.name ?? 'Manager'),
+            const SizedBox(height: 24),
+
+            // Quick Actions
+            _buildSectionTitle('Operations', Icons.work),
+            const SizedBox(height: 12),
+            _buildOperationsGrid(context),
+            const SizedBox(height: 24),
+
+            // Settings
+            _buildSectionTitle('Account', Icons.person),
+            const SizedBox(height: 12),
+            _buildAccountGrid(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWelcomeCard(String name) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.info, AppColors.info.withValues(alpha: 0.7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: AppColors.white,
+            child: Icon(Icons.person, color: AppColors.info, size: 32),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome,',
+                  style: TextStyle(
+                    color: AppColors.white.withValues(alpha: 0.8),
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  name,
+                  style: TextStyle(
+                    color: AppColors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'MANAGER',
+                    style: TextStyle(
+                      color: AppColors.info,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: AppColors.black),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOperationsGrid(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.5,
+      children: [
+        _buildActionCard(
+          context,
+          icon: Icons.grid_view,
+          label: 'View Rooms',
+          color: AppColors.roomFree,
+          onTap: () => context.push(AppRoutes.rooms),
+        ),
+        _buildActionCard(
+          context,
+          icon: Icons.book_online,
+          label: 'Create Booking',
+          color: AppColors.info,
+          onTap: () => context.push(AppRoutes.bookingSearch),
+        ),
+        _buildActionCard(
+          context,
+          icon: Icons.people,
+          label: 'Customers',
+          color: AppColors.warning,
+          onTap: () => context.push(AppRoutes.customers),
+        ),
+        _buildActionCard(
+          context,
+          icon: Icons.book,
+          label: 'Bookings',
+          color: AppColors.success,
+          onTap: () => context.push(AppRoutes.bookings),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAccountGrid(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.5,
+      children: [
+        _buildActionCard(
+          context,
+          icon: Icons.lock,
+          label: 'Change Password',
+          color: AppColors.grey600,
+          onTap: () => context.push(AppRoutes.changePassword),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionCard(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3), width: 2),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: AppColors.black,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

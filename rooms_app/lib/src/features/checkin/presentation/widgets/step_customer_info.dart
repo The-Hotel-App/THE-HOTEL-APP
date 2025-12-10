@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/services/aadhaar_ocr_service.dart';
 import 'package:rooms/src/features/checkin/presentation/providers/checkin_providers.dart';
 import 'package:rooms/src/features/customers/domain/entities/customer.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
@@ -28,11 +32,17 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
   DateTime _checkIn = DateTime.now();
   DateTime _checkOut = DateTime.now().add(const Duration(days: 1));
 
+  // Aadhaar OCR
+  String? _idImagePath;
+  bool _isProcessingOcr = false;
+  final AadhaarOcrService _ocrService = AadhaarOcrService();
+
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
     _idNumberController.dispose();
+    _ocrService.dispose();
     super.dispose();
   }
 
@@ -60,6 +70,10 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
             const SizedBox(height: 12),
             _buildIdTypeSelector(),
             const SizedBox(height: 12),
+            if (_selectedIdType == IdType.aadhar) ...[
+              _buildAadhaarUploadSection(),
+              const SizedBox(height: 12),
+            ],
             _buildIdNumberField(),
             const SizedBox(height: 20),
 
@@ -195,6 +209,147 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
         );
       }).toList(),
     );
+  }
+
+  Widget _buildAadhaarUploadSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.info.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.camera_alt, color: AppColors.info, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Scan Aadhaar Card',
+                style: TextStyle(
+                  color: AppColors.info,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              if (_isProcessingOcr)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Take a photo or upload an image to auto-fill the Aadhaar number',
+            style: TextStyle(color: AppColors.grey600, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _isProcessingOcr
+                      ? null
+                      : () => _processAadhaar(ImageSource.camera),
+                  icon: const Icon(Icons.camera_alt, size: 18),
+                  label: const Text('Camera'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.info,
+                    side: BorderSide(color: AppColors.info),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _isProcessingOcr
+                      ? null
+                      : () => _processAadhaar(ImageSource.gallery),
+                  icon: const Icon(Icons.photo_library, size: 18),
+                  label: const Text('Gallery'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.info,
+                    side: BorderSide(color: AppColors.info),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_idImagePath != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              height: 100,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.grey300),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.file(File(_idImagePath!), fit: BoxFit.cover),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _processAadhaar(ImageSource source) async {
+    setState(() => _isProcessingOcr = true);
+
+    try {
+      final result = await _ocrService.pickAndExtract(source: source);
+
+      if (result.success && result.aadhaarNumber != null) {
+        setState(() {
+          _idImagePath = result.imagePath;
+          _idNumberController.text = result.aadhaarNumber!;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Aadhaar number extracted: ${result.formattedAadhaarNumber}',
+              ),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } else {
+        // Store the image even if OCR failed
+        if (result.imagePath != null) {
+          setState(() => _idImagePath = result.imagePath);
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message),
+              backgroundColor: result.imagePath != null
+                  ? AppColors.warning
+                  : AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessingOcr = false);
+    }
   }
 
   Widget _buildIdNumberField() {

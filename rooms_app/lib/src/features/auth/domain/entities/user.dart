@@ -2,7 +2,8 @@
 enum UserRole {
   owner,
   manager,
-  staff;
+  staff,
+  kitchenManager;
 
   String get displayName {
     switch (this) {
@@ -12,6 +13,8 @@ enum UserRole {
         return 'Manager';
       case UserRole.staff:
         return 'Staff';
+      case UserRole.kitchenManager:
+        return 'Kitchen Manager';
     }
   }
 
@@ -40,6 +43,39 @@ enum UserRole {
   }
 
   bool get canViewMoneyDetails {
+    return this == UserRole.owner;
+  }
+
+  /// Kitchen manager can only access kitchen-related features
+  bool get canAccessRooms {
+    return this != UserRole.kitchenManager;
+  }
+
+  bool get canCreateBookings {
+    return this == UserRole.owner ||
+        this == UserRole.manager ||
+        this == UserRole.staff;
+  }
+
+  bool get canViewFoodOrders {
+    return this == UserRole.owner ||
+        this == UserRole.manager ||
+        this == UserRole.kitchenManager;
+  }
+
+  bool get canManageFoodOrders {
+    return this == UserRole.manager || this == UserRole.kitchenManager;
+  }
+
+  bool get canViewLaundryRequests {
+    return this == UserRole.manager || this == UserRole.staff;
+  }
+
+  bool get canManageRoomTypes {
+    return this == UserRole.owner;
+  }
+
+  bool get canEditRooms {
     return this == UserRole.owner;
   }
 }
