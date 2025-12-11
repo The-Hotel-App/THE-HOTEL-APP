@@ -79,13 +79,7 @@ class _RoomsManagementPageState extends ConsumerState<RoomsManagementPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Row(
-          children: [
-            Icon(Icons.bedroom_parent, size: 24),
-            SizedBox(width: 8),
-            Text('Manage Rooms'),
-          ],
-        ),
+        title: const Text('Manage Rooms'),
         actions: [
           if (_selectedRooms.isNotEmpty)
             TextButton.icon(
@@ -100,11 +94,6 @@ class _RoomsManagementPageState extends ConsumerState<RoomsManagementPage> {
             icon: const Icon(Icons.add),
             onPressed: _showAddRoomDialog,
             tooltip: 'Add Room',
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-            tooltip: 'Refresh',
           ),
         ],
       ),

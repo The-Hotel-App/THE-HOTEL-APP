@@ -1,10 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
-import 'package:rooms/src/core/services/aadhaar_ocr_service.dart';
+import 'package:rooms/src/core/services/id_ocr_service.dart';
 import 'package:rooms/src/features/checkin/presentation/providers/checkin_providers.dart';
 import 'package:rooms/src/features/customers/domain/entities/customer.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
@@ -32,10 +30,11 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
   DateTime _checkIn = DateTime.now();
   DateTime _checkOut = DateTime.now().add(const Duration(days: 1));
 
-  // Aadhaar OCR
+  // ID OCR
+  // ignore: unused_field
   String? _idImagePath;
   bool _isProcessingOcr = false;
-  final AadhaarOcrService _ocrService = AadhaarOcrService();
+  final IdOcrService _ocrService = IdOcrService();
 
   @override
   void dispose() {
@@ -70,10 +69,8 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
             const SizedBox(height: 12),
             _buildIdTypeSelector(),
             const SizedBox(height: 12),
-            if (_selectedIdType == IdType.aadhar) ...[
-              _buildAadhaarUploadSection(),
-              const SizedBox(height: 12),
-            ],
+            _buildIdScanSection(),
+            const SizedBox(height: 12),
             _buildIdNumberField(),
             const SizedBox(height: 20),
 
@@ -95,9 +92,9 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.roomFree.withValues(alpha: 0.1),
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.roomFree, width: 2),
+        border: Border.all(color: AppColors.grey300, width: 1),
       ),
       child: Row(
         children: [
@@ -105,7 +102,7 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: AppColors.roomFree,
+              color: AppColors.primary,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
@@ -211,113 +208,63 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
     );
   }
 
-  Widget _buildAadhaarUploadSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.info.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.camera_alt, color: AppColors.info, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Scan Aadhaar Card',
-                style: TextStyle(
-                  color: AppColors.info,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
-              if (_isProcessingOcr)
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Take a photo or upload an image to auto-fill the Aadhaar number',
-            style: TextStyle(color: AppColors.grey600, fontSize: 12),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _isProcessingOcr
-                      ? null
-                      : () => _processAadhaar(ImageSource.camera),
-                  icon: const Icon(Icons.camera_alt, size: 18),
-                  label: const Text('Camera'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.info,
-                    side: BorderSide(color: AppColors.info),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _isProcessingOcr
-                      ? null
-                      : () => _processAadhaar(ImageSource.gallery),
-                  icon: const Icon(Icons.photo_library, size: 18),
-                  label: const Text('Gallery'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.info,
-                    side: BorderSide(color: AppColors.info),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (_idImagePath != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              height: 100,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.grey300),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.file(File(_idImagePath!), fit: BoxFit.cover),
-              ),
+  Widget _buildIdScanSection() {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: _isProcessingOcr
+                ? null
+                : () => _processIdScan(ImageSource.camera),
+            icon: _isProcessingOcr
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.camera_alt, size: 18),
+            label: const Text('Scan ID'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.black,
+              side: const BorderSide(color: AppColors.grey400),
+              padding: const EdgeInsets.symmetric(vertical: 12),
             ),
-          ],
-        ],
-      ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: _isProcessingOcr
+                ? null
+                : () => _processIdScan(ImageSource.gallery),
+            icon: const Icon(Icons.photo_library, size: 18),
+            label: const Text('Upload'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.black,
+              side: const BorderSide(color: AppColors.grey400),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  Future<void> _processAadhaar(ImageSource source) async {
+  Future<void> _processIdScan(ImageSource source) async {
     setState(() => _isProcessingOcr = true);
 
     try {
       final result = await _ocrService.pickAndExtract(source: source);
 
-      if (result.success && result.aadhaarNumber != null) {
+      if (result.success && result.idNumber != null) {
         setState(() {
           _idImagePath = result.imagePath;
-          _idNumberController.text = result.aadhaarNumber!;
+          _idNumberController.text = result.idNumber!;
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                'Aadhaar number extracted: ${result.formattedAadhaarNumber}',
-              ),
+              content: Text('ID number extracted: ${result.idNumber}'),
               backgroundColor: AppColors.success,
             ),
           );
@@ -504,16 +451,20 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
             if (icon != null) ...[
               Icon(
                 icon,
-                size: 18,
+                size: 16,
                 color: isSelected ? AppColors.white : AppColors.black,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
             ],
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? AppColors.white : AppColors.black,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? AppColors.white : AppColors.black,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 13,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -528,7 +479,7 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
       child: ElevatedButton(
         onPressed: _handleNext,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.roomFree,
+          backgroundColor: AppColors.primary,
           foregroundColor: AppColors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(

@@ -10,3 +10,7 @@ trigger: always_on
 
 ## File Creation Restrictions
 - Never create any summary documents or .ps1 or bash executable scripts UNLESS EXPLICITLY MENTIONED
+
+## Supabase
+- ALWAYS refer supabase-info.txt
+- ALWAYS update supabase-info.txt wherever applicable

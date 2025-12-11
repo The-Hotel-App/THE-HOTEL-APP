@@ -23,8 +23,8 @@ class _CheckinFlowPageState extends ConsumerState<CheckinFlowPage> {
   int _currentStep = 0;
 
   final List<_StepInfo> _steps = [
-    _StepInfo(icon: Icons.person, label: 'Guest', color: AppColors.info),
-    _StepInfo(icon: Icons.payment, label: 'Payment', color: AppColors.warning),
+    _StepInfo(icon: Icons.person, label: 'Guest', color: AppColors.primary),
+    _StepInfo(icon: Icons.payment, label: 'Payment', color: AppColors.primary),
     _StepInfo(
       icon: Icons.check_circle,
       label: 'Confirm',
@@ -37,18 +37,13 @@ class _CheckinFlowPageState extends ConsumerState<CheckinFlowPage> {
     return Scaffold(
       backgroundColor: AppColors.grey100,
       appBar: _buildAppBar(),
-      body: Column(
-        children: [
-          _buildStepIndicator(),
-          Expanded(child: _buildCurrentStep()),
-        ],
-      ),
+      body: _buildCurrentStep(),
     );
   }
 
   AppBar _buildAppBar() {
     return AppBar(
-      backgroundColor: AppColors.roomFree,
+      backgroundColor: AppColors.primary,
       foregroundColor: AppColors.white,
       leading: IconButton(
         icon: const Icon(Icons.close, size: 28),
@@ -66,7 +61,7 @@ class _CheckinFlowPageState extends ConsumerState<CheckinFlowPage> {
 
   Widget _buildStepIndicator() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       color: AppColors.white,
       child: Row(
         children: List.generate(_steps.length * 2 - 1, (index) {
@@ -75,7 +70,7 @@ class _CheckinFlowPageState extends ConsumerState<CheckinFlowPage> {
             final isCompleted = stepIndex < _currentStep;
             return Expanded(
               child: Container(
-                height: 3,
+                height: 2,
                 color: isCompleted ? AppColors.success : AppColors.grey300,
               ),
             );
@@ -98,24 +93,24 @@ class _CheckinFlowPageState extends ConsumerState<CheckinFlowPage> {
     return Column(
       children: [
         Container(
-          width: 50,
-          height: 50,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
             color: isActive || isCompleted ? color : AppColors.grey200,
             shape: BoxShape.circle,
-            border: Border.all(color: color, width: 3),
+            border: Border.all(color: color, width: 2),
           ),
           child: Icon(
             isCompleted ? Icons.check : step.icon,
             color: isActive || isCompleted ? AppColors.white : color,
-            size: 24,
+            size: 18,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           step.label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
             color: isActive ? color : AppColors.textSecondary,
           ),
@@ -125,27 +120,38 @@ class _CheckinFlowPageState extends ConsumerState<CheckinFlowPage> {
   }
 
   Widget _buildCurrentStep() {
+    Widget stepContent;
     switch (_currentStep) {
       case 0:
-        return StepCustomerInfo(
+        stepContent = StepCustomerInfo(
           room: widget.room,
           onNext: () => setState(() => _currentStep = 1),
         );
+        break;
       case 1:
-        return StepPayment(
+        stepContent = StepPayment(
           room: widget.room,
           onNext: () => setState(() => _currentStep = 2),
           onBack: () => setState(() => _currentStep = 0),
         );
+        break;
       case 2:
-        return StepConfirmation(
+        stepContent = StepConfirmation(
           room: widget.room,
           onConfirm: _completeCheckin,
           onBack: () => setState(() => _currentStep = 1),
         );
+        break;
       default:
-        return const SizedBox.shrink();
+        stepContent = const SizedBox.shrink();
     }
+
+    return Column(
+      children: [
+        _buildStepIndicator(),
+        Expanded(child: stepContent),
+      ],
+    );
   }
 
   Future<void> _completeCheckin() async {
