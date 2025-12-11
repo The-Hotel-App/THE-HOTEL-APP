@@ -34,6 +34,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
 
   // Step 1: Hotel Profile
   final _nameController = TextEditingController();
+  final _hotelCodeController = TextEditingController();
   final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
@@ -241,6 +242,12 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         email: _emailController.text.trim().isEmpty
             ? null
             : _emailController.text.trim(),
+        hotelCode: _hotelCodeController.text.trim().isNotEmpty
+            ? _hotelCodeController.text.trim().toLowerCase().replaceAll(
+                ' ',
+                '-',
+              )
+            : null,
         totalFloors: _totalFloors,
         floorConfigs: floorConfigs,
       );
@@ -517,6 +524,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
                   ),
                   HotelProfileStep(
                     nameController: _nameController,
+                    hotelCodeController: _hotelCodeController,
                     addressController: _addressController,
                     phoneController: _phoneController,
                     emailController: _emailController,

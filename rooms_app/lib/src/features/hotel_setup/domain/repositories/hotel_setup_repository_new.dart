@@ -11,6 +11,7 @@ abstract class HotelSetupRepository {
     required int totalFloors,
     required List<FloorConfig> floorConfigs,
     required String ownerId,
+    String? hotelCode,
   });
 
   /// Get hotel by ID

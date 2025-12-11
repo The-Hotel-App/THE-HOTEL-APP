@@ -4,7 +4,10 @@ import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 
 /// Welcome screen - first screen shown when app opens
-/// User can choose to login or create a booking (without login for biometric verification later)
+/// Three user journeys per hotel_app_onboarding.md:
+/// 1. Create New Hotel (Green) - For new hotel owners
+/// 2. Login to Hotel (Blue) - For existing users
+/// 3. Join a Hotel (Yellow) - For new employees
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
@@ -28,7 +31,17 @@ class WelcomeScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     // App logo
-                    Icon(Icons.hotel, size: 120, color: AppColors.warning),
+                    Image.asset(
+                      'assets/new_images/yellow_logo_on_transparent_bg.png',
+                      height: 120,
+                      width: 120,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => Icon(
+                        Icons.hotel,
+                        size: 120,
+                        color: AppColors.warning,
+                      ),
+                    ),
                     const SizedBox(height: 24),
                     Text(
                       'ROOMS.io',
@@ -50,24 +63,87 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ),
 
-              // Action buttons
+              // Action buttons - 3 journeys
               Expanded(
-                flex: 1,
+                flex: 2,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Login button
+                    // 1. Create New Hotel (Green) - For new hotel owners
                     SizedBox(
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          debugPrint('🔘 Login button tapped');
-                          context.go(AppRoutes.login);
+                          debugPrint('🔘 Create New Hotel button tapped');
+                          context.go(AppRoutes.setup);
                         },
-                        icon: Icon(Icons.login, color: AppColors.black),
+                        icon: const Icon(
+                          Icons.add_business,
+                          color: Colors.white,
+                        ),
+                        label: const Text(
+                          'Create New Hotel',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.success,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 2. Login to Hotel (Blue) - For existing users
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          debugPrint('🔘 Login to Hotel button tapped');
+                          context.go(AppRoutes.hotelLogin);
+                        },
+                        icon: const Icon(Icons.login, color: Colors.white),
+                        label: const Text(
+                          'Login to Hotel',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.info,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 3. Join a Hotel (Yellow) - For new employees
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          debugPrint('🔘 Join a Hotel button tapped');
+                          context.go(AppRoutes.joinHotel);
+                        },
+                        icon: Icon(Icons.person_add, color: AppColors.black),
                         label: Text(
-                          'Login',
+                          'Join a Hotel',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -80,35 +156,7 @@ class WelcomeScreen extends StatelessWidget {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Create Booking button (for quick booking without login)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          debugPrint('🔘 Create Booking button tapped');
-                          context.go(AppRoutes.bookingSearch);
-                        },
-                        icon: Icon(Icons.book_online, color: AppColors.warning),
-                        label: Text(
-                          'Create Booking',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.warning,
-                          ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.warning,
-                          side: BorderSide(color: AppColors.warning, width: 2),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          elevation: 2,
                         ),
                       ),
                     ),

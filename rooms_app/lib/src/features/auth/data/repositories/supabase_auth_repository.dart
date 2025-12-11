@@ -394,4 +394,119 @@ class SupabaseAuthRepository implements AuthRepository {
       throw Exception('Failed to create staff account: $e');
     }
   }
+
+  /// Register a new user (for employee join flow)
+  @override
+  Future<app.User> register({
+    required String email,
+    required String password,
+    required String name,
+    String? phone,
+  }) async {
+    return signUp(email: email, password: password, name: name, phone: phone);
+  }
+
+  /// Get hotel by hotel code
+  @override
+  Future<Map<String, dynamic>?> getHotelByCode(String hotelCode) async {
+    try {
+      debugPrint('🏨 Looking up hotel by code: $hotelCode');
+
+      final response = await _client
+          .from('hotels')
+          .select('id, name, address, phone, email')
+          .eq('hotel_code', hotelCode.toLowerCase())
+          .maybeSingle();
+
+      if (response == null) {
+        debugPrint('⚠️ Hotel not found for code: $hotelCode');
+        return null;
+      }
+
+      debugPrint('✅ Found hotel: ${response['name']}');
+      return response;
+    } catch (e) {
+      debugPrint('❌ Error looking up hotel: $e');
+      return null;
+    }
+  }
+
+  /// Validate join code
+  @override
+  Future<Map<String, dynamic>> validateJoinCode(
+    String hotelCode,
+    String joinCode,
+  ) async {
+    try {
+      debugPrint('🔑 Validating join code: $joinCode for hotel: $hotelCode');
+
+      final response = await _client.rpc(
+        'validate_join_code',
+        params: {
+          'p_hotel_code': hotelCode.toLowerCase(),
+          'p_join_code': joinCode,
+        },
+      );
+
+      if (response == null || (response as List).isEmpty) {
+        return {'is_valid': false, 'error_message': 'Invalid codes'};
+      }
+
+      final result = response[0] as Map<String, dynamic>;
+      debugPrint('✅ Join code validation result: ${result['is_valid']}');
+      return result;
+    } catch (e) {
+      debugPrint('❌ Error validating join code: $e');
+      return {'is_valid': false, 'error_message': 'Error validating codes: $e'};
+    }
+  }
+
+  /// Submit join request
+  @override
+  Future<void> submitJoinRequest({
+    required String hotelId,
+    String? joinCodeId,
+  }) async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      debugPrint('📝 Submitting join request for hotel: $hotelId');
+
+      await _client.from('join_requests').insert({
+        'hotel_id': hotelId,
+        'user_id': userId,
+        'join_code_id': joinCodeId,
+        'status': 'pending',
+      });
+
+      debugPrint('✅ Join request submitted');
+    } catch (e) {
+      debugPrint('❌ Error submitting join request: $e');
+      rethrow;
+    }
+  }
+
+  /// Check if hotel code is available
+  @override
+  Future<bool> isHotelCodeAvailable(String hotelCode) async {
+    try {
+      debugPrint('🔍 Checking hotel code availability: $hotelCode');
+
+      final response = await _client
+          .from('hotels')
+          .select('id')
+          .eq('hotel_code', hotelCode.toLowerCase())
+          .maybeSingle();
+
+      final isAvailable = response == null;
+      debugPrint('✅ Hotel code available: $isAvailable');
+      return isAvailable;
+    } catch (e) {
+      debugPrint('❌ Error checking hotel code: $e');
+      return false;
+    }
+  }
 }

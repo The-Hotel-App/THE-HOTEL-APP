@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/pages/home_page.dart';
+import 'package:rooms/src/features/auth/presentation/pages/hotel_login_page.dart';
+import 'package:rooms/src/features/auth/presentation/pages/join_hotel_page.dart';
 import 'package:rooms/src/features/auth/presentation/pages/login_page.dart';
 import 'package:rooms/src/features/auth/presentation/pages/welcome_screen.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart'
@@ -24,7 +26,9 @@ import 'package:rooms/src/features/rooms/presentation/pages/rooms_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/change_password_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/create_staff_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/hotel_settings_page.dart';
+import 'package:rooms/src/features/settings/presentation/pages/join_codes_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/notifications_page.dart';
+import 'package:rooms/src/features/settings/presentation/pages/pending_requests_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/room_types_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/staff_page.dart';
 
@@ -32,6 +36,8 @@ import 'package:rooms/src/features/settings/presentation/pages/staff_page.dart';
 class AppRoutes {
   static const String welcome = '/welcome';
   static const String login = '/login';
+  static const String hotelLogin = '/hotel-login';
+  static const String joinHotel = '/join-hotel';
   static const String setup = '/setup';
   static const String home = '/';
   static const String rooms = '/rooms';
@@ -53,6 +59,9 @@ class AppRoutes {
   static const String createStaff = '/create-staff';
   static const String roomTypes = '/room-types';
   static const String roomsManagement = '/rooms-management';
+  // Join code management routes
+  static const String joinCodes = '/join-codes';
+  static const String pendingRequests = '/pending-requests';
 }
 
 /// Refresh notifier for GoRouter
@@ -217,6 +226,48 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const LoginPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            const curve = Curves.easeInOut;
+            final tween = Tween(
+              begin: begin,
+              end: end,
+            ).chain(CurveTween(curve: curve));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.hotelLogin,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const HotelLoginPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            const curve = Curves.easeInOut;
+            final tween = Tween(
+              begin: begin,
+              end: end,
+            ).chain(CurveTween(curve: curve));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.joinHotel,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const JoinHotelPage(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(1.0, 0.0);
             const end = Offset.zero;
@@ -602,6 +653,46 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const RoomsManagementPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            final tween = Tween(
+              begin: begin,
+              end: end,
+            ).chain(CurveTween(curve: Curves.easeInOut));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.joinCodes,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const JoinCodesPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            final tween = Tween(
+              begin: begin,
+              end: end,
+            ).chain(CurveTween(curve: Curves.easeInOut));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.pendingRequests,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const PendingRequestsPage(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(1.0, 0.0);
             const end = Offset.zero;

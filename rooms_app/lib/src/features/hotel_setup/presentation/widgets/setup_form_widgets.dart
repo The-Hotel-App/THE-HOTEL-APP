@@ -10,6 +10,7 @@ class SetupTextField extends StatelessWidget {
   final int maxLines;
   final TextInputType? keyboardType;
   final bool required;
+  final String? helperText;
 
   const SetupTextField({
     super.key,
@@ -20,6 +21,7 @@ class SetupTextField extends StatelessWidget {
     this.maxLines = 1,
     this.keyboardType,
     this.required = false,
+    this.helperText,
   });
 
   @override
@@ -31,6 +33,7 @@ class SetupTextField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: required ? '$label *' : label,
         hintText: hint,
+        helperText: helperText,
         prefixIcon: Icon(icon),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(

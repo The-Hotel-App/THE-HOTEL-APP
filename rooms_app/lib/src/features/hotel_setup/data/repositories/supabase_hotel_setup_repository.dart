@@ -22,6 +22,7 @@ class SupabaseHotelSetupRepository implements HotelSetupRepository {
     required int totalFloors,
     required List<FloorConfig> floorConfigs,
     required String ownerId,
+    String? hotelCode,
   }) async {
     try {
       debugPrint('🏨 Creating hotel: $name');
@@ -38,6 +39,7 @@ class SupabaseHotelSetupRepository implements HotelSetupRepository {
             'address': address,
             'phone': phone,
             'email': email,
+            'hotel_code': hotelCode?.toLowerCase(),
             'total_floors': totalFloors,
             'total_rooms': totalRooms,
             'floor_configs': floorConfigs.map((c) => c.toJson()).toList(),

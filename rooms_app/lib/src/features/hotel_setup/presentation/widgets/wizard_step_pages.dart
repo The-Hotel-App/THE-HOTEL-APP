@@ -61,6 +61,7 @@ class OwnerRegistrationStep extends StatelessWidget {
 /// Hotel Profile Page - Step 2 of the wizard
 class HotelProfileStep extends StatelessWidget {
   final TextEditingController nameController;
+  final TextEditingController hotelCodeController;
   final TextEditingController addressController;
   final TextEditingController phoneController;
   final TextEditingController emailController;
@@ -68,6 +69,7 @@ class HotelProfileStep extends StatelessWidget {
   const HotelProfileStep({
     super.key,
     required this.nameController,
+    required this.hotelCodeController,
     required this.addressController,
     required this.phoneController,
     required this.emailController,
@@ -100,6 +102,15 @@ class HotelProfileStep extends StatelessWidget {
             hint: 'Enter hotel name',
             icon: Icons.business,
             required: true,
+          ),
+          const SizedBox(height: 16),
+          SetupTextField(
+            controller: hotelCodeController,
+            label: 'Hotel Code',
+            hint: 'e.g., taj-chennai (used by employees to join)',
+            icon: Icons.qr_code,
+            required: true,
+            helperText: 'Unique code for employees to find your hotel',
           ),
           const SizedBox(height: 16),
           SetupTextField(
