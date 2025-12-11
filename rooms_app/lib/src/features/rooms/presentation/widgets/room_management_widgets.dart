@@ -1,0 +1,544 @@
+import 'package:flutter/material.dart';
+import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/features/rooms/data/repositories/room_types_repository.dart';
+import 'package:rooms/src/features/rooms/data/repositories/rooms_repository.dart';
+import 'package:rooms/src/features/rooms/domain/entities/room.dart';
+
+/// Floor section header with expandable rooms list
+class FloorSection extends StatelessWidget {
+  final int floor;
+  final List<ManagedRoom> rooms;
+  final bool isExpanded;
+  final VoidCallback onToggle;
+  final Widget Function(ManagedRoom room) buildRoomTile;
+
+  const FloorSection({
+    super.key,
+    required this.floor,
+    required this.rooms,
+    required this.isExpanded,
+    required this.onToggle,
+    required this.buildRoomTile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: onToggle,
+            borderRadius: BorderRadius.vertical(
+              top: const Radius.circular(16),
+              bottom: isExpanded ? Radius.zero : const Radius.circular(16),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.grey800,
+                borderRadius: BorderRadius.vertical(
+                  top: const Radius.circular(16),
+                  bottom: isExpanded ? Radius.zero : const Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.layers, color: AppColors.white, size: 24),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Floor $floor',
+                    style: const TextStyle(
+                      color: AppColors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${rooms.length} rooms',
+                      style: const TextStyle(
+                        color: AppColors.grey800,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    isExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: AppColors.white,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isExpanded) ...rooms.map((room) => buildRoomTile(room)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Room tile widget showing room details with selection
+class RoomTile extends StatelessWidget {
+  final ManagedRoom room;
+  final bool isSelected;
+  final bool showCheckbox;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+  final ValueChanged<bool?> onCheckboxChanged;
+
+  const RoomTile({
+    super.key,
+    required this.room,
+    required this.isSelected,
+    required this.showCheckbox,
+    required this.onTap,
+    required this.onLongPress,
+    required this.onCheckboxChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = _getStatusColor(room.status);
+
+    return InkWell(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.info.withValues(alpha: 0.1) : null,
+          border: Border(bottom: BorderSide(color: AppColors.grey200)),
+        ),
+        child: Row(
+          children: [
+            if (showCheckbox)
+              Checkbox(
+                value: isSelected,
+                onChanged: onCheckboxChanged,
+                activeColor: AppColors.info,
+              ),
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: statusColor, width: 2),
+              ),
+              child: Center(
+                child: Text(
+                  room.roomNumber,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    room.roomTypeName ?? 'No Type',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    room.pricePerNight != null
+                        ? '₹${room.pricePerNight!.toStringAsFixed(0)}/night • Max ${room.maxOccupancy ?? 2} guests'
+                        : 'No pricing set',
+                    style: TextStyle(color: AppColors.grey600, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                room.status.displayName,
+                style: TextStyle(
+                  color: statusColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.edit, color: AppColors.grey400, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(RoomStatus status) {
+    switch (status) {
+      case RoomStatus.free:
+        return AppColors.roomFree;
+      case RoomStatus.occupied:
+        return AppColors.error;
+      case RoomStatus.cleaning:
+        return AppColors.warning;
+      case RoomStatus.maintenance:
+        return AppColors.grey600;
+      case RoomStatus.outOfService:
+        return AppColors.grey500;
+    }
+  }
+}
+
+/// Add room dialog
+class AddRoomDialog extends StatefulWidget {
+  final List<RoomType> roomTypes;
+  final Future<void> Function({
+    required String roomNumber,
+    required int floor,
+    String? roomTypeId,
+  })
+  onAdd;
+
+  const AddRoomDialog({
+    super.key,
+    required this.roomTypes,
+    required this.onAdd,
+  });
+
+  static Future<void> show(
+    BuildContext context, {
+    required List<RoomType> roomTypes,
+    required Future<void> Function({
+      required String roomNumber,
+      required int floor,
+      String? roomTypeId,
+    })
+    onAdd,
+  }) {
+    return showDialog(
+      context: context,
+      builder: (context) => AddRoomDialog(roomTypes: roomTypes, onAdd: onAdd),
+    );
+  }
+
+  @override
+  State<AddRoomDialog> createState() => _AddRoomDialogState();
+}
+
+class _AddRoomDialogState extends State<AddRoomDialog> {
+  final _roomNumberController = TextEditingController();
+  final _floorController = TextEditingController(text: '1');
+  final _formKey = GlobalKey<FormState>();
+  String? _selectedTypeId;
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _roomNumberController.dispose();
+    _floorController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add Room'),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _roomNumberController,
+                decoration: const InputDecoration(
+                  labelText: 'Room Number',
+                  hintText: 'e.g. 101',
+                ),
+                validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _floorController,
+                decoration: const InputDecoration(
+                  labelText: 'Floor',
+                  hintText: 'e.g. 1',
+                ),
+                keyboardType: TextInputType.number,
+                validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedTypeId,
+                decoration: const InputDecoration(labelText: 'Room Type'),
+                items: widget.roomTypes
+                    .map(
+                      (type) => DropdownMenuItem(
+                        value: type.id,
+                        child: Text(
+                          '${type.name} (₹${type.basePrice.toStringAsFixed(0)})',
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedTypeId = v),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _isSaving ? null : _handleAdd,
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.black),
+          child: _isSaving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Add'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleAdd() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      await widget.onAdd(
+        roomNumber: _roomNumberController.text.trim(),
+        floor: int.tryParse(_floorController.text) ?? 1,
+        roomTypeId: _selectedTypeId,
+      );
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      setState(() => _isSaving = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+}
+
+/// Edit room dialog for changing room type
+class EditRoomDialog extends StatefulWidget {
+  final ManagedRoom room;
+  final List<RoomType> roomTypes;
+  final Future<void> Function(String? roomTypeId) onSave;
+
+  const EditRoomDialog({
+    super.key,
+    required this.room,
+    required this.roomTypes,
+    required this.onSave,
+  });
+
+  static Future<void> show(
+    BuildContext context, {
+    required ManagedRoom room,
+    required List<RoomType> roomTypes,
+    required Future<void> Function(String? roomTypeId) onSave,
+  }) {
+    return showDialog(
+      context: context,
+      builder: (context) =>
+          EditRoomDialog(room: room, roomTypes: roomTypes, onSave: onSave),
+    );
+  }
+
+  @override
+  State<EditRoomDialog> createState() => _EditRoomDialogState();
+}
+
+class _EditRoomDialogState extends State<EditRoomDialog> {
+  late String? _selectedTypeId;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedTypeId = widget.room.roomTypeId;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Edit Room ${widget.room.roomNumber}'),
+      content: DropdownButtonFormField<String>(
+        initialValue: _selectedTypeId,
+        decoration: const InputDecoration(labelText: 'Room Type'),
+        items: widget.roomTypes
+            .map(
+              (type) => DropdownMenuItem(
+                value: type.id,
+                child: Text(
+                  '${type.name} (₹${type.basePrice.toStringAsFixed(0)})',
+                ),
+              ),
+            )
+            .toList(),
+        onChanged: (v) => setState(() => _selectedTypeId = v),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            try {
+              await widget.onSave(_selectedTypeId);
+              if (context.mounted) Navigator.pop(context);
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: $e'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
+            }
+          },
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.black),
+          child: const Text('Update'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Bulk assign room type dialog
+class BulkAssignDialog extends StatefulWidget {
+  final int roomCount;
+  final List<RoomType> roomTypes;
+  final Future<void> Function(String roomTypeId) onAssign;
+  final VoidCallback onCancel;
+
+  const BulkAssignDialog({
+    super.key,
+    required this.roomCount,
+    required this.roomTypes,
+    required this.onAssign,
+    required this.onCancel,
+  });
+
+  static Future<void> show(
+    BuildContext context, {
+    required int roomCount,
+    required List<RoomType> roomTypes,
+    required Future<void> Function(String roomTypeId) onAssign,
+    required VoidCallback onCancel,
+  }) {
+    return showDialog(
+      context: context,
+      builder: (context) => BulkAssignDialog(
+        roomCount: roomCount,
+        roomTypes: roomTypes,
+        onAssign: onAssign,
+        onCancel: onCancel,
+      ),
+    );
+  }
+
+  @override
+  State<BulkAssignDialog> createState() => _BulkAssignDialogState();
+}
+
+class _BulkAssignDialogState extends State<BulkAssignDialog> {
+  String? _selectedTypeId;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Assign Type to ${widget.roomCount} Rooms'),
+      content: DropdownButtonFormField<String>(
+        initialValue: _selectedTypeId,
+        decoration: const InputDecoration(labelText: 'Room Type'),
+        items: widget.roomTypes
+            .map(
+              (type) => DropdownMenuItem(
+                value: type.id,
+                child: Text(
+                  '${type.name} (₹${type.basePrice.toStringAsFixed(0)})',
+                ),
+              ),
+            )
+            .toList(),
+        onChanged: (v) => setState(() => _selectedTypeId = v),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+            widget.onCancel();
+          },
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _selectedTypeId == null
+              ? null
+              : () async {
+                  try {
+                    await widget.onAssign(_selectedTypeId!);
+                    if (context.mounted) Navigator.pop(context);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: $e'),
+                          backgroundColor: AppColors.error,
+                        ),
+                      );
+                    }
+                  }
+                },
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.black),
+          child: const Text('Assign'),
+        ),
+      ],
+    );
+  }
+}

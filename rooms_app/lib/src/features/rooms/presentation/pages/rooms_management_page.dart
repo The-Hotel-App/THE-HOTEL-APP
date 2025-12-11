@@ -5,7 +5,7 @@ import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/rooms/data/repositories/room_types_repository.dart';
 import 'package:rooms/src/features/rooms/data/repositories/rooms_repository.dart';
-import 'package:rooms/src/features/rooms/domain/entities/room.dart';
+import 'package:rooms/src/features/rooms/presentation/widgets/room_management_widgets.dart';
 
 /// Rooms Management Page - Owner only, floorwise view
 class RoomsManagementPage extends ConsumerStatefulWidget {
@@ -144,10 +144,26 @@ class _RoomsManagementPageState extends ConsumerState<RoomsManagementPage> {
         itemBuilder: (context, index) {
           final floor = floors[index];
           final rooms = _roomsByFloor[floor]!;
-          return _buildFloorSection(floor, rooms);
+          return FloorSection(
+            floor: floor,
+            rooms: rooms,
+            isExpanded: _expandedFloors.contains(floor),
+            onToggle: () => _toggleFloor(floor),
+            buildRoomTile: (room) => _buildRoomTile(room),
+          );
         },
       ),
     );
+  }
+
+  void _toggleFloor(int floor) {
+    setState(() {
+      if (_expandedFloors.contains(floor)) {
+        _expandedFloors.remove(floor);
+      } else {
+        _expandedFloors.add(floor);
+      }
+    });
   }
 
   Widget _buildEmptyState() {
@@ -181,470 +197,105 @@ class _RoomsManagementPageState extends ConsumerState<RoomsManagementPage> {
     );
   }
 
-  Widget _buildFloorSection(int floor, List<ManagedRoom> rooms) {
-    final isExpanded = _expandedFloors.contains(floor);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          InkWell(
-            onTap: () {
-              setState(() {
-                if (isExpanded) {
-                  _expandedFloors.remove(floor);
-                } else {
-                  _expandedFloors.add(floor);
-                }
-              });
-            },
-            borderRadius: BorderRadius.vertical(
-              top: const Radius.circular(16),
-              bottom: isExpanded ? Radius.zero : const Radius.circular(16),
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.grey800,
-                borderRadius: BorderRadius.vertical(
-                  top: const Radius.circular(16),
-                  bottom: isExpanded ? Radius.zero : const Radius.circular(16),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.layers, color: AppColors.white, size: 24),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Floor $floor',
-                    style: const TextStyle(
-                      color: AppColors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${rooms.length} rooms',
-                      style: const TextStyle(
-                        color: AppColors.grey800,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: AppColors.white,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (isExpanded) ...rooms.map((room) => _buildRoomTile(room)),
-        ],
-      ),
-    );
-  }
-
   Widget _buildRoomTile(ManagedRoom room) {
     final isSelected = _selectedRooms.contains(room.id);
-    final statusColor = _getStatusColor(room.status);
-
-    return InkWell(
+    return RoomTile(
+      room: room,
+      isSelected: isSelected,
+      showCheckbox: _selectedRooms.isNotEmpty,
       onTap: () => _showEditRoomDialog(room),
-      onLongPress: () {
-        setState(() {
-          if (isSelected) {
-            _selectedRooms.remove(room.id);
-          } else {
-            _selectedRooms.add(room.id);
-          }
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.info.withValues(alpha: 0.1) : null,
-          border: Border(bottom: BorderSide(color: AppColors.grey200)),
-        ),
-        child: Row(
-          children: [
-            if (_selectedRooms.isNotEmpty)
-              Checkbox(
-                value: isSelected,
-                onChanged: (v) {
-                  setState(() {
-                    if (v == true) {
-                      _selectedRooms.add(room.id);
-                    } else {
-                      _selectedRooms.remove(room.id);
-                    }
-                  });
-                },
-                activeColor: AppColors.info,
-              ),
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: statusColor, width: 2),
-              ),
-              child: Center(
-                child: Text(
-                  room.roomNumber,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    room.roomTypeName ?? 'No Type',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  Text(
-                    room.pricePerNight != null
-                        ? '₹${room.pricePerNight!.toStringAsFixed(0)}/night • Max ${room.maxOccupancy ?? 2} guests'
-                        : 'No pricing set',
-                    style: TextStyle(color: AppColors.grey600, fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                room.status.displayName,
-                style: TextStyle(
-                  color: statusColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.edit, color: AppColors.grey400, size: 18),
-          ],
-        ),
-      ),
+      onLongPress: () => _toggleRoomSelection(room.id),
+      onCheckboxChanged: (v) => _toggleRoomSelection(room.id),
     );
   }
 
-  Color _getStatusColor(RoomStatus status) {
-    switch (status) {
-      case RoomStatus.free:
-        return AppColors.roomFree;
-      case RoomStatus.occupied:
-        return AppColors.error;
-      case RoomStatus.cleaning:
-        return AppColors.warning;
-      case RoomStatus.maintenance:
-        return AppColors.grey600;
-      case RoomStatus.outOfService:
-        return AppColors.grey500;
-    }
+  void _toggleRoomSelection(String roomId) {
+    setState(() {
+      if (_selectedRooms.contains(roomId)) {
+        _selectedRooms.remove(roomId);
+      } else {
+        _selectedRooms.add(roomId);
+      }
+    });
   }
 
   void _showAddRoomDialog() {
-    final roomNumberController = TextEditingController();
-    final floorController = TextEditingController(text: '1');
-    String? selectedTypeId;
-    final formKey = GlobalKey<FormState>();
-    bool isSaving = false;
+    AddRoomDialog.show(
+      context,
+      roomTypes: _roomTypes,
+      onAdd: ({required roomNumber, required floor, roomTypeId}) async {
+        final hotel = ref.read(currentHotelProvider);
+        final repository = ref.read(roomsRepositoryProvider);
 
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add Room'),
-          content: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: roomNumberController,
-                    decoration: const InputDecoration(
-                      labelText: 'Room Number',
-                      hintText: 'e.g. 101',
-                    ),
-                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: floorController,
-                    decoration: const InputDecoration(
-                      labelText: 'Floor',
-                      hintText: 'e.g. 1',
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedTypeId,
-                    decoration: const InputDecoration(labelText: 'Room Type'),
-                    items: _roomTypes
-                        .map(
-                          (type) => DropdownMenuItem(
-                            value: type.id,
-                            child: Text(
-                              '${type.name} (₹${type.basePrice.toStringAsFixed(0)})',
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setDialogState(() => selectedTypeId = v),
-                  ),
-                ],
-              ),
+        await repository.createRoom(
+          hotelId: hotel!.hotelId,
+          roomNumber: roomNumber,
+          floor: floor,
+          roomTypeId: roomTypeId,
+        );
+
+        await _loadData();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Room added!'),
+              backgroundColor: AppColors.success,
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: isSaving
-                  ? null
-                  : () async {
-                      if (!formKey.currentState!.validate()) return;
-
-                      setDialogState(() => isSaving = true);
-
-                      try {
-                        final hotel = ref.read(currentHotelProvider);
-                        final repository = ref.read(roomsRepositoryProvider);
-
-                        await repository.createRoom(
-                          hotelId: hotel!.hotelId,
-                          roomNumber: roomNumberController.text.trim(),
-                          floor: int.tryParse(floorController.text) ?? 1,
-                          roomTypeId: selectedTypeId,
-                        );
-
-                        if (context.mounted) Navigator.pop(context);
-                        await _loadData();
-
-                        if (mounted) {
-                          ScaffoldMessenger.of(this.context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Room added!'),
-                              backgroundColor: AppColors.success,
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        setDialogState(() => isSaving = false);
-                        if (mounted) {
-                          ScaffoldMessenger.of(this.context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error: $e'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                        }
-                      }
-                    },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.black),
-              child: isSaving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Add'),
-            ),
-          ],
-        ),
-      ),
+          );
+        }
+      },
     );
   }
 
   void _showEditRoomDialog(ManagedRoom room) {
-    String? selectedTypeId = room.roomTypeId;
+    EditRoomDialog.show(
+      context,
+      room: room,
+      roomTypes: _roomTypes,
+      onSave: (roomTypeId) async {
+        final repository = ref.read(roomsRepositoryProvider);
+        await repository.updateRoom(id: room.id, roomTypeId: roomTypeId);
 
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text('Edit Room ${room.roomNumber}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                initialValue: selectedTypeId,
-                decoration: const InputDecoration(labelText: 'Room Type'),
-                items: _roomTypes
-                    .map(
-                      (type) => DropdownMenuItem(
-                        value: type.id,
-                        child: Text(
-                          '${type.name} (₹${type.basePrice.toStringAsFixed(0)})',
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setDialogState(() => selectedTypeId = v),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+        await _loadData();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Room updated!'),
+              backgroundColor: AppColors.success,
             ),
-            ElevatedButton(
-              onPressed: () async {
-                try {
-                  final repository = ref.read(roomsRepositoryProvider);
-                  await repository.updateRoom(
-                    id: room.id,
-                    roomTypeId: selectedTypeId,
-                  );
-
-                  if (context.mounted) Navigator.pop(context);
-                  await _loadData();
-
-                  if (mounted) {
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Room updated!'),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error: $e'),
-                        backgroundColor: AppColors.error,
-                      ),
-                    );
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.black),
-              child: const Text('Update'),
-            ),
-          ],
-        ),
-      ),
+          );
+        }
+      },
     );
   }
 
   void _showBulkAssignDialog() {
-    String? selectedTypeId;
+    BulkAssignDialog.show(
+      context,
+      roomCount: _selectedRooms.length,
+      roomTypes: _roomTypes,
+      onAssign: (roomTypeId) async {
+        final repository = ref.read(roomsRepositoryProvider);
+        await repository.bulkUpdateRoomType(
+          roomIds: _selectedRooms.toList(),
+          roomTypeId: roomTypeId,
+        );
 
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text('Assign Type to ${_selectedRooms.length} Rooms'),
-          content: DropdownButtonFormField<String>(
-            initialValue: selectedTypeId,
-            decoration: const InputDecoration(labelText: 'Room Type'),
-            items: _roomTypes
-                .map(
-                  (type) => DropdownMenuItem(
-                    value: type.id,
-                    child: Text(
-                      '${type.name} (₹${type.basePrice.toStringAsFixed(0)})',
-                    ),
-                  ),
-                )
-                .toList(),
-            onChanged: (v) => setDialogState(() => selectedTypeId = v),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                setState(() => _selectedRooms.clear());
-              },
-              child: const Text('Cancel'),
+        setState(() => _selectedRooms.clear());
+        await _loadData();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Rooms updated!'),
+              backgroundColor: AppColors.success,
             ),
-            ElevatedButton(
-              onPressed: selectedTypeId == null
-                  ? null
-                  : () async {
-                      try {
-                        final repository = ref.read(roomsRepositoryProvider);
-                        await repository.bulkUpdateRoomType(
-                          roomIds: _selectedRooms.toList(),
-                          roomTypeId: selectedTypeId!,
-                        );
-
-                        if (context.mounted) Navigator.pop(context);
-                        setState(() => _selectedRooms.clear());
-                        await _loadData();
-
-                        if (mounted) {
-                          ScaffoldMessenger.of(this.context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Rooms updated!'),
-                              backgroundColor: AppColors.success,
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(this.context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error: $e'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                        }
-                      }
-                    },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.black),
-              child: const Text('Assign'),
-            ),
-          ],
-        ),
-      ),
+          );
+        }
+      },
+      onCancel: () => setState(() => _selectedRooms.clear()),
     );
   }
 }
