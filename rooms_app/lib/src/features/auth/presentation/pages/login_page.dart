@@ -28,6 +28,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     super.dispose();
   }
 
+  /// Helper to get the appropriate dashboard route based on user role
+  String _getDashboardRoute(UserRole role) {
+    switch (role) {
+      case UserRole.owner:
+        return AppRoutes.ownerDashboard;
+      case UserRole.manager:
+        return AppRoutes.managerDashboard;
+      case UserRole.staff:
+        return AppRoutes.staffDashboard;
+      case UserRole.kitchenManager:
+        return AppRoutes.kitchenDashboard;
+    }
+  }
+
   Future<void> _handleLogin() async {
     debugPrint('🔐 Login attempt started');
 
@@ -73,15 +87,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         // Auto-select the only hotel
         debugPrint('✅ Auto-selecting single hotel: ${hotels.first.hotelName}');
         ref.read(selectedHotelIdProvider.notifier).state = hotels.first.hotelId;
-        setState(() => _isLoading = false);
 
+        // Get the dashboard route before any async operations
+        final dashboardRoute = _getDashboardRoute(hotels.first.role);
+        debugPrint('🚀 Navigating to dashboard: $dashboardRoute');
+
+        // Small delay to ensure provider state propagates
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        // Navigate first, then clear loading state
+        // This prevents the router refresh from interfering with navigation
         if (mounted) {
-          // Invalidate to trigger router refresh, then navigate
-          ref.invalidate(currentUserProvider);
-          await Future.delayed(const Duration(milliseconds: 50));
-          if (mounted) {
-            context.go(AppRoutes.home);
-          }
+          context.go(dashboardRoute);
+          // Clear loading after navigation is initiated
+          if (mounted) setState(() => _isLoading = false);
         }
         return;
       }
@@ -175,7 +194,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ref.read(selectedHotelIdProvider.notifier).state =
                           hotel.hotelId;
                       Navigator.pop(context);
-                      context.go(AppRoutes.home);
+                      // Navigate directly to role-based dashboard
+                      final dashboardRoute = _getDashboardRoute(hotel.role);
+                      debugPrint('🚀 Navigating to dashboard: $dashboardRoute');
+                      context.go(dashboardRoute);
                     },
                   ),
                 ),

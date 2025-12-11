@@ -11,11 +11,15 @@ class AppColors {
   static const Color accent = Color(0xFFFFFFFF); // White accent
 
   // Room Status Colors (High Contrast)
-  static const Color roomFree = Color(0xFF4CAF50); // Green
-  static const Color roomOccupied = Color(0xFFE53935); // Red
-  static const Color roomCleaning = Color(0xFFFF9800); // Orange
-  static const Color roomMaintenance = Color(0xFFFF9800); // Orange
-  static const Color roomOutOfService = Color(0xFF757575); // Grey
+  static const Color roomFree = Color(0xFF4CAF50); // Green - Available
+  static const Color roomOccupied = Color(0xFFE53935); // Red - Danger/Stop
+  static const Color roomCleaning = Color(0xFF2196F3); // Blue - Water/Clean
+  static const Color roomEmergency = Color(
+    0xFFFFC107,
+  ); // Amber/Yellow - Emergency/Urgent
+  static const Color roomOutOfService = Color(
+    0xFF424242,
+  ); // Dark Grey - Blocked/Inactive
 
   // Secondary Colors
   static const Color success = Color(0xFF4CAF50);
@@ -60,8 +64,9 @@ class RoomStatusColors {
         return AppColors.roomOccupied;
       case 'cleaning':
         return AppColors.roomCleaning;
-      case 'maintenance':
-        return AppColors.roomMaintenance;
+      case 'emergency':
+      case 'maintenance': // backwards compatibility
+        return AppColors.roomEmergency;
       case 'out_of_service':
       case 'blocked':
         return AppColors.roomOutOfService;
@@ -79,8 +84,9 @@ class RoomStatusColors {
         return 'Occupied';
       case 'cleaning':
         return 'Cleaning';
-      case 'maintenance':
-        return 'Maintenance';
+      case 'emergency':
+      case 'maintenance': // backwards compatibility
+        return 'Emergency';
       case 'out_of_service':
       case 'blocked':
         return 'Out of Service';

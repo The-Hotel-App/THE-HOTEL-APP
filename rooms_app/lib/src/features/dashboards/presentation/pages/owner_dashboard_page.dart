@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 
 /// Owner Dashboard - Full access to all hotel features
@@ -18,7 +19,23 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
     // Invalidate providers to force refresh from database
     ref.invalidate(currentUserProvider);
     ref.invalidate(userHotelsProvider);
+    ref.invalidate(userHotelsProvider);
     await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  Future<void> _showLogoutConfirmation(BuildContext context) async {
+    await AppDialog.show(
+      context: context,
+      title: 'Logout',
+      content: const Text('Are you sure you want to logout?'),
+      primaryButtonText: 'Logout',
+      onPrimaryPressed: () async {
+        Navigator.pop(context); // Close dialog
+        await ref.read(authRepositoryProvider).logout();
+        if (context.mounted) context.go(AppRoutes.welcome);
+      },
+      secondaryButtonText: 'Cancel',
+    );
   }
 
   @override
@@ -41,10 +58,7 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await ref.read(authRepositoryProvider).logout();
-              if (context.mounted) context.go(AppRoutes.welcome);
-            },
+            onPressed: () => _showLogoutConfirmation(context),
           ),
         ],
       ),
@@ -58,6 +72,7 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
             children: [
               // Welcome section
               _buildWelcomeCard(user?.name ?? 'Owner'),
+
               const SizedBox(height: 24),
 
               // Quick Actions
@@ -87,19 +102,27 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.black, AppColors.grey800],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.grey300, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.grey400.withValues(alpha: 0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 30,
-            backgroundColor: AppColors.warning,
-            child: Icon(Icons.person, color: AppColors.black, size: 32),
+            backgroundColor: AppColors.grey100,
+            child: Icon(
+              Icons.admin_panel_settings,
+              color: AppColors.grey800,
+              size: 32,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -108,12 +131,15 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
               children: [
                 Text(
                   'Welcome back,',
-                  style: TextStyle(color: AppColors.grey400, fontSize: 14),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                  ),
                 ),
                 Text(
                   name,
                   style: TextStyle(
-                    color: AppColors.white,
+                    color: AppColors.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
@@ -125,13 +151,13 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.warning,
+                    color: AppColors.grey800,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     'OWNER',
                     style: TextStyle(
-                      color: AppColors.black,
+                      color: AppColors.white,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),

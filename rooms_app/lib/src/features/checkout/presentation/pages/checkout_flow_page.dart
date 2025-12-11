@@ -6,7 +6,7 @@ import 'package:rooms/src/features/auth/presentation/providers/auth_providers.da
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
 
-/// Check-out flow page - Simplified checkout process
+/// Check-out flow page - Sleek, compact checkout process
 class CheckoutFlowPage extends ConsumerStatefulWidget {
   final Room room;
 
@@ -30,125 +30,146 @@ class _CheckoutFlowPageState extends ConsumerState<CheckoutFlowPage> {
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider).valueOrNull;
     final canViewMoney = currentUser?.role.canViewMoneyDetails ?? false;
+
     return Scaffold(
-      backgroundColor: AppColors.grey100,
+      backgroundColor: AppColors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.roomOccupied,
+        backgroundColor: AppColors.black,
         foregroundColor: AppColors.white,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, size: 28),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Row(
-          children: [
-            const Icon(Icons.logout, size: 24),
-            const SizedBox(width: 8),
-            Text('Check Out - Room ${widget.room.roomNumber}'),
-          ],
+        title: Text(
+          'Check Out',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildRoomCard(),
-            const SizedBox(height: 24),
-            if (canViewMoney) ...[
-              _buildAdditionalCharges(),
-              const SizedBox(height: 24),
-            ],
-            _buildRoomStatusSelector(),
-            const SizedBox(height: 32),
-            _buildCheckoutButton(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRoomCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.roomOccupied.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.roomOccupied, width: 2),
-      ),
-      child: Row(
+      body: Column(
         children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              color: AppColors.roomOccupied,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Text(
-                widget.room.roomNumber,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Room header - compact
+                  _buildRoomHeader(),
+                  const SizedBox(height: 24),
+
+                  // Additional charges (if permitted)
+                  if (canViewMoney) ...[
+                    _buildAdditionalCharges(),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // Room status selector
+                  _buildRoomStatusSelector(),
+                ],
               ),
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.room.roomType,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Currently Occupied',
-                  style: TextStyle(
-                    color: AppColors.roomOccupied,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
+
+          // Bottom checkout button
+          _buildCheckoutButton(),
         ],
       ),
     );
   }
 
-  Widget _buildAdditionalCharges() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.grey300),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+  Widget _buildRoomHeader() {
+    return Row(
+      children: [
+        // Room number badge
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: AppColors.black,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Center(
+            child: Text(
+              widget.room.roomNumber,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.add_circle, color: AppColors.warning),
-              const SizedBox(width: 8),
-              const Text(
-                'Additional Charges',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Text(
+                widget.room.roomType,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: AppColors.roomOccupied,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Occupied',
+                    style: TextStyle(
+                      color: AppColors.roomOccupied,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Row(
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAdditionalCharges() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Additional Charges',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.grey100,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
             children: [
-              const Text(
+              Text(
                 '₹',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -156,105 +177,98 @@ class _CheckoutFlowPageState extends ConsumerState<CheckoutFlowPage> {
                   controller: _additionalChargesController,
                   keyboardType: TextInputType.number,
                   style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
                   ),
                   decoration: const InputDecoration(
                     border: InputBorder.none,
                     hintText: '0',
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Mini-bar, room service, damages, etc.',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Mini-bar, room service, damages, etc.',
+          style: TextStyle(color: AppColors.grey500, fontSize: 12),
+        ),
+      ],
     );
   }
 
   Widget _buildRoomStatusSelector() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.grey300),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.swap_horiz, color: AppColors.black),
-              const SizedBox(width: 8),
-              const Text(
-                'Set Room Status',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Set Room Status After Checkout',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatusOption(
-                  true,
-                  'Cleaning',
-                  Icons.cleaning_services,
-                  AppColors.roomCleaning,
-                ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatusOption(
+                isCleaning: true,
+                label: 'Cleaning',
+                icon: Icons.cleaning_services_rounded,
+                color: AppColors.roomCleaning,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatusOption(
-                  false,
-                  'Free',
-                  Icons.check_circle,
-                  AppColors.roomFree,
-                ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatusOption(
+                isCleaning: false,
+                label: 'Free',
+                icon: Icons.check_circle_rounded,
+                color: AppColors.roomFree,
               ),
-            ],
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
-  Widget _buildStatusOption(
-    bool isCleaning,
-    String label,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _buildStatusOption({
+    required bool isCleaning,
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
     final isSelected = _setToCleaning == isCleaning;
-    return InkWell(
+
+    return GestureDetector(
       onTap: () => setState(() => _setToCleaning = isCleaning),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           color: isSelected ? color : AppColors.grey100,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? color : AppColors.grey300,
-            width: 2,
+            color: isSelected ? color : AppColors.grey200,
+            width: isSelected ? 2 : 1,
           ),
         ),
         child: Column(
           children: [
-            Icon(icon, size: 40, color: isSelected ? Colors.white : color),
-            const SizedBox(height: 8),
+            Icon(icon, size: 28, color: isSelected ? Colors.white : color),
+            const SizedBox(height: 6),
             Text(
               label,
               style: TextStyle(
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
                 color: isSelected ? Colors.white : color,
-                fontSize: 16,
+                fontSize: 14,
               ),
             ),
           ],
@@ -264,28 +278,37 @@ class _CheckoutFlowPageState extends ConsumerState<CheckoutFlowPage> {
   }
 
   Widget _buildCheckoutButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _handleCheckout,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.roomOccupied,
-          foregroundColor: AppColors.white,
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
           ),
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.logout, size: 24),
-            SizedBox(width: 8),
-            Text(
-              'Complete Check-Out',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ],
+      ),
+      child: SafeArea(
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _handleCheckout,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.black,
+              foregroundColor: AppColors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
             ),
-          ],
+            child: const Text(
+              'Complete Check-Out',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ),
         ),
       ),
     );
@@ -296,7 +319,7 @@ class _CheckoutFlowPageState extends ConsumerState<CheckoutFlowPage> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => const Center(
-        child: CircularProgressIndicator(color: AppColors.roomOccupied),
+        child: CircularProgressIndicator(color: AppColors.black),
       ),
     );
 
@@ -316,37 +339,38 @@ class _CheckoutFlowPageState extends ConsumerState<CheckoutFlowPage> {
     final color = newStatus == RoomStatus.cleaning
         ? AppColors.roomCleaning
         : AppColors.roomFree;
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 80,
-                height: 80,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.check_circle, color: color, size: 48),
+                child: Icon(Icons.check_circle, color: color, size: 36),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               const Text(
-                'Check-Out Complete!',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                'Check-Out Complete',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               Text(
-                'Room ${widget.room.roomNumber} is now ${newStatus.displayName}',
-                style: const TextStyle(color: AppColors.textSecondary),
+                'Room ${widget.room.roomNumber} → ${newStatus.displayName}',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -355,14 +379,18 @@ class _CheckoutFlowPageState extends ConsumerState<CheckoutFlowPage> {
                     context.pop();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: color,
+                    backgroundColor: AppColors.black,
                     foregroundColor: AppColors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
+                    elevation: 0,
                   ),
-                  child: const Text('Done', style: TextStyle(fontSize: 16)),
+                  child: const Text(
+                    'Done',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ],

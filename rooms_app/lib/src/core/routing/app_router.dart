@@ -87,6 +87,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoginRoute = state.matchedLocation == AppRoutes.login;
       final isSetupRoute = state.matchedLocation == AppRoutes.setup;
 
+      // Check if user is navigating to a dashboard route
+      final isDashboardRoute =
+          state.matchedLocation == AppRoutes.ownerDashboard ||
+          state.matchedLocation == AppRoutes.managerDashboard ||
+          state.matchedLocation == AppRoutes.staffDashboard ||
+          state.matchedLocation == AppRoutes.kitchenDashboard;
+
       // Check auth state
       final authState = ref.read(auth_new.currentUserProvider);
 
@@ -108,18 +115,36 @@ final routerProvider = Provider<GoRouter>((ref) {
         // Check if hotels are still loading
         final hotelsAsync = ref.read(auth_new.userHotelsProvider);
 
-        // If hotels are still loading, don't redirect yet
+        // If hotels are still loading but user is explicitly navigating to dashboard,
+        // don't interfere - the login page has already selected the hotel
         if (hotelsAsync.isLoading) {
+          if (isDashboardRoute) {
+            debugPrint(
+              '⏳ Hotels loading but navigating to dashboard, allowing',
+            );
+            return null;
+          }
           debugPrint('⏳ Hotels loading, staying on current route');
           return null;
         }
 
+        final selectedHotelId = ref.read(auth_new.selectedHotelIdProvider);
         final selectedHotelAsync = ref.read(auth_new.currentHotelProvider);
-        final hasHotel = selectedHotelAsync != null;
+        final hasHotel = selectedHotelAsync != null || selectedHotelId != null;
+
+        debugPrint(
+          '🏨 Selected hotel ID: $selectedHotelId, hasHotel: $hasHotel',
+        );
 
         // If user is on setup page, allow them to stay (they might be creating their first hotel)
         if (isSetupRoute) {
           debugPrint('✅ On setup page, allowing access');
+          return null;
+        }
+
+        // If user is navigating to a dashboard and has a hotel selected, allow it
+        if (isDashboardRoute && hasHotel) {
+          debugPrint('✅ Navigating to dashboard with hotel selected, allowing');
           return null;
         }
 
@@ -138,18 +163,22 @@ final routerProvider = Provider<GoRouter>((ref) {
 
         // If user has hotel and is on welcome/login, redirect to role-based dashboard
         if (hasHotel && (isWelcomeRoute || isLoginRoute)) {
-          final role = selectedHotelAsync.role;
-          debugPrint('✅ Has hotel with role: $role, redirecting to dashboard');
+          final role = selectedHotelAsync?.role;
+          if (role != null) {
+            debugPrint(
+              '✅ Has hotel with role: $role, redirecting to dashboard',
+            );
 
-          switch (role) {
-            case UserRole.owner:
-              return AppRoutes.ownerDashboard;
-            case UserRole.manager:
-              return AppRoutes.managerDashboard;
-            case UserRole.staff:
-              return AppRoutes.staffDashboard;
-            case UserRole.kitchenManager:
-              return AppRoutes.kitchenDashboard;
+            switch (role) {
+              case UserRole.owner:
+                return AppRoutes.ownerDashboard;
+              case UserRole.manager:
+                return AppRoutes.managerDashboard;
+              case UserRole.staff:
+                return AppRoutes.staffDashboard;
+              case UserRole.kitchenManager:
+                return AppRoutes.kitchenDashboard;
+            }
           }
         }
       }

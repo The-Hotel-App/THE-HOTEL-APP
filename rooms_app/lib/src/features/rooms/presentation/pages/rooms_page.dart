@@ -150,6 +150,9 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
           .toList();
     }
 
+    // Always sort by room number
+    filteredRooms.sort((a, b) => a.roomNumber.compareTo(b.roomNumber));
+
     if (filteredRooms.isEmpty) {
       return _buildEmptyState();
     }

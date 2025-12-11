@@ -62,7 +62,8 @@ class ManagedRoom {
         return RoomStatus.occupied;
       case 'cleaning':
         return RoomStatus.cleaning;
-      case 'maintenance':
+      case 'emergency':
+      case 'maintenance': // backwards compatibility
         return RoomStatus.maintenance;
       case 'out_of_service':
         return RoomStatus.outOfService;
@@ -80,7 +81,7 @@ class ManagedRoom {
       case RoomStatus.cleaning:
         return 'cleaning';
       case RoomStatus.maintenance:
-        return 'maintenance';
+        return 'emergency';
       case RoomStatus.outOfService:
         return 'out_of_service';
     }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 
 /// Staff Dashboard - Access to rooms and create bookings only, no money details
@@ -17,7 +18,23 @@ class _StaffDashboardPageState extends ConsumerState<StaffDashboardPage> {
   Future<void> _refresh() async {
     ref.invalidate(currentUserProvider);
     ref.invalidate(userHotelsProvider);
+    ref.invalidate(userHotelsProvider);
     await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  Future<void> _showLogoutConfirmation(BuildContext context) async {
+    await AppDialog.show(
+      context: context,
+      title: 'Logout',
+      content: const Text('Are you sure you want to logout?'),
+      primaryButtonText: 'Logout',
+      onPrimaryPressed: () async {
+        Navigator.pop(context); // Close dialog
+        await ref.read(authRepositoryProvider).logout();
+        if (context.mounted) context.go(AppRoutes.welcome);
+      },
+      secondaryButtonText: 'Cancel',
+    );
   }
 
   @override
@@ -40,10 +57,7 @@ class _StaffDashboardPageState extends ConsumerState<StaffDashboardPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await ref.read(authRepositoryProvider).logout();
-              if (context.mounted) context.go(AppRoutes.welcome);
-            },
+            onPressed: () => _showLogoutConfirmation(context),
           ),
         ],
       ),

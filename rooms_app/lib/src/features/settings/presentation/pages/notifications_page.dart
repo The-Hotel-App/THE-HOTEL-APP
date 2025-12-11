@@ -93,7 +93,7 @@ class NotificationsPage extends StatelessWidget {
           const SizedBox(height: 12),
           _buildNotificationCard(
             icon: Icons.warning_amber,
-            title: 'Maintenance Required',
+            title: 'Emergency Required',
             message: 'Room 205 needs attention - AC not working',
             time: '4 hours ago',
             color: AppColors.warning,

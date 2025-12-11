@@ -15,7 +15,7 @@ enum RoomStatus {
       case RoomStatus.cleaning:
         return 'Cleaning';
       case RoomStatus.maintenance:
-        return 'Maintenance';
+        return 'Emergency';
       case RoomStatus.outOfService:
         return 'Out of Service';
     }

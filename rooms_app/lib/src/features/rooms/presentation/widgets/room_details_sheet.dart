@@ -72,89 +72,32 @@ class RoomDetailsSheet extends ConsumerWidget {
           _buildPrimaryAction(context, ref, statusColor),
           const SizedBox(height: 24),
 
-          // Floor and Max info row
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.grey100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.layers,
-                            size: 16,
-                            color: AppColors.grey500,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Floor',
-                            style: TextStyle(
-                              color: AppColors.grey500,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        room.floor,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+          // Max occupancy info
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.grey100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.people, size: 20, color: AppColors.grey600),
+                const SizedBox(width: 8),
+                Text(
+                  'Max Occupancy: ',
+                  style: TextStyle(color: AppColors.grey600, fontSize: 14),
+                ),
+                Text(
+                  '${room.maxOccupancy}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.grey100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.people,
-                            size: 16,
-                            color: AppColors.grey500,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Max',
-                            style: TextStyle(
-                              color: AppColors.grey500,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${room.maxOccupancy}',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 24),
 
@@ -197,7 +140,7 @@ class RoomDetailsSheet extends ConsumerWidget {
         };
         break;
       case RoomStatus.maintenance:
-        label = 'REPAIR DONE';
+        label = 'EMERGENCY FIXED';
         onTap = () async {
           await _updateRoomStatus(ref, room.id, RoomStatus.free);
           if (context.mounted) Navigator.pop(context);
@@ -254,15 +197,15 @@ class RoomDetailsSheet extends ConsumerWidget {
       ),
       _StatusButtonData(
         status: RoomStatus.maintenance,
-        label: 'Maintenance',
-        icon: Icons.build,
-        color: AppColors.roomMaintenance,
+        label: 'Emergency',
+        icon: Icons.warning_amber_rounded,
+        color: AppColors.roomEmergency,
       ),
       _StatusButtonData(
         status: RoomStatus.outOfService,
-        label: 'Block',
-        icon: Icons.block,
-        color: AppColors.grey600,
+        label: 'Out of Service',
+        icon: Icons.do_not_disturb_on_rounded,
+        color: AppColors.roomOutOfService,
       ),
     ];
 
