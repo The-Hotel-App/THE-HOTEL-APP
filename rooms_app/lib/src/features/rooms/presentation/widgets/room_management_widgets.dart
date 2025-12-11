@@ -144,15 +144,14 @@ class RoomTile extends StatelessWidget {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.1),
+                color: AppColors.grey100,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: statusColor, width: 2),
               ),
               child: Center(
                 child: Text(
                   room.roomNumber,
-                  style: TextStyle(
-                    color: statusColor,
+                  style: const TextStyle(
+                    color: AppColors.black,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -405,16 +404,25 @@ class _EditRoomDialogState extends State<EditRoomDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Edit Room ${widget.room.roomNumber}'),
+      backgroundColor: AppColors.white,
+      title: Text(
+        'Edit Room ${widget.room.roomNumber}',
+        style: const TextStyle(color: AppColors.black),
+      ),
       content: DropdownButtonFormField<String>(
         initialValue: _selectedTypeId,
-        decoration: const InputDecoration(labelText: 'Room Type'),
+        decoration: const InputDecoration(
+          labelText: 'Room Type',
+          labelStyle: TextStyle(color: AppColors.grey600),
+        ),
+        style: const TextStyle(color: AppColors.black),
         items: widget.roomTypes
             .map(
               (type) => DropdownMenuItem(
                 value: type.id,
                 child: Text(
                   '${type.name} (₹${type.basePrice.toStringAsFixed(0)})',
+                  style: const TextStyle(color: AppColors.black),
                 ),
               ),
             )
@@ -424,7 +432,7 @@ class _EditRoomDialogState extends State<EditRoomDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: const Text('Cancel', style: TextStyle(color: AppColors.black)),
         ),
         ElevatedButton(
           onPressed: () async {
@@ -442,7 +450,10 @@ class _EditRoomDialogState extends State<EditRoomDialog> {
               }
             }
           },
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.black),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.black,
+            foregroundColor: AppColors.white,
+          ),
           child: const Text('Update'),
         ),
       ],
