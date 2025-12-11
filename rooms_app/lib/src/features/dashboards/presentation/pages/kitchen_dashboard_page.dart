@@ -6,11 +6,23 @@ import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 
 /// Kitchen Manager Dashboard - Food orders only, no access to rooms/bookings/customers
-class KitchenDashboardPage extends ConsumerWidget {
+class KitchenDashboardPage extends ConsumerStatefulWidget {
   const KitchenDashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<KitchenDashboardPage> createState() =>
+      _KitchenDashboardPageState();
+}
+
+class _KitchenDashboardPageState extends ConsumerState<KitchenDashboardPage> {
+  Future<void> _refresh() async {
+    ref.invalidate(currentUserProvider);
+    ref.invalidate(userHotelsProvider);
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final hotel = ref.watch(currentHotelProvider);
     final user = ref.watch(currentUserProvider).valueOrNull;
 
@@ -36,26 +48,30 @@ class KitchenDashboardPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Welcome section
-            _buildWelcomeCard(user?.name ?? 'Kitchen Manager'),
-            const SizedBox(height: 24),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Welcome section
+              _buildWelcomeCard(user?.name ?? 'Kitchen Manager'),
+              const SizedBox(height: 24),
 
-            // Food Orders section
-            _buildSectionTitle('Food Orders', Icons.restaurant_menu),
-            const SizedBox(height: 12),
-            _buildOrdersSection(),
-            const SizedBox(height: 24),
+              // Food Orders section
+              _buildSectionTitle('Food Orders', Icons.restaurant_menu),
+              const SizedBox(height: 12),
+              _buildOrdersSection(),
+              const SizedBox(height: 24),
 
-            // Account
-            _buildSectionTitle('Account', Icons.person),
-            const SizedBox(height: 12),
-            _buildAccountGrid(context),
-          ],
+              // Account
+              _buildSectionTitle('Account', Icons.person),
+              const SizedBox(height: 12),
+              _buildAccountGrid(context),
+            ],
+          ),
         ),
       ),
     );

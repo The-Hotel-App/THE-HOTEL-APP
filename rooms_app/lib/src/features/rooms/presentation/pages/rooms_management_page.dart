@@ -241,13 +241,13 @@ class _RoomsManagementPageState extends ConsumerState<RoomsManagementPage> {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.warning,
+                      color: AppColors.white,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       '${rooms.length} rooms',
                       style: const TextStyle(
-                        color: AppColors.black,
+                        color: AppColors.grey800,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),

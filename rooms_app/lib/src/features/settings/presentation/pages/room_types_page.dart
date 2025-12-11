@@ -109,42 +109,7 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
       );
     }
 
-    if (_roomTypes.isEmpty) {
-      return _buildEmptyState();
-    }
-
     return _buildRoomTypesList();
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.category_outlined, size: 80, color: AppColors.grey400),
-          const SizedBox(height: 16),
-          const Text(
-            'No Room Types',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Add room types to categorize your rooms',
-            style: TextStyle(color: AppColors.grey500),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => _showAddEditDialog(null),
-            icon: const Icon(Icons.add),
-            label: const Text('Add Room Type'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.black,
-              foregroundColor: AppColors.white,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildRoomTypesList() {
@@ -270,7 +235,7 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
                     controller: nameController,
                     decoration: const InputDecoration(
                       labelText: 'Name',
-                      hintText: 'e.g. Deluxe',
+                      hintText: 'Deluxe, Suite...',
                     ),
                     validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                   ),
@@ -278,8 +243,8 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
                   TextFormField(
                     controller: priceController,
                     decoration: const InputDecoration(
-                      labelText: 'Base Price (₹/night)',
-                      hintText: 'e.g. 1500',
+                      labelText: 'Price/Night (₹)',
+                      hintText: '1500',
                     ),
                     keyboardType: TextInputType.number,
                     validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
@@ -288,8 +253,8 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
                   TextFormField(
                     controller: occupancyController,
                     decoration: const InputDecoration(
-                      labelText: 'Max Occupancy',
-                      hintText: 'e.g. 2',
+                      labelText: 'Max Guests',
+                      hintText: '2',
                     ),
                     keyboardType: TextInputType.number,
                     validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
@@ -298,8 +263,8 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
                   TextFormField(
                     controller: descriptionController,
                     decoration: const InputDecoration(
-                      labelText: 'Description (Optional)',
-                      hintText: 'Brief description',
+                      labelText: 'Description',
+                      hintText: 'Optional',
                     ),
                     maxLines: 2,
                   ),
@@ -394,8 +359,8 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Room Type?'),
-        content: Text('Are you sure you want to delete "${roomType.name}"?'),
+        title: const Text('Delete?'),
+        content: Text('Delete "${roomType.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

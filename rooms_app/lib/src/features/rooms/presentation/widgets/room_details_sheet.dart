@@ -3,12 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
-import 'package:rooms/src/features/auth/domain/entities/user.dart';
-import 'package:rooms/src/features/auth/presentation/providers/auth_providers.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
 
-/// Bottom sheet for room details and actions
+/// Bottom sheet for room details and actions - Clean minimal design
 class RoomDetailsSheet extends ConsumerWidget {
   final Room room;
 
@@ -17,320 +15,326 @@ class RoomDetailsSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statusColor = RoomStatusColors.getColor(room.status.name);
-    final currentUser = ref.watch(currentUserProvider).valueOrNull;
-    final canViewMoney = currentUser?.role.canViewMoneyDetails ?? false;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle
+          // Handle bar
           Container(
-            margin: const EdgeInsets.only(top: 12),
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.grey300,
+              color: AppColors.grey400,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
+          const SizedBox(height: 24),
 
-          // Header
+          // Room number circle
           Container(
-            margin: const EdgeInsets.all(24),
-            padding: const EdgeInsets.all(20),
+            width: 100,
+            height: 100,
             decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: statusColor, width: 2),
+              color: statusColor,
+              shape: BoxShape.circle,
             ),
-            child: Row(
-              children: [
-                Container(
+            child: Center(
+              child: Text(
+                room.roomNumber,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // "Room Number" label
+          Text(
+            'Room Number',
+            style: TextStyle(
+              color: statusColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Primary action button
+          _buildPrimaryAction(context, ref, statusColor),
+          const SizedBox(height: 24),
+
+          // Floor and Max info row
+          Row(
+            children: [
+              Expanded(
+                child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: statusColor,
-                    shape: BoxShape.circle,
+                    color: AppColors.grey100,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    room.roomNumber,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.layers,
+                            size: 16,
+                            color: AppColors.grey500,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Floor',
+                            style: TextStyle(
+                              color: AppColors.grey500,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
                       Text(
-                        room.roomType,
+                        room.floor,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.grey100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.people,
+                            size: 16,
+                            color: AppColors.grey500,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Max',
+                            style: TextStyle(
+                              color: AppColors.grey500,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
                       Text(
-                        room.status.displayName,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: statusColor,
-                          fontWeight: FontWeight.w600,
+                        '${room.maxOccupancy}',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+          const SizedBox(height: 24),
 
-          // Primary Action Button (Color-coded for illiterate users)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: _buildPrimaryAction(context, ref),
-          ),
-
-          // Details
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(24),
-              children: [
-                _buildDetailRow(Icons.layers, 'Floor', room.floor),
-                if (canViewMoney)
-                  _buildDetailRow(
-                    Icons.currency_rupee,
-                    'Price/Night',
-                    '₹${room.pricePerNight.toStringAsFixed(0)}',
-                  ),
-                _buildDetailRow(
-                  Icons.people,
-                  'Max Occupancy',
-                  '${room.maxOccupancy}',
-                ),
-                if (room.lastCleaned != null)
-                  _buildDetailRow(
-                    Icons.cleaning_services,
-                    'Last Cleaned',
-                    _formatDateTime(room.lastCleaned!),
-                  ),
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 16),
-                const Text(
-                  'Quick Status Change',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                _buildQuickStatusButtons(context, ref),
-              ],
-            ),
-          ),
+          // Quick status buttons - 2x2 grid
+          _buildStatusGrid(context, ref),
         ],
       ),
     );
   }
 
-  /// Primary action based on room status - BIG, COLOR-CODED button
-  Widget _buildPrimaryAction(BuildContext context, WidgetRef ref) {
+  /// Primary action based on room status
+  Widget _buildPrimaryAction(
+    BuildContext context,
+    WidgetRef ref,
+    Color statusColor,
+  ) {
+    String label;
+    VoidCallback onTap;
+
     switch (room.status) {
       case RoomStatus.free:
-        return _buildBigActionButton(
-          context: context,
-          icon: Icons.login,
-          label: 'CHECK IN',
-          color: AppColors.roomFree,
-          onTap: () {
-            Navigator.pop(context);
-            context.push(AppRoutes.checkin, extra: room);
-          },
-        );
+        label = 'CHECK IN';
+        onTap = () {
+          Navigator.pop(context);
+          context.push(AppRoutes.checkin, extra: room);
+        };
+        break;
       case RoomStatus.occupied:
-        return _buildBigActionButton(
-          context: context,
-          icon: Icons.logout,
-          label: 'CHECK OUT',
-          color: AppColors.roomOccupied,
-          onTap: () {
-            Navigator.pop(context);
-            context.push(AppRoutes.checkout, extra: room);
-          },
-        );
+        label = 'CHECK OUT';
+        onTap = () {
+          Navigator.pop(context);
+          context.push(AppRoutes.checkout, extra: room);
+        };
+        break;
       case RoomStatus.cleaning:
-        return _buildBigActionButton(
-          context: context,
-          icon: Icons.check_circle,
-          label: 'CLEANING DONE',
-          color: AppColors.roomCleaning,
-          onTap: () async {
-            await _updateRoomStatus(ref, room.id, RoomStatus.free);
-            if (context.mounted) Navigator.pop(context);
-          },
-        );
+        label = 'CLEANING DONE';
+        onTap = () async {
+          await _updateRoomStatus(ref, room.id, RoomStatus.free);
+          if (context.mounted) Navigator.pop(context);
+        };
+        break;
       case RoomStatus.maintenance:
-        return _buildBigActionButton(
-          context: context,
-          icon: Icons.check_circle,
-          label: 'REPAIR DONE',
-          color: AppColors.grey600,
-          onTap: () async {
-            await _updateRoomStatus(ref, room.id, RoomStatus.free);
-            if (context.mounted) Navigator.pop(context);
-          },
-        );
+        label = 'REPAIR DONE';
+        onTap = () async {
+          await _updateRoomStatus(ref, room.id, RoomStatus.free);
+          if (context.mounted) Navigator.pop(context);
+        };
+        break;
       case RoomStatus.outOfService:
-        return _buildBigActionButton(
-          context: context,
-          icon: Icons.refresh,
-          label: 'RESTORE ROOM',
-          color: AppColors.grey600,
-          onTap: () async {
-            await _updateRoomStatus(ref, room.id, RoomStatus.free);
-            if (context.mounted) Navigator.pop(context);
-          },
-        );
+        label = 'RESTORE ROOM';
+        onTap = () async {
+          await _updateRoomStatus(ref, room.id, RoomStatus.free);
+          if (context.mounted) Navigator.pop(context);
+        };
+        break;
     }
-  }
 
-  Widget _buildBigActionButton({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: color,
+          backgroundColor: statusColor,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 20),
+          padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(30),
+          ),
+          elevation: 0,
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusGrid(BuildContext context, WidgetRef ref) {
+    // Define status buttons with icons and colors
+    final statusButtons = [
+      _StatusButtonData(
+        status: RoomStatus.occupied,
+        label: 'Occupied',
+        icon: Icons.cancel,
+        color: AppColors.roomOccupied,
+      ),
+      _StatusButtonData(
+        status: RoomStatus.cleaning,
+        label: 'Cleaning',
+        icon: Icons.cleaning_services,
+        color: AppColors.roomCleaning,
+      ),
+      _StatusButtonData(
+        status: RoomStatus.maintenance,
+        label: 'Maintenance',
+        icon: Icons.build,
+        color: AppColors.roomMaintenance,
+      ),
+      _StatusButtonData(
+        status: RoomStatus.outOfService,
+        label: 'Block',
+        icon: Icons.block,
+        color: AppColors.grey600,
+      ),
+    ];
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: _buildStatusButton(context, ref, statusButtons[0])),
+            const SizedBox(width: 12),
+            Expanded(child: _buildStatusButton(context, ref, statusButtons[1])),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _buildStatusButton(context, ref, statusButtons[2])),
+            const SizedBox(width: 12),
+            Expanded(child: _buildStatusButton(context, ref, statusButtons[3])),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusButton(
+    BuildContext context,
+    WidgetRef ref,
+    _StatusButtonData data,
+  ) {
+    final isCurrentStatus = room.status == data.status;
+
+    return InkWell(
+      onTap: isCurrentStatus
+          ? null
+          : () async {
+              await _updateRoomStatus(ref, room.id, data.status);
+              if (context.mounted) Navigator.pop(context);
+            },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isCurrentStatus
+              ? data.color.withValues(alpha: 0.15)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isCurrentStatus ? data.color : AppColors.grey300,
+            width: isCurrentStatus ? 2 : 1,
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 28),
-            const SizedBox(width: 12),
+            Icon(
+              data.icon,
+              size: 18,
+              color: isCurrentStatus ? data.color : AppColors.grey600,
+            ),
+            const SizedBox(width: 8),
             Text(
-              label,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              data.label,
+              style: TextStyle(
+                color: isCurrentStatus ? data.color : AppColors.grey700,
+                fontWeight: isCurrentStatus ? FontWeight.bold : FontWeight.w500,
+                fontSize: 14,
+              ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  Widget _buildQuickStatusButtons(BuildContext context, WidgetRef ref) {
-    final currentUser = ref.watch(currentUserProvider).valueOrNull;
-    final isStaff = currentUser?.role == UserRole.staff;
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: RoomStatus.values
-          .where((s) => s != room.status)
-          .where((s) {
-            // Staff can only change to Cleaning or Free
-            if (isStaff) {
-              return s == RoomStatus.cleaning || s == RoomStatus.free;
-            }
-            return true;
-          })
-          .map((status) {
-            final color = RoomStatusColors.getColor(status.name);
-            return InkWell(
-              onTap: () async {
-                await _updateRoomStatus(ref, room.id, status);
-                if (context.mounted) Navigator.pop(context);
-              },
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: color),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(_getStatusIcon(status), size: 18, color: color),
-                    const SizedBox(width: 6),
-                    Text(
-                      status.displayName,
-                      style: TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          })
-          .toList(),
-    );
-  }
-
-  Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          Icon(icon, size: 24, color: AppColors.black),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDateTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else {
-      return '${difference.inDays}d ago';
-    }
   }
 
   Future<void> _updateRoomStatus(
@@ -340,20 +344,21 @@ class RoomDetailsSheet extends ConsumerWidget {
   ) async {
     final repo = ref.read(roomRepositoryProvider);
     await repo.updateRoomStatus(roomId, status);
+    // Invalidate providers to refresh data
+    ref.invalidate(roomsProvider);
   }
+}
 
-  IconData _getStatusIcon(RoomStatus status) {
-    switch (status) {
-      case RoomStatus.free:
-        return Icons.check_circle;
-      case RoomStatus.occupied:
-        return Icons.hotel;
-      case RoomStatus.cleaning:
-        return Icons.cleaning_services;
-      case RoomStatus.maintenance:
-        return Icons.build;
-      case RoomStatus.outOfService:
-        return Icons.block;
-    }
-  }
+class _StatusButtonData {
+  final RoomStatus status;
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const _StatusButtonData({
+    required this.status,
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
 }

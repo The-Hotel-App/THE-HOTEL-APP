@@ -6,11 +6,23 @@ import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 
 /// Owner Dashboard - Full access to all hotel features
-class OwnerDashboardPage extends ConsumerWidget {
+class OwnerDashboardPage extends ConsumerStatefulWidget {
   const OwnerDashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OwnerDashboardPage> createState() => _OwnerDashboardPageState();
+}
+
+class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
+  Future<void> _refresh() async {
+    // Invalidate providers to force refresh from database
+    ref.invalidate(currentUserProvider);
+    ref.invalidate(userHotelsProvider);
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final hotel = ref.watch(currentHotelProvider);
     final user = ref.watch(currentUserProvider).valueOrNull;
 
@@ -36,32 +48,36 @@ class OwnerDashboardPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Welcome section
-            _buildWelcomeCard(user?.name ?? 'Owner'),
-            const SizedBox(height: 24),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Welcome section
+              _buildWelcomeCard(user?.name ?? 'Owner'),
+              const SizedBox(height: 24),
 
-            // Quick Actions
-            _buildSectionTitle('Quick Actions', Icons.flash_on),
-            const SizedBox(height: 12),
-            _buildQuickActionsGrid(context),
-            const SizedBox(height: 24),
+              // Quick Actions
+              _buildSectionTitle('Quick Actions', Icons.flash_on),
+              const SizedBox(height: 12),
+              _buildQuickActionsGrid(context),
+              const SizedBox(height: 24),
 
-            // Management
-            _buildSectionTitle('Management', Icons.settings),
-            const SizedBox(height: 12),
-            _buildManagementGrid(context),
-            const SizedBox(height: 24),
+              // Management
+              _buildSectionTitle('Management', Icons.settings),
+              const SizedBox(height: 12),
+              _buildManagementGrid(context),
+              const SizedBox(height: 24),
 
-            // Settings
-            _buildSectionTitle('Settings', Icons.tune),
-            const SizedBox(height: 12),
-            _buildSettingsGrid(context),
-          ],
+              // Settings
+              _buildSectionTitle('Settings', Icons.tune),
+              const SizedBox(height: 12),
+              _buildSettingsGrid(context),
+            ],
+          ),
         ),
       ),
     );

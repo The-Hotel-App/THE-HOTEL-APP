@@ -247,15 +247,16 @@ class SupabaseAuthRepository implements AuthRepository {
     String? phone,
   }) async {
     try {
-      debugPrint('👤 Updating profile for user: $userId');
+      debugPrint('👤 Updating/creating profile for user: $userId');
 
-      final updates = <String, dynamic>{};
-      if (name != null) updates['name'] = name;
-      if (phone != null) updates['phone'] = phone;
+      // Use upsert to ensure profile exists - if it doesn't exist, create it
+      final profileData = <String, dynamic>{'id': userId, 'is_active': true};
+      if (name != null) profileData['name'] = name;
+      if (phone != null) profileData['phone'] = phone;
 
-      await _client.from('user_profiles').update(updates).eq('id', userId);
+      await _client.from('user_profiles').upsert(profileData, onConflict: 'id');
 
-      debugPrint('✅ Profile updated successfully');
+      debugPrint('✅ Profile updated/created successfully');
     } catch (e) {
       debugPrint('❌ Error updating profile: $e');
       rethrow;

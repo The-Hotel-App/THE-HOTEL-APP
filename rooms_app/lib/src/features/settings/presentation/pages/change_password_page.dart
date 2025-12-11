@@ -56,36 +56,9 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildInfoCard(),
-              const SizedBox(height: 24),
-              _buildPasswordCard(),
-            ],
+            children: [const SizedBox(height: 24), _buildPasswordCard()],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.info.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info, color: AppColors.info),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Your password must be at least 6 characters long.',
-              style: TextStyle(color: AppColors.info, fontSize: 14),
-            ),
-          ),
-        ],
       ),
     );
   }

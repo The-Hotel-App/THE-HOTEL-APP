@@ -59,7 +59,8 @@ class AppDialog extends StatelessWidget {
                 ],
                 if (primaryButtonText != null)
                   ElevatedButton(
-                    onPressed: onPrimaryPressed,
+                    onPressed:
+                        onPrimaryPressed ?? () => Navigator.of(context).pop(),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.black,
                       foregroundColor: AppColors.white,

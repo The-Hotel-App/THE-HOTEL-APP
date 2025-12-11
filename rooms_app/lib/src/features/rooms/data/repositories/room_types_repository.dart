@@ -11,7 +11,6 @@ class RoomType {
   final double basePrice;
   final int maxOccupancy;
   final String? description;
-  final bool isActive;
   final DateTime createdAt;
 
   const RoomType({
@@ -21,7 +20,6 @@ class RoomType {
     required this.basePrice,
     required this.maxOccupancy,
     this.description,
-    this.isActive = true,
     required this.createdAt,
   });
 
@@ -33,7 +31,6 @@ class RoomType {
       basePrice: (json['base_price'] as num).toDouble(),
       maxOccupancy: json['max_occupancy'] as int,
       description: json['description'] as String?,
-      isActive: json['is_active'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -45,7 +42,6 @@ class RoomType {
       'base_price': basePrice,
       'max_occupancy': maxOccupancy,
       'description': description,
-      'is_active': isActive,
     };
   }
 
@@ -56,7 +52,6 @@ class RoomType {
     double? basePrice,
     int? maxOccupancy,
     String? description,
-    bool? isActive,
     DateTime? createdAt,
   }) {
     return RoomType(
@@ -66,7 +61,6 @@ class RoomType {
       basePrice: basePrice ?? this.basePrice,
       maxOccupancy: maxOccupancy ?? this.maxOccupancy,
       description: description ?? this.description,
-      isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -87,7 +81,6 @@ class RoomTypesRepository {
           .from('room_types')
           .select()
           .eq('hotel_id', hotelId)
-          .eq('is_active', true)
           .order('name');
 
       final roomTypes = (response as List)
@@ -120,7 +113,6 @@ class RoomTypesRepository {
             'base_price': basePrice,
             'max_occupancy': maxOccupancy,
             'description': description,
-            'is_active': true,
           })
           .select()
           .single();
@@ -164,14 +156,11 @@ class RoomTypesRepository {
     }
   }
 
-  /// Delete a room type (soft delete)
+  /// Delete a room type
   Future<void> deleteRoomType(String id) async {
     try {
       debugPrint('📦 Deleting room type: $id');
-      await _client
-          .from('room_types')
-          .update({'is_active': false})
-          .eq('id', id);
+      await _client.from('room_types').delete().eq('id', id);
 
       debugPrint('✅ Room type deleted');
     } catch (e) {

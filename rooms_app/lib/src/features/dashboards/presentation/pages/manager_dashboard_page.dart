@@ -6,11 +6,23 @@ import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 
 /// Manager Dashboard - Access to rooms, bookings, customers (current only), no money details
-class ManagerDashboardPage extends ConsumerWidget {
+class ManagerDashboardPage extends ConsumerStatefulWidget {
   const ManagerDashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ManagerDashboardPage> createState() =>
+      _ManagerDashboardPageState();
+}
+
+class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
+  Future<void> _refresh() async {
+    ref.invalidate(currentUserProvider);
+    ref.invalidate(userHotelsProvider);
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final hotel = ref.watch(currentHotelProvider);
     final user = ref.watch(currentUserProvider).valueOrNull;
 
@@ -36,26 +48,30 @@ class ManagerDashboardPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Welcome section
-            _buildWelcomeCard(user?.name ?? 'Manager'),
-            const SizedBox(height: 24),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Welcome section
+              _buildWelcomeCard(user?.name ?? 'Manager'),
+              const SizedBox(height: 24),
 
-            // Quick Actions
-            _buildSectionTitle('Operations', Icons.work),
-            const SizedBox(height: 12),
-            _buildOperationsGrid(context),
-            const SizedBox(height: 24),
+              // Quick Actions
+              _buildSectionTitle('Operations', Icons.work),
+              const SizedBox(height: 12),
+              _buildOperationsGrid(context),
+              const SizedBox(height: 24),
 
-            // Settings
-            _buildSectionTitle('Account', Icons.person),
-            const SizedBox(height: 12),
-            _buildAccountGrid(context),
-          ],
+              // Settings
+              _buildSectionTitle('Account', Icons.person),
+              const SizedBox(height: 12),
+              _buildAccountGrid(context),
+            ],
+          ),
         ),
       ),
     );

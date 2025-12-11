@@ -105,6 +105,15 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // If authenticated, check if hotel is selected
       if (isAuthenticated) {
+        // Check if hotels are still loading
+        final hotelsAsync = ref.read(auth_new.userHotelsProvider);
+
+        // If hotels are still loading, don't redirect yet
+        if (hotelsAsync.isLoading) {
+          debugPrint('⏳ Hotels loading, staying on current route');
+          return null;
+        }
+
         final selectedHotelAsync = ref.read(auth_new.currentHotelProvider);
         final hasHotel = selectedHotelAsync != null;
 
@@ -114,12 +123,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           return null;
         }
 
-        // If user has no hotel, redirect to setup (but only if not already there)
+        // If user has no hotel (and hotels finished loading), redirect to setup
         if (!hasHotel) {
-          // Don't redirect if we're already going to/from setup to avoid recreating the widget
-          if (state.matchedLocation != AppRoutes.setup) {
-            debugPrint('⚠️  No hotel selected, redirecting to setup');
-            return AppRoutes.setup;
+          // Check if hotels loaded but are empty
+          final hotelsList = hotelsAsync.valueOrNull ?? [];
+          if (hotelsList.isEmpty) {
+            if (state.matchedLocation != AppRoutes.setup) {
+              debugPrint('⚠️  No hotels found, redirecting to setup');
+              return AppRoutes.setup;
+            }
           }
           return null;
         }

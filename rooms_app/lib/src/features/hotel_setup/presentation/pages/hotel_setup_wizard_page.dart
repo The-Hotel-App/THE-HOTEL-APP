@@ -320,7 +320,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
           ),
         );
         if (mounted) {
-          context.go(AppRoutes.home);
+          context.go(AppRoutes.ownerDashboard);
         }
       }
     } catch (e) {

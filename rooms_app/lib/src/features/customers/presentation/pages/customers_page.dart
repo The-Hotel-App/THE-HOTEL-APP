@@ -21,6 +21,12 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     super.dispose();
   }
 
+  Future<void> _refresh() async {
+    ref.invalidate(customersProvider);
+    ref.invalidate(filteredCustomersProvider);
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
   @override
   Widget build(BuildContext context) {
     final customersAsync = ref.watch(filteredCustomersProvider);
@@ -41,15 +47,34 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
             Text('Customers'),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refresh,
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: Column(
         children: [
           _buildSearchBar(),
           Expanded(
-            child: customersAsync.when(
-              data: (customers) => _buildCustomerList(customers),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: customersAsync.when(
+                data: (customers) => _buildCustomerList(customers),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => ListView(
+                  children: [
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Text('Error: $e'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],

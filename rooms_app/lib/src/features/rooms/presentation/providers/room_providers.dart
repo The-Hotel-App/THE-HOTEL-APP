@@ -1,45 +1,78 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rooms/src/features/auth/presentation/providers/auth_providers.dart';
-import 'package:rooms/src/features/rooms/data/repositories/dummy_room_repository.dart';
+import 'package:rooms/src/core/services/supabase_service.dart';
+import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
+import 'package:rooms/src/features/rooms/data/repositories/rooms_repository.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
-import 'package:rooms/src/features/rooms/domain/repositories/room_repository.dart';
 
-/// Provider for room repository
-final roomRepositoryProvider = Provider<RoomRepository>((ref) {
-  return DummyRoomRepository();
+/// Provider for rooms repository (Supabase)
+final roomRepositoryProvider = Provider<RoomsRepository>((ref) {
+  return RoomsRepository(client: SupabaseService.instance.client);
 });
 
-/// Provider for all rooms
-final roomsProvider = FutureProvider<List<Room>>((ref) async {
-  final roomRepo = ref.watch(roomRepositoryProvider);
-  final user = ref.watch(currentUserProvider).valueOrNull;
-  final hotelId = user?.hotelId ?? 'hotel-001';
+/// Provider for all rooms for current hotel - with realtime updates
+final roomsProvider = StreamProvider<List<Room>>((ref) {
+  final hotel = ref.watch(currentHotelProvider);
+  if (hotel == null) {
+    return Stream.value([]);
+  }
 
-  return roomRepo.getRooms(hotelId);
+  final client = SupabaseService.instance.client;
+  final hotelId = hotel.hotelId;
+
+  debugPrint(
+    '🔴 Setting up realtime subscription for rooms in hotel: $hotelId',
+  );
+
+  // Create a stream that emits room updates
+  return client
+      .from('rooms')
+      .stream(primaryKey: ['id'])
+      .eq('hotel_id', hotelId)
+      .map((data) {
+        debugPrint('🔴 Realtime update received: ${data.length} rooms');
+        return data.map((json) => ManagedRoom.fromJson(json).toRoom()).toList();
+      });
 });
 
-/// Provider for rooms by floor
+/// Provider for rooms by specific floor for current hotel
 final roomsByFloorProvider = FutureProvider.family<List<Room>, String>((
   ref,
   floor,
 ) async {
-  final roomRepo = ref.read(roomRepositoryProvider);
-  final user = ref.read(currentUserProvider).valueOrNull;
-  final hotelId = user?.hotelId ?? 'hotel-001';
+  final hotel = ref.read(currentHotelProvider);
+  if (hotel == null) {
+    return [];
+  }
 
-  return roomRepo.getRoomsByFloor(hotelId, floor);
+  final roomsRepo = ref.read(roomRepositoryProvider);
+  final managedRooms = await roomsRepo.getRooms(hotel.hotelId);
+
+  // Filter by floor and convert to Room
+  return managedRooms
+      .where((mr) => mr.floor.toString() == floor)
+      .map((mr) => mr.toRoom())
+      .toList();
 });
 
-/// Provider for rooms by status
+/// Provider for rooms by status for current hotel
 final roomsByStatusProvider = FutureProvider.family<List<Room>, RoomStatus>((
   ref,
   status,
 ) async {
-  final roomRepo = ref.read(roomRepositoryProvider);
-  final user = ref.read(currentUserProvider).valueOrNull;
-  final hotelId = user?.hotelId ?? 'hotel-001';
+  final hotel = ref.read(currentHotelProvider);
+  if (hotel == null) {
+    return [];
+  }
 
-  return roomRepo.getRoomsByStatus(hotelId, status);
+  final roomsRepo = ref.read(roomRepositoryProvider);
+  final managedRooms = await roomsRepo.getRooms(hotel.hotelId);
+
+  // Filter by status and convert to Room
+  return managedRooms
+      .where((mr) => mr.status == status)
+      .map((mr) => mr.toRoom())
+      .toList();
 });
 
 /// Provider for selected floor (for floor-wise view)

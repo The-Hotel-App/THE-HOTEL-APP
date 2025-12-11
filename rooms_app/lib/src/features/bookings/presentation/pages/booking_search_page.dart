@@ -133,7 +133,7 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
           const SizedBox(height: 12),
           _buildGuestSelector(),
           const SizedBox(height: 20),
-          _buildSectionTitle('Room Type (Optional)', Icons.bedroom_parent),
+          _buildSectionTitle('Room Type', Icons.bedroom_parent),
           const SizedBox(height: 12),
           _buildRoomTypeDropdown(),
           const SizedBox(height: 24),
@@ -213,8 +213,7 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
         children: [
           const Icon(Icons.people, color: AppColors.grey600),
           const SizedBox(width: 12),
-          const Text('Number of Guests', style: TextStyle(fontSize: 16)),
-          const Spacer(),
+          const Expanded(child: Text('Guests', style: TextStyle(fontSize: 16))),
           IconButton(
             onPressed: _guestCount > 1
                 ? () => setState(() => _guestCount--)
@@ -223,11 +222,11 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
             color: AppColors.black,
           ),
           Container(
-            width: 40,
+            width: 32,
             alignment: Alignment.center,
             child: Text(
               '$_guestCount',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
           IconButton(
@@ -245,21 +244,25 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
   Widget _buildRoomTypeDropdown() {
     if (_isLoadingTypes) {
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: AppColors.grey100,
+          color: AppColors.grey200,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.grey300),
         ),
         child: const Row(
           children: [
+            Expanded(
+              child: Text(
+                'Any Room Type',
+                style: TextStyle(color: AppColors.grey500),
+              ),
+            ),
             SizedBox(
-              width: 20,
-              height: 20,
+              width: 16,
+              height: 16,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
-            SizedBox(width: 12),
-            Text('Loading room types...'),
           ],
         ),
       );
@@ -313,8 +316,8 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
             : const Icon(Icons.search),
         label: Text(_isSearching ? 'Searching...' : 'Search Available Rooms'),
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.warning,
-          foregroundColor: AppColors.black,
+          backgroundColor: AppColors.black,
+          foregroundColor: AppColors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

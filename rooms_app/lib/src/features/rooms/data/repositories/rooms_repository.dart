@@ -244,6 +244,21 @@ class RoomsRepository {
     }
   }
 
+  /// Update room status only
+  Future<void> updateRoomStatus(String roomId, RoomStatus status) async {
+    try {
+      debugPrint('📦 Updating room status: $roomId -> ${status.name}');
+      await _client
+          .from('rooms')
+          .update({'status': ManagedRoom._statusToString(status)})
+          .eq('id', roomId);
+      debugPrint('✅ Room status updated');
+    } catch (e) {
+      debugPrint('❌ Error updating room status: $e');
+      rethrow;
+    }
+  }
+
   /// Bulk update rooms (assign room type to multiple rooms)
   Future<void> bulkUpdateRoomType({
     required List<String> roomIds,

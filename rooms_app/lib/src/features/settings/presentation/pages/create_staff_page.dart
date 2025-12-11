@@ -58,36 +58,9 @@ class _CreateStaffPageState extends ConsumerState<CreateStaffPage> {
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildInfoCard(),
-              const SizedBox(height: 24),
-              _buildFormCard(),
-            ],
+            children: [const SizedBox(height: 24), _buildFormCard()],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info, color: AppColors.warning),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Create an account for your staff. They can log in with the email and password you set.',
-              style: TextStyle(color: AppColors.grey700, fontSize: 14),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -308,7 +281,7 @@ class _CreateStaffPageState extends ConsumerState<CreateStaffPage> {
             : const Icon(Icons.person_add),
         label: Text(_isLoading ? 'Creating...' : 'Create Staff Account'),
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.success,
+          backgroundColor: AppColors.black,
           foregroundColor: AppColors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
-import 'package:rooms/src/features/hotel_setup/presentation/providers/setup_providers.dart';
+import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
 import 'package:rooms/src/features/rooms/presentation/widgets/room_details_sheet.dart';
@@ -19,11 +19,18 @@ class RoomsPage extends ConsumerStatefulWidget {
 }
 
 class _RoomsPageState extends ConsumerState<RoomsPage> {
+  Future<void> _refreshRooms() async {
+    // Invalidate providers to force refresh from database
+    ref.invalidate(roomsProvider);
+    // Wait a bit for stream to reconnect
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
   @override
   Widget build(BuildContext context) {
     final roomsAsync = ref.watch(roomsProvider);
     final selectedFloor = ref.watch(selectedFloorProvider);
-    final hotel = ref.watch(currentHotelProvider).valueOrNull;
+    final hotel = ref.watch(currentHotelProvider);
 
     return PopScope(
       canPop: selectedFloor == null,
@@ -56,12 +63,19 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
               Text(
                 selectedFloor != null
                     ? 'Floor $selectedFloor'
-                    : hotel?.name ?? 'Rooms',
+                    : hotel?.hotelName ?? 'Rooms',
               ),
             ],
           ),
           backgroundColor: AppColors.black,
           foregroundColor: AppColors.white,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _refreshRooms,
+              tooltip: 'Refresh',
+            ),
+          ],
         ),
         body: roomsAsync.when(
           data: (rooms) {
@@ -79,6 +93,11 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
                 const Icon(Icons.error, size: 48, color: AppColors.error),
                 const SizedBox(height: 16),
                 Text('Error: $error'),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _refreshRooms,
+                  child: const Text('Retry'),
+                ),
               ],
             ),
           ),
@@ -91,28 +110,31 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
     final floors = allRooms.map((r) => r.floor).toSet().toList();
     floors.sort((a, b) => int.parse(a).compareTo(int.parse(b)));
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      itemCount: floors.length + 1,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: RoomStatsBar(rooms: allRooms),
-          );
-        }
+    return RefreshIndicator(
+      onRefresh: _refreshRooms,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        itemCount: floors.length + 1,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: RoomStatsBar(rooms: allRooms),
+            );
+          }
 
-        final floorIndex = index - 1;
-        final floor = floors[floorIndex];
-        final floorRooms = allRooms.where((r) => r.floor == floor).toList();
-        return FloorListItem(
-          floor: floor,
-          rooms: floorRooms,
-          onTap: () {
-            ref.read(selectedFloorProvider.notifier).state = floor;
-          },
-        );
-      },
+          final floorIndex = index - 1;
+          final floor = floors[floorIndex];
+          final floorRooms = allRooms.where((r) => r.floor == floor).toList();
+          return FloorListItem(
+            floor: floor,
+            rooms: floorRooms,
+            onTap: () {
+              ref.read(selectedFloorProvider.notifier).state = floor;
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -132,30 +154,33 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
       return _buildEmptyState();
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      itemCount: filteredRooms.length + 2,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: RoomStatsBar(rooms: floorRooms),
-          );
-        }
+    return RefreshIndicator(
+      onRefresh: _refreshRooms,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        itemCount: filteredRooms.length + 2,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: RoomStatsBar(rooms: floorRooms),
+            );
+          }
 
-        if (index == 1) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _buildFilterBar(selectedStatuses),
-          );
-        }
+          if (index == 1) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildFilterBar(selectedStatuses),
+            );
+          }
 
-        final roomIndex = index - 2;
-        return RoomListItem(
-          room: filteredRooms[roomIndex],
-          onTap: () => _showRoomDetails(filteredRooms[roomIndex]),
-        );
-      },
+          final roomIndex = index - 2;
+          return RoomListItem(
+            room: filteredRooms[roomIndex],
+            onTap: () => _showRoomDetails(filteredRooms[roomIndex]),
+          );
+        },
+      ),
     );
   }
 
