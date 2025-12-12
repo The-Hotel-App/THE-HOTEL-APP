@@ -69,9 +69,12 @@ class StaffRepository {
   Future<List<StaffMember>> getStaff(String hotelId) async {
     try {
       debugPrint('📦 Fetching staff for hotel: $hotelId');
+      // Use the explicit relationship name to avoid ambiguity
+      // hotel_staff has TWO foreign keys to user_profiles (user_id and created_by)
+      // We want the user_id relationship, so we specify: user_profiles!hotel_staff_user_id_fkey
       final response = await _client
           .from('hotel_staff')
-          .select('*, user_profiles(name, phone)')
+          .select('*, user_profiles!hotel_staff_user_id_fkey(name, phone)')
           .eq('hotel_id', hotelId)
           .order('created_at', ascending: false);
 

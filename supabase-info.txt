@@ -25,5 +25,8 @@ Please use "npx supabase <command>" to use the CLI tools.
 - `validate_join_code(p_hotel_code, p_join_code)` - Validates hotel and join codes
 - `is_hotel_code_available(p_hotel_code)` - Checks if hotel code is taken
 - `get_hotel_by_code(p_hotel_code)` - Gets hotel details by code
+- `add_staff_to_hotel(p_hotel_id, p_user_id, p_role, p_created_by)` - Adds staff to hotel (bypasses RLS, verifies owner)
 
-Migration file: `supabase/migrations/20241212_onboarding_schema.sql`
+Migration files:
+- `supabase/migrations/20241212_onboarding_schema.sql`
+- `supabase/migrations/20241213_add_staff_function.sql`

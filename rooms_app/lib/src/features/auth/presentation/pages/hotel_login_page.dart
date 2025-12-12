@@ -118,19 +118,29 @@ class _HotelLoginPageState extends ConsumerState<HotelLoginPage> {
       final password = _passwordController.text;
 
       final authRepo = ref.read(authRepositoryProvider);
-      await authRepo.login(email: email, password: password);
+      final user = await authRepo.login(email: email, password: password);
 
       if (!mounted) return;
+
+      debugPrint('✅ Login successful: ${user.name}');
+      debugPrint('👤 User ID: ${user.id}');
+      debugPrint('🏨 Looking for hotel ID: $_hotelId');
 
       // Get user's hotels
       final hotels = await ref.read(userHotelsProvider.future);
 
       if (!mounted) return;
 
+      debugPrint('📋 User has access to ${hotels.length} hotels:');
+      for (final h in hotels) {
+        debugPrint('   - ${h.hotelName} (${h.hotelId}) - role: ${h.role.displayName}, isOwner: ${h.isOwner}');
+      }
+
       // Find the hotel matching our hotel code
       final matchingHotel = hotels.where((h) => h.hotelId == _hotelId).toList();
 
       if (matchingHotel.isEmpty) {
+        debugPrint('❌ No matching hotel found! User does not have access to $_hotelId');
         _showError('You do not have access to this hotel.');
         await authRepo.logout();
         setState(() => _isLoading = false);
@@ -141,6 +151,7 @@ class _HotelLoginPageState extends ConsumerState<HotelLoginPage> {
       ref.read(selectedHotelIdProvider.notifier).state = _hotelId;
 
       final role = matchingHotel.first.role;
+      debugPrint('✅ Access granted with role: ${role.displayName}');
       final dashboardRoute = _getDashboardRoute(role);
 
       await Future.delayed(const Duration(milliseconds: 100));

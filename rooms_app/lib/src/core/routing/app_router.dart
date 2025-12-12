@@ -64,25 +64,17 @@ class AppRoutes {
   static const String pendingRequests = '/pending-requests';
 }
 
-/// Refresh notifier for GoRouter
-class GoRouterRefreshNotifier extends ChangeNotifier {
-  GoRouterRefreshNotifier(List<Stream> streams) {
-    for (final stream in streams) {
-      stream.listen((_) => notifyListeners());
-    }
-  }
-}
+// NOTE: We intentionally do NOT use refreshListenable tied to auth state.
+// When auth state changes (login/signup), the router would reset to initialLocation,
+// which breaks flows like the hotel setup wizard where we need to stay on /setup
+// and continue after signup. The redirect logic handles navigation appropriately.
 
 /// Router provider
 final routerProvider = Provider<GoRouter>((ref) {
-  final refreshNotifier = GoRouterRefreshNotifier([
-    ref.watch(auth_new.currentUserProvider.future).asStream(),
-  ]);
-
   return GoRouter(
     initialLocation: AppRoutes.welcome,
     debugLogDiagnostics: true,
-    refreshListenable: refreshNotifier,
+    // No refreshListenable - we handle navigation explicitly
     errorPageBuilder: (context, state) => MaterialPage(
       child: Scaffold(
         appBar: AppBar(title: const Text('Error')),
@@ -119,98 +111,82 @@ final routerProvider = Provider<GoRouter>((ref) {
         '👤 Auth state: ${isAuthenticated ? 'Authenticated (${user.name})' : 'Not authenticated'}',
       );
 
-      // If authenticated, check if hotel is selected
-      if (isAuthenticated) {
-        // Check if hotels are still loading
-        final hotelsAsync = ref.read(auth_new.userHotelsProvider);
-
-        // If hotels are still loading but user is explicitly navigating to dashboard,
-        // don't interfere - the login page has already selected the hotel
-        if (hotelsAsync.isLoading) {
-          if (isDashboardRoute) {
-            debugPrint(
-              '⏳ Hotels loading but navigating to dashboard, allowing',
-            );
-            return null;
-          }
-          debugPrint('⏳ Hotels loading, staying on current route');
-          return null;
-        }
-
-        final selectedHotelId = ref.read(auth_new.selectedHotelIdProvider);
-        final selectedHotelAsync = ref.read(auth_new.currentHotelProvider);
-        final hasHotel = selectedHotelAsync != null || selectedHotelId != null;
-
-        debugPrint(
-          '🏨 Selected hotel ID: $selectedHotelId, hasHotel: $hasHotel',
-        );
-
-        // If user is on setup page, allow them to stay (they might be creating their first hotel)
-        if (isSetupRoute) {
-          debugPrint('✅ On setup page, allowing access');
-          return null;
-        }
-
-        // If user is navigating to a dashboard and has a hotel selected, allow it
-        if (isDashboardRoute && hasHotel) {
-          debugPrint('✅ Navigating to dashboard with hotel selected, allowing');
-          return null;
-        }
-
-        // If user has no hotel (and hotels finished loading), redirect to setup
-        if (!hasHotel) {
-          // Check if hotels loaded but are empty
-          final hotelsList = hotelsAsync.valueOrNull ?? [];
-          if (hotelsList.isEmpty) {
-            if (state.matchedLocation != AppRoutes.setup) {
-              debugPrint('⚠️  No hotels found, redirecting to setup');
-              return AppRoutes.setup;
-            }
-          }
-          return null;
-        }
-
-        // If user has hotel and is on welcome/login, redirect to role-based dashboard
-        if (hasHotel && (isWelcomeRoute || isLoginRoute)) {
-          final role = selectedHotelAsync?.role;
-          if (role != null) {
-            debugPrint(
-              '✅ Has hotel with role: $role, redirecting to dashboard',
-            );
-
-            switch (role) {
-              case UserRole.owner:
-                return AppRoutes.ownerDashboard;
-              case UserRole.manager:
-                return AppRoutes.managerDashboard;
-              case UserRole.staff:
-                return AppRoutes.staffDashboard;
-              case UserRole.kitchenManager:
-                return AppRoutes.kitchenDashboard;
-            }
-          }
-        }
-      }
-
-      // If not authenticated and trying to access protected route
-      // Allow public routes that don't require authentication:
-      // - booking-search, checkin: for biometric verification later
-      // - hotel-login: for existing users to login (Journey 2)
-      // - join-hotel: for new employees to join (Journey 3)
+      // Define public routes that should always be accessible
+      // regardless of authentication or hotel selection state
       final isHotelLoginRoute = state.matchedLocation == AppRoutes.hotelLogin;
       final isJoinHotelRoute = state.matchedLocation == AppRoutes.joinHotel;
       final isPublicRoute =
-          state.matchedLocation == AppRoutes.bookingSearch ||
-          state.matchedLocation == AppRoutes.checkin ||
+          isWelcomeRoute ||
+          isLoginRoute ||
+          isSetupRoute ||
           isHotelLoginRoute ||
-          isJoinHotelRoute;
-      if (!isAuthenticated &&
-          !isWelcomeRoute &&
-          !isLoginRoute &&
-          !isSetupRoute &&
-          !isPublicRoute) {
+          isJoinHotelRoute ||
+          state.matchedLocation == AppRoutes.bookingSearch ||
+          state.matchedLocation == AppRoutes.checkin;
+
+      // If on a public route, allow access without any restrictions
+      if (isPublicRoute) {
+        debugPrint('✅ On public route, allowing access');
+        return null;
+      }
+
+      // From here on, we're dealing with protected routes only
+      
+      // If not authenticated and trying to access protected route -> redirect to welcome
+      if (!isAuthenticated) {
         debugPrint('🚫 Not authenticated, redirecting to welcome');
         return AppRoutes.welcome;
+      }
+
+      // User is authenticated and on a protected route - check hotel access
+      final hotelsAsync = ref.read(auth_new.userHotelsProvider);
+
+      // If hotels are still loading but user is explicitly navigating to dashboard,
+      // don't interfere - the login page has already selected the hotel
+      if (hotelsAsync.isLoading) {
+        if (isDashboardRoute) {
+          debugPrint(
+            '⏳ Hotels loading but navigating to dashboard, allowing',
+          );
+          return null;
+        }
+        debugPrint('⏳ Hotels loading, staying on current route');
+        return null;
+      }
+
+      final selectedHotelId = ref.read(auth_new.selectedHotelIdProvider);
+      final selectedHotelAsync = ref.read(auth_new.currentHotelProvider);
+      final hasHotel = selectedHotelAsync != null || selectedHotelId != null;
+
+      debugPrint(
+        '🏨 Selected hotel ID: $selectedHotelId, hasHotel: $hasHotel',
+      );
+
+      // If user is navigating to a dashboard and has a hotel selected, allow it
+      if (isDashboardRoute && hasHotel) {
+        debugPrint('✅ Navigating to dashboard with hotel selected, allowing');
+        return null;
+      }
+
+      // If user has hotel and is on home route, redirect to role-based dashboard
+      if (hasHotel && state.matchedLocation == AppRoutes.home) {
+        final role = selectedHotelAsync?.role;
+        if (role != null) {
+          debugPrint(
+            '✅ Has hotel with role: $role, redirecting to dashboard',
+          );
+
+          switch (role) {
+            case UserRole.owner:
+              return AppRoutes.ownerDashboard;
+            case UserRole.manager:
+              return AppRoutes.managerDashboard;
+            case UserRole.staff:
+              return AppRoutes.staffDashboard;
+            case UserRole.kitchenManager:
+              return AppRoutes.kitchenDashboard;
+          }
+        }
       }
 
       debugPrint('➡️  No redirect needed');

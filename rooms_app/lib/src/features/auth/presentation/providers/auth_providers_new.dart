@@ -34,36 +34,34 @@ final currentHotelProvider = Provider<UserHotel?>((ref) {
 
   return hotelsAsync.when(
     data: (hotels) {
+      if (hotels.isEmpty) {
+        return null; // No hotels available - return null instead of throwing
+      }
+      
       if (selectedHotelId == null) {
         // Auto-select first hotel if available
-        if (hotels.isNotEmpty) {
-          // Schedule the update after the build
-          Future.microtask(
-            () => ref.read(selectedHotelIdProvider.notifier).state =
-                hotels.first.hotelId,
-          );
-          return hotels.first;
-        }
-        return null;
+        // Schedule the update after the build
+        Future.microtask(
+          () => ref.read(selectedHotelIdProvider.notifier).state =
+              hotels.first.hotelId,
+        );
+        return hotels.first;
       }
 
-      return hotels.firstWhere(
-        (h) => h.hotelId == selectedHotelId,
-        orElse: () {
-          if (hotels.isNotEmpty) {
-            // Schedule hotel ID update if selected hotel not found
-            Future.microtask(
-              () => ref.read(selectedHotelIdProvider.notifier).state =
-                  hotels.first.hotelId,
-            );
-            return hotels.first;
-          }
-          throw StateError('No hotels available');
-        },
-      );
+      // Try to find the selected hotel
+      try {
+        return hotels.firstWhere((h) => h.hotelId == selectedHotelId);
+      } catch (e) {
+        // Selected hotel not found - auto-select first
+        Future.microtask(
+          () => ref.read(selectedHotelIdProvider.notifier).state =
+              hotels.first.hotelId,
+        );
+        return hotels.first;
+      }
     },
     loading: () => null,
-    error: (_, _) => null,
+    error: (_, __) => null,
   );
 });
 
@@ -73,6 +71,6 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
   return userAsync.when(
     data: (user) => user != null,
     loading: () => false,
-    error: (_, _) => false,
+    error: (e, s) => false,
   );
 });

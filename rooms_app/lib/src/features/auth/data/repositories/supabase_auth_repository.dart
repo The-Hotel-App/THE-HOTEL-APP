@@ -223,10 +223,6 @@ class SupabaseAuthRepository implements AuthRepository {
         params: {'user_uuid': userId},
       );
 
-      if (response == null) {
-        return [];
-      }
-
       final hotels = (response as List)
           .map((json) => app.UserHotel.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -361,8 +357,16 @@ class SupabaseAuthRepository implements AuthRepository {
     try {
       debugPrint('🔐 SupabaseAuth: Creating staff account for $email');
 
-      // Create user via Supabase Auth admin functions (requires service role)
-      // For now, we'll use the regular signUp and then add to hotel_staff
+      // IMPORTANT: Save the owner's ID BEFORE signing up the new user
+      // because signUp() auto-logs in as the new user
+      final ownerId = _client.auth.currentUser?.id;
+      if (ownerId == null) {
+        throw Exception('You must be logged in as the hotel owner to create staff accounts');
+      }
+      debugPrint('👤 Owner creating staff: $ownerId');
+
+      // Create user via Supabase Auth
+      // Note: This will log us in as the new user!
       final response = await _client.auth.signUp(
         email: email,
         password: password,
@@ -373,19 +377,19 @@ class SupabaseAuthRepository implements AuthRepository {
         throw Exception('Failed to create staff account');
       }
 
-      final userId = response.user!.id;
-      debugPrint('✅ Staff user created: $userId');
+      final newUserId = response.user!.id;
+      debugPrint('✅ Staff user created: $newUserId');
 
       // Wait for the user_profiles trigger to create the profile
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Add staff to hotel_staff table with role
-      await _client.from('hotel_staff').insert({
-        'hotel_id': hotelId,
-        'user_id': userId,
-        'role': role.dbValue,
-        'is_active': true,
-        'created_by': _client.auth.currentUser?.id,
+      // Use RPC function to add staff (bypasses RLS since it uses SECURITY DEFINER)
+      // The function verifies that p_created_by is the hotel owner
+      await _client.rpc('add_staff_to_hotel', params: {
+        'p_hotel_id': hotelId,
+        'p_user_id': newUserId,
+        'p_role': role.dbValue,
+        'p_created_by': ownerId,
       });
 
       debugPrint('✅ Staff added to hotel with role: ${role.displayName}');
@@ -412,19 +416,21 @@ class SupabaseAuthRepository implements AuthRepository {
     try {
       debugPrint('🏨 Looking up hotel by code: $hotelCode');
 
-      final response = await _client
-          .from('hotels')
-          .select('id, name, address, phone, email')
-          .eq('hotel_code', hotelCode.toLowerCase())
-          .maybeSingle();
+      // Use the get_hotel_by_code RPC function (SECURITY DEFINER)
+      // This ensures consistent access regardless of auth state
+      final response = await _client.rpc(
+        'get_hotel_by_code',
+        params: {'p_hotel_code': hotelCode.toLowerCase()},
+      );
 
-      if (response == null) {
+      if (response == null || (response as List).isEmpty) {
         debugPrint('⚠️ Hotel not found for code: $hotelCode');
         return null;
       }
 
-      debugPrint('✅ Found hotel: ${response['name']}');
-      return response;
+      final hotel = response.first as Map<String, dynamic>;
+      debugPrint('✅ Found hotel: ${hotel['name']}');
+      return hotel;
     } catch (e) {
       debugPrint('❌ Error looking up hotel: $e');
       return null;
@@ -507,6 +513,31 @@ class SupabaseAuthRepository implements AuthRepository {
     } catch (e) {
       debugPrint('❌ Error checking hotel code: $e');
       return false;
+    }
+  }
+
+  /// Get hotels owned by the current user
+  @override
+  Future<List<Map<String, dynamic>>> getOwnerHotels(String userId) async {
+    try {
+      debugPrint('🏨 Getting hotels owned by user: $userId');
+
+      final response = await _client
+          .from('hotels')
+          .select('id, name, address, phone, email, hotel_code, is_setup_completed, created_at')
+          .eq('owner_id', userId)
+          .order('created_at', ascending: false);
+
+      final hotels = (response as List)
+          .map((json) => json as Map<String, dynamic>)
+          .toList();
+
+      debugPrint('✅ Found ${hotels.length} hotels owned by user');
+
+      return hotels;
+    } catch (e) {
+      debugPrint('❌ Error getting owner hotels: $e');
+      return [];
     }
   }
 }

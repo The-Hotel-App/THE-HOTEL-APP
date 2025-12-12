@@ -79,4 +79,7 @@ abstract class AuthRepository {
 
   /// Check if hotel code is available
   Future<bool> isHotelCodeAvailable(String hotelCode);
+
+  /// Get hotels owned by the current user (where user is the owner)
+  Future<List<Map<String, dynamic>>> getOwnerHotels(String userId);
 }
