@@ -14,6 +14,21 @@ import 'package:rooms/src/features/hotel_setup/domain/entities/hotel_new.dart'
 import 'package:rooms/src/features/hotel_setup/presentation/widgets/wizard_step_pages.dart';
 
 /// Hotel Setup Wizard - Multi-step wizard for setting up a new hotel
+///
+/// TODO: ABUSE PREVENTION - Future Enhancement Required
+/// Currently, anyone can create an owner account and hotel. This could be abused by:
+/// - Existing staff/managers creating competing owner accounts
+/// - Spam/bot hotel registrations
+/// - Users creating fake hotels
+///
+/// Recommended mitigations for production:
+/// 1. Email verification required before hotel can go live
+/// 2. Phone OTP verification during registration
+/// 3. Rate limiting: max 1-2 hotels per device/IP per day
+/// 4. Admin approval queue for new hotels (optional)
+/// 5. Captcha/bot detection on registration
+/// 6. Link detection: if email/phone already exists as staff, show warning
+/// 7. Business verification for premium features
 class HotelSetupWizardPage extends ConsumerStatefulWidget {
   const HotelSetupWizardPage({super.key});
 
@@ -25,21 +40,33 @@ class HotelSetupWizardPage extends ConsumerStatefulWidget {
 class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
   final _pageController = PageController();
   int _currentPage = 0;
-  final int _totalPages = 4;
 
-  // Step 0: Owner Profile (user already logged in)
+  // Dynamic page count based on auth state
+  bool _isNewUser = true; // Will be determined in initState
+  int get _totalPages => _isNewUser
+      ? 5
+      : 4; // 5 for new users (includes account creation), 4 for logged-in users
+
+  // Step 0 (new users only): Account Creation
+  final _accountEmailController = TextEditingController();
+  final _accountPasswordController = TextEditingController();
+  final _accountConfirmPasswordController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
+  // Step 1: Owner Profile (or Step 0 for logged-in users)
   final _ownerNameController = TextEditingController();
   final _ownerPhoneController = TextEditingController();
   String? _ownerId;
 
-  // Step 1: Hotel Profile
+  // Step 2: Hotel Profile
   final _nameController = TextEditingController();
   final _hotelCodeController = TextEditingController();
   final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
 
-  // Step 2: Floors & Rooms
+  // Step 3: Floors & Rooms
   int _totalFloors = 1;
   final Map<int, TextEditingController> _startRoomControllers = {
     1: TextEditingController(text: '101'),
@@ -50,20 +77,22 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
   final Map<int, FocusNode> _startRoomFocusNodes = {1: FocusNode()};
   final Map<int, FocusNode> _endRoomFocusNodes = {1: FocusNode()};
 
-  // Step 3: Room Types
+  // Step 4: Room Types
   final List<RoomType> _roomTypes = [];
 
   @override
   void initState() {
     super.initState();
-    _initializeOwnerData();
+    _checkAuthState();
   }
 
-  void _initializeOwnerData() {
+  void _checkAuthState() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final currentUser = ref.read(auth_new.currentUserProvider).valueOrNull;
       if (currentUser != null) {
+        // User is already logged in - skip account creation step
         setState(() {
+          _isNewUser = false;
           _ownerId = currentUser.id;
           if (currentUser.name.isNotEmpty && currentUser.name != 'User') {
             _ownerNameController.text = currentUser.name;
@@ -72,9 +101,13 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
             _ownerPhoneController.text = currentUser.phone!;
           }
         });
-        debugPrint('✅ Logged-in user ID: $_ownerId');
+        debugPrint('✅ Logged-in user detected: $_ownerId');
       } else {
-        debugPrint('⚠️ No logged-in user found');
+        // New user - needs to create account first
+        setState(() {
+          _isNewUser = true;
+        });
+        debugPrint('👤 New user - account creation required');
       }
     });
   }
@@ -82,9 +115,13 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
   @override
   void dispose() {
     _pageController.dispose();
+    _accountEmailController.dispose();
+    _accountPasswordController.dispose();
+    _accountConfirmPasswordController.dispose();
     _ownerNameController.dispose();
     _ownerPhoneController.dispose();
     _nameController.dispose();
+    _hotelCodeController.dispose();
     _addressController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
@@ -118,8 +155,27 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
     return total;
   }
 
+  /// Get the logical step index (what step we're on in the flow)
+  int _getLogicalStep() {
+    if (_isNewUser) {
+      return _currentPage; // 0=Account, 1=Profile, 2=Hotel, 3=Rooms, 4=Types
+    } else {
+      return _currentPage +
+          1; // Skip account step: 0=Profile(1), 1=Hotel(2), etc.
+    }
+  }
+
   Future<void> _nextPage() async {
-    if (_currentPage == 0) {
+    final logicalStep = _getLogicalStep();
+
+    // Step 0 (new users only): Account Creation
+    if (_isNewUser && _currentPage == 0) {
+      final success = await _createAccount();
+      if (!success) return;
+    }
+
+    // Step 1: Owner Profile validation
+    if (logicalStep == 1) {
       if (_ownerNameController.text.trim().isEmpty ||
           _ownerPhoneController.text.trim().isEmpty) {
         _showErrorDialog('Please fill in all required fields');
@@ -127,7 +183,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       }
 
       if (_ownerId == null) {
-        _showErrorDialog('You must be logged in to continue');
+        _showErrorDialog('Account not created. Please go back and try again.');
         return;
       }
 
@@ -144,6 +200,69 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+    }
+  }
+
+  Future<bool> _createAccount() async {
+    final email = _accountEmailController.text.trim();
+    final password = _accountPasswordController.text;
+    final confirmPassword = _accountConfirmPasswordController.text;
+
+    // Validation
+    if (email.isEmpty || !email.contains('@')) {
+      _showErrorDialog('Please enter a valid email address');
+      return false;
+    }
+    if (password.length < 6) {
+      _showErrorDialog('Password must be at least 6 characters');
+      return false;
+    }
+    if (password != confirmPassword) {
+      _showErrorDialog('Passwords do not match');
+      return false;
+    }
+
+    try {
+      debugPrint('📝 Creating account for: $email');
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) =>
+            const Center(child: CircularProgressIndicator()),
+      );
+
+      final authRepo = SupabaseAuthRepository();
+      await authRepo.register(
+        email: email,
+        password: password,
+        name: 'New Owner', // Will be updated in next step
+      );
+
+      // Get the new user's ID
+      final currentUser = await ref.read(auth_new.currentUserProvider.future);
+
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      if (currentUser != null) {
+        setState(() {
+          _ownerId = currentUser.id;
+        });
+        debugPrint('✅ Account created successfully: $_ownerId');
+        return true;
+      } else {
+        _showErrorDialog('Account created but failed to get user info');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ Account creation error: $e');
+      if (mounted) {
+        Navigator.of(context).pop();
+        _showErrorDialog('Account creation failed: ${e.toString()}');
+      }
+      return false;
     }
   }
 
@@ -487,6 +606,44 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Build the list of wizard steps dynamically
+    final List<Widget> wizardSteps = [
+      // Step 0 (new users only): Account Creation
+      if (_isNewUser) _buildAccountCreationStep(),
+      // Step 1: Owner Profile
+      OwnerRegistrationStep(
+        nameController: _ownerNameController,
+        phoneController: _ownerPhoneController,
+      ),
+      // Step 2: Hotel Profile
+      HotelProfileStep(
+        nameController: _nameController,
+        hotelCodeController: _hotelCodeController,
+        addressController: _addressController,
+        phoneController: _phoneController,
+        emailController: _emailController,
+      ),
+      // Step 3: Floors & Rooms
+      FloorsRoomsStep(
+        totalFloors: _totalFloors,
+        totalRooms: _getTotalRooms(),
+        onFloorsChanged: _updateFloors,
+        startRoomControllers: _startRoomControllers,
+        endRoomControllers: _endRoomControllers,
+        startRoomFocusNodes: _startRoomFocusNodes,
+        endRoomFocusNodes: _endRoomFocusNodes,
+        onRoomRangeChanged: () => setState(() {}),
+        onRoomRangeSubmitted: _validateAndRestoreDefaults,
+        getRoomCount: _getRoomCount,
+      ),
+      // Step 4: Room Types
+      RoomTypesStep(
+        roomTypes: _roomTypes,
+        onAddRoomType: _showAddRoomTypeDialog,
+        onRemoveRoomType: (index) => setState(() => _roomTypes.removeAt(index)),
+      ),
+    ];
+
     return Scaffold(
       backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: false,
@@ -517,37 +674,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (page) => setState(() => _currentPage = page),
-                children: [
-                  OwnerRegistrationStep(
-                    nameController: _ownerNameController,
-                    phoneController: _ownerPhoneController,
-                  ),
-                  HotelProfileStep(
-                    nameController: _nameController,
-                    hotelCodeController: _hotelCodeController,
-                    addressController: _addressController,
-                    phoneController: _phoneController,
-                    emailController: _emailController,
-                  ),
-                  FloorsRoomsStep(
-                    totalFloors: _totalFloors,
-                    totalRooms: _getTotalRooms(),
-                    onFloorsChanged: _updateFloors,
-                    startRoomControllers: _startRoomControllers,
-                    endRoomControllers: _endRoomControllers,
-                    startRoomFocusNodes: _startRoomFocusNodes,
-                    endRoomFocusNodes: _endRoomFocusNodes,
-                    onRoomRangeChanged: () => setState(() {}),
-                    onRoomRangeSubmitted: _validateAndRestoreDefaults,
-                    getRoomCount: _getRoomCount,
-                  ),
-                  RoomTypesStep(
-                    roomTypes: _roomTypes,
-                    onAddRoomType: _showAddRoomTypeDialog,
-                    onRemoveRoomType: (index) =>
-                        setState(() => _roomTypes.removeAt(index)),
-                  ),
-                ],
+                children: wizardSteps,
               ),
             ),
             WizardNavigationButtons(
@@ -559,6 +686,123 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Account creation step widget for new users
+  Widget _buildAccountCreationStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '🔐 Create Your Account',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Create an owner account to manage your hotel',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 32),
+          // Email field
+          TextField(
+            controller: _accountEmailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              labelText: 'Email Address *',
+              hintText: 'your@email.com',
+              prefixIcon: const Icon(Icons.email_outlined),
+              filled: true,
+              fillColor: AppColors.grey100,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Password field
+          TextField(
+            controller: _accountPasswordController,
+            obscureText: _obscurePassword,
+            decoration: InputDecoration(
+              labelText: 'Password *',
+              hintText: 'At least 6 characters',
+              prefixIcon: const Icon(Icons.lock_outline),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                ),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
+              ),
+              filled: true,
+              fillColor: AppColors.grey100,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Confirm password field
+          TextField(
+            controller: _accountConfirmPasswordController,
+            obscureText: _obscureConfirmPassword,
+            decoration: InputDecoration(
+              labelText: 'Confirm Password *',
+              hintText: 'Re-enter your password',
+              prefixIcon: const Icon(Icons.lock_outline),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureConfirmPassword
+                      ? Icons.visibility
+                      : Icons.visibility_off,
+                ),
+                onPressed: () => setState(
+                  () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                ),
+              ),
+              filled: true,
+              fillColor: AppColors.grey100,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Info banner
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.info.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: AppColors.info, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'You\'ll be the Owner of this hotel with full administrative access.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppColors.info),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

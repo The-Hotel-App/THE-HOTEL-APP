@@ -193,10 +193,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // If not authenticated and trying to access protected route
-      // Allow booking-search and checkin without authentication (for biometric verification later)
+      // Allow public routes that don't require authentication:
+      // - booking-search, checkin: for biometric verification later
+      // - hotel-login: for existing users to login (Journey 2)
+      // - join-hotel: for new employees to join (Journey 3)
+      final isHotelLoginRoute = state.matchedLocation == AppRoutes.hotelLogin;
+      final isJoinHotelRoute = state.matchedLocation == AppRoutes.joinHotel;
       final isPublicRoute =
           state.matchedLocation == AppRoutes.bookingSearch ||
-          state.matchedLocation == AppRoutes.checkin;
+          state.matchedLocation == AppRoutes.checkin ||
+          isHotelLoginRoute ||
+          isJoinHotelRoute;
       if (!isAuthenticated &&
           !isWelcomeRoute &&
           !isLoginRoute &&

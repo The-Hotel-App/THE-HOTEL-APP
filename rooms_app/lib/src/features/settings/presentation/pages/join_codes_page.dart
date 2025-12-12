@@ -260,7 +260,7 @@ class _JoinCodesPageState extends ConsumerState<JoinCodesPage> {
               value: isActive,
               onChanged: (value) =>
                   _toggleJoinCode(code['id'] as String, isActive),
-              activeColor: AppColors.success,
+              activeThumbColor: AppColors.success,
             ),
           ),
         );
