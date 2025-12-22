@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
+import 'package:rooms/src/features/bookings/presentation/pages/booking_floor_rooms_page.dart';
 import 'package:rooms/src/features/rooms/data/repositories/room_types_repository.dart';
 import 'package:rooms/src/features/rooms/data/repositories/rooms_repository.dart';
 
@@ -371,6 +372,16 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
   }
 
   Widget _buildResultsSection() {
+    // Group rooms by floor
+    final Map<String, List<ManagedRoom>> roomsByFloor = {};
+    for (final room in _filteredRooms) {
+      roomsByFloor.putIfAbsent(room.floor.toString(), () => []).add(room);
+    }
+
+    // Sort floors
+    final floors = roomsByFloor.keys.toList();
+    floors.sort((a, b) => int.parse(a).compareTo(int.parse(b)));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -379,7 +390,7 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
             const Icon(Icons.list, size: 20, color: AppColors.black),
             const SizedBox(width: 8),
             Text(
-              'Available Rooms (${_filteredRooms.length})',
+              'Available Rooms: ${_filteredRooms.length}',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
@@ -388,7 +399,9 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
         if (_filteredRooms.isEmpty)
           _buildNoResultsCard()
         else
-          ..._filteredRooms.map((room) => _buildRoomCard(room)),
+          ...floors.map(
+            (floor) => _buildFloorCard(floor, roomsByFloor[floor]!),
+          ),
       ],
     );
   }
@@ -414,6 +427,86 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
             style: TextStyle(color: AppColors.grey500),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFloorCard(String floor, List<ManagedRoom> rooms) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () => _navigateToFloorRooms(floor, rooms),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Floor Number Badge
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: AppColors.black,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    floor,
+                    style: const TextStyle(
+                      color: AppColors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+
+              // Floor Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Floor $floor',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${rooms.length} ${rooms.length == 1 ? 'room' : 'rooms'} available',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Arrow
+              const Icon(
+                Icons.chevron_right,
+                color: AppColors.grey400,
+                size: 28,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -489,5 +582,18 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
   void _selectRoom(ManagedRoom room) {
     // Navigate to check-in flow with selected room
     context.push(AppRoutes.checkin, extra: room.toRoom());
+  }
+
+  void _navigateToFloorRooms(String floor, List<ManagedRoom> rooms) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => BookingFloorRoomsPage(
+          floor: floor,
+          rooms: rooms,
+          checkIn: _checkIn,
+          checkOut: _checkOut,
+        ),
+      ),
+    );
   }
 }
