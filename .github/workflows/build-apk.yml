@@ -7,6 +7,7 @@ on:
       - "rooms_app/lib/**"
       - "rooms_app/pubspec.yaml"
       - "rooms_app/android/**"
+      - ".github/workflows/**"
 
 jobs:
   build:
