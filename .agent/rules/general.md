@@ -12,5 +12,5 @@ trigger: always_on
 - Never create any summary documents or .ps1 or bash executable scripts UNLESS EXPLICITLY MENTIONED
 
 ## Supabase
-- ALWAYS refer supabase-info.txt
-- ALWAYS update supabase-info.txt wherever applicable
+- ALWAYS refer supabase-info.md
+- ALWAYS update supabase-info.md wherever applicable

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
-import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 
 /// Welcome screen - Login page shown when app opens
@@ -21,45 +20,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
-  List<Map<String, String>> _testEmails = [];
-  bool _isLoadingEmails = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadTestEmails();
-  }
-
-  Future<void> _loadTestEmails() async {
-    try {
-      final response = await SupabaseService.instance.client
-          .from('customers')
-          .select('name, email')
-          .not('email', 'is', null)
-          .order('name');
-
-      final emails = <Map<String, String>>[];
-      for (final row in response) {
-        final email = row['email'] as String?;
-        final name = row['name'] as String? ?? 'Unknown';
-        if (email != null && email.isNotEmpty) {
-          emails.add({'email': email, 'label': name});
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _testEmails = emails;
-          _isLoadingEmails = false;
-        });
-      }
-    } catch (e) {
-      AppLogger.error('Error loading test emails', tag: 'Auth', error: e);
-      if (mounted) {
-        setState(() => _isLoadingEmails = false);
-      }
-    }
-  }
+  // Hardcoded test accounts for development
+  static const List<Map<String, String>> _testAccounts = [
+    {'email': 'owner@rooms.io', 'label': 'Owner', 'password': 'owner123'},
+    {'email': 'manager@rooms.io', 'label': 'Manager', 'password': 'manager123'},
+  ];
 
   @override
   void dispose() {
@@ -159,11 +125,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
             height: 120,
             width: 120,
             fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => Icon(
-              Icons.hotel,
-              size: 120,
-              color: AppColors.warning,
-            ),
+            errorBuilder: (context, error, stackTrace) =>
+                Icon(Icons.hotel, size: 120, color: AppColors.warning),
           ),
           const SizedBox(height: 24),
           Text(
@@ -193,7 +156,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
             decoration: InputDecoration(
               labelText: 'Email Address',
               labelStyle: const TextStyle(color: AppColors.grey400),
-              prefixIcon: const Icon(Icons.email_outlined, color: AppColors.grey400),
+              prefixIcon: const Icon(
+                Icons.email_outlined,
+                color: AppColors.grey400,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: AppColors.grey600),
@@ -228,7 +194,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
             decoration: InputDecoration(
               labelText: 'Password',
               labelStyle: const TextStyle(color: AppColors.grey400),
-              prefixIcon: const Icon(Icons.lock_outlined, color: AppColors.grey400),
+              prefixIcon: const Icon(
+                Icons.lock_outlined,
+                color: AppColors.grey400,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: AppColors.grey600),
@@ -299,52 +268,17 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                     ),
             ),
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Streamline your hotel operations',
-            textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.grey500),
-          ),
         ],
       ),
     );
   }
 
   Widget _buildQuickFillSection() {
-    if (_isLoadingEmails) {
-      return Row(
-        children: [
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.grey400),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Loading test accounts...',
-            style: TextStyle(fontSize: 12, color: AppColors.grey400),
-          ),
-        ],
-      );
-    }
-
-    if (_testEmails.isEmpty) {
-      return Text(
-        'No test accounts found',
-        style: TextStyle(fontSize: 12, color: AppColors.grey400),
-      );
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Quick Fill (Dev) - Password: 123456',
+          'Quick Login (Test Accounts)',
           style: TextStyle(
             fontSize: 12,
             color: AppColors.grey400,
@@ -355,11 +289,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _testEmails.map((cred) {
+          children: _testAccounts.map((account) {
             return InkWell(
               onTap: () {
-                _emailController.text = cred['email']!;
-                _passwordController.text = '123456';
+                _emailController.text = account['email']!;
+                _passwordController.text = account['password']!;
               },
               borderRadius: BorderRadius.circular(8),
               child: Container(
@@ -373,7 +307,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   border: Border.all(color: AppColors.grey600),
                 ),
                 child: Text(
-                  cred['label']!,
+                  account['label']!,
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.grey300,
