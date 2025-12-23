@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
-import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/booking_floor_rooms_page.dart';
 import 'package:rooms/src/features/rooms/data/repositories/room_types_repository.dart';
@@ -509,79 +508,6 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
         ),
       ),
     );
-  }
-
-  Widget _buildRoomCard(ManagedRoom room) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () => _selectRoom(room),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.roomFree.withValues(alpha: 0.3),
-              width: 2,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: AppColors.roomFree,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    room.roomNumber,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      room.roomTypeName ?? 'Standard',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Floor ${room.floor} • Max ${room.maxOccupancy ?? 2} guests',
-                      style: TextStyle(color: AppColors.grey600, fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.arrow_forward_ios,
-                color: AppColors.grey400,
-                size: 16,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _selectRoom(ManagedRoom room) {
-    // Navigate to check-in flow with selected room
-    context.push(AppRoutes.checkin, extra: room.toRoom());
   }
 
   void _navigateToFloorRooms(String floor, List<ManagedRoom> rooms) {

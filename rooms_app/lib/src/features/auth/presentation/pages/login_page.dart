@@ -245,12 +245,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         notificationServiceProvider,
                       );
                       await notificationService.registerTokenForUser();
-
-                      Navigator.pop(context);
-                      // Navigate directly to role-based dashboard
-                      final dashboardRoute = _getDashboardRoute(hotel.role);
-                      debugPrint('🚀 Navigating to dashboard: $dashboardRoute');
-                      context.go(dashboardRoute);
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        // Navigate directly to role-based dashboard
+                        final dashboardRoute = _getDashboardRoute(hotel.role);
+                        debugPrint(
+                          '🚀 Navigating to dashboard: $dashboardRoute',
+                        );
+                        context.go(dashboardRoute);
+                      }
                     },
                   ),
                 ),

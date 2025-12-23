@@ -16,7 +16,7 @@ class HotelSwitcherButton extends ConsumerWidget {
 
     return hotelsAsync.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (hotels) {
         // Only show if user has multiple hotels
         if (hotels.length <= 1) return const SizedBox.shrink();

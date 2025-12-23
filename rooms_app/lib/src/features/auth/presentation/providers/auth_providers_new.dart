@@ -61,7 +61,7 @@ final currentHotelProvider = Provider<UserHotel?>((ref) {
       }
     },
     loading: () => null,
-    error: (_, __) => null,
+    error: (_, _) => null,
   );
 });
 
