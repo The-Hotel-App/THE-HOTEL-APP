@@ -45,11 +45,14 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => context.pop(),
               ),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.people, size: 24),
-            SizedBox(width: 8),
-            Text('Customers'),
+            Image.asset(
+              'assets/new_images/black_logo_on_yellow_bg_new_fixed_ratio.png',
+              height: 28,
+            ),
+            const SizedBox(width: 12),
+            const Text('Guests'),
           ],
         ),
         actions: [

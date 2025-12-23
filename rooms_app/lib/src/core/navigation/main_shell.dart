@@ -6,6 +6,7 @@ import 'package:rooms/src/features/auth/presentation/providers/auth_providers_ne
 import 'package:rooms/src/features/bookings/presentation/pages/bookings_page.dart';
 import 'package:rooms/src/features/customers/presentation/pages/customers_page.dart';
 import 'package:rooms/src/features/rooms/presentation/pages/rooms_page.dart';
+import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
 import 'package:rooms/src/features/settings/presentation/pages/more_page.dart';
 import 'package:rooms/src/core/navigation/dashboard_tab.dart';
 
@@ -110,6 +111,10 @@ class _MainShellState extends ConsumerState<MainShell> {
               return Expanded(
                 child: InkWell(
                   onTap: () {
+                    // Reset floor selection when Rooms tab is tapped
+                    if (tabs[index].label == 'Rooms') {
+                      ref.read(selectedFloorProvider.notifier).state = null;
+                    }
                     ref.read(mainShellTabProvider.notifier).state = index;
                   },
                   borderRadius: BorderRadius.circular(12),

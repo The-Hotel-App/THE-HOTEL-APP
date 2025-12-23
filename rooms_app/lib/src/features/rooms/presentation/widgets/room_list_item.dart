@@ -2,7 +2,45 @@ import 'package:flutter/material.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 
-/// List item widget for displaying a room
+/// Compact grid tile widget for displaying a room
+class RoomGridTile extends StatelessWidget {
+  final Room room;
+  final VoidCallback onTap;
+
+  const RoomGridTile({super.key, required this.room, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = RoomStatusColors.getColor(room.status.name);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: statusColor.withValues(alpha: 0.15),
+            border: Border.all(color: statusColor, width: 2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Center(
+            child: Text(
+              room.roomNumber,
+              style: TextStyle(
+                color: statusColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// List item widget for displaying a room (legacy, kept for compatibility)
 class RoomListItem extends StatelessWidget {
   final Room room;
   final VoidCallback onTap;
@@ -19,7 +57,6 @@ class RoomListItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
-            // Room Number Badge
             Container(
               width: 56,
               height: 56,
@@ -40,8 +77,6 @@ class RoomListItem extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-
-            // Room Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,8 +101,6 @@ class RoomListItem extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Arrow
             const Icon(Icons.chevron_right, color: AppColors.grey400, size: 24),
           ],
         ),
@@ -133,7 +166,7 @@ class FloorListItem extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${rooms.length} rooms',
+                    '${rooms.length} rooms  •  ${rooms.where((r) => r.status == RoomStatus.free).length} free',
                     style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.textSecondary,

@@ -23,7 +23,16 @@ class MorePage extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppColors.black,
         foregroundColor: AppColors.white,
-        title: const Text('More'),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/new_images/black_logo_on_yellow_bg_new_fixed_ratio.png',
+              height: 28,
+            ),
+            const SizedBox(width: 12),
+            const Text('More'),
+          ],
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

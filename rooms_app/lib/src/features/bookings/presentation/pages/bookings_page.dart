@@ -30,11 +30,14 @@ class BookingsPage extends ConsumerWidget {
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => context.pop(),
               ),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.book_online, size: 24),
-            SizedBox(width: 8),
-            Text('Bookings'),
+            Image.asset(
+              'assets/new_images/black_logo_on_yellow_bg_new_fixed_ratio.png',
+              height: 28,
+            ),
+            const SizedBox(width: 12),
+            const Text('Bookings'),
           ],
         ),
       ),

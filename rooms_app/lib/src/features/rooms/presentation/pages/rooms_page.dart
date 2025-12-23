@@ -8,7 +8,7 @@ import 'package:rooms/src/features/rooms/presentation/providers/room_providers.d
 import 'package:rooms/src/features/rooms/presentation/widgets/room_details_sheet.dart';
 import 'package:rooms/src/features/rooms/presentation/widgets/room_list_item.dart';
 import 'package:rooms/src/features/rooms/presentation/widgets/room_stats_bar.dart';
-import 'package:rooms/src/features/rooms/presentation/widgets/status_filter_dialog.dart';
+
 
 /// Main rooms page displaying floors and rooms grid
 class RoomsPage extends ConsumerStatefulWidget {
@@ -145,119 +145,71 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
 
   Widget _buildRoomsView(List<Room> allRooms) {
     final selectedFloor = ref.watch(selectedFloorProvider);
-    final selectedStatuses = ref.watch(selectedStatusFilterProvider);
 
     var floorRooms = allRooms.where((r) => r.floor == selectedFloor).toList();
-    var filteredRooms = floorRooms;
-    if (selectedStatuses.isNotEmpty) {
-      filteredRooms = filteredRooms
-          .where((r) => selectedStatuses.contains(r.status))
-          .toList();
-    }
 
     // Always sort by room number
-    filteredRooms.sort((a, b) => a.roomNumber.compareTo(b.roomNumber));
+    floorRooms.sort((a, b) => a.roomNumber.compareTo(b.roomNumber));
 
-    if (filteredRooms.isEmpty) {
+    if (floorRooms.isEmpty) {
       return _buildEmptyState();
     }
 
+    // Split rooms into left and right columns (airplane style)
+    final midPoint = (floorRooms.length / 2).ceil();
+    final leftRooms = floorRooms.sublist(0, midPoint);
+    final rightRooms = floorRooms.sublist(midPoint);
+
     return RefreshIndicator(
       onRefresh: _refreshRooms,
-      child: ListView.builder(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        itemCount: filteredRooms.length + 2,
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: RoomStatsBar(rooms: floorRooms),
-            );
-          }
-
-          if (index == 1) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _buildFilterBar(selectedStatuses),
-            );
-          }
-
-          final roomIndex = index - 2;
-          return RoomListItem(
-            room: filteredRooms[roomIndex],
-            onTap: () => _showRoomDetails(filteredRooms[roomIndex]),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildFilterBar(Set<RoomStatus> selectedStatuses) {
-    return Row(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: selectedStatuses.map((status) {
-                final statusColor = RoomStatusColors.getColor(status.name);
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: _buildFilterChip(status, statusColor),
-                );
-              }).toList(),
+        child: Column(
+          children: [
+            // Stats Bar
+            RoomStatsBar(rooms: floorRooms),
+            const SizedBox(height: 16),
+            // Airplane-style 2-column layout
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Left column
+                Expanded(
+                  child: Column(
+                    children: leftRooms.map((room) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: SizedBox(
+                        height: 64,
+                        child: RoomGridTile(
+                          room: room,
+                          onTap: () => _showRoomDetails(room),
+                        ),
+                      ),
+                    )).toList(),
+                  ),
+                ),
+                // Center gap
+                const SizedBox(width: 48),
+                // Right column
+                Expanded(
+                  child: Column(
+                    children: rightRooms.map((room) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: SizedBox(
+                        height: 64,
+                        child: RoomGridTile(
+                          room: room,
+                          onTap: () => _showRoomDetails(room),
+                        ),
+                      ),
+                    )).toList(),
+                  ),
+                ),
+              ],
             ),
-          ),
+            const SizedBox(height: 24),
+          ],
         ),
-        const SizedBox(width: 8),
-        IconButton(
-          icon: const Icon(Icons.filter_list),
-          onPressed: _showStatusFilterDialog,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFilterChip(RoomStatus status, Color statusColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: statusColor.withValues(alpha: 0.15),
-        border: Border.all(color: statusColor),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: statusColor,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            status.displayName,
-            style: TextStyle(
-              color: statusColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: 6),
-          GestureDetector(
-            onTap: () {
-              final updated = Set<RoomStatus>.from(
-                ref.read(selectedStatusFilterProvider),
-              );
-              updated.remove(status);
-              ref.read(selectedStatusFilterProvider.notifier).state = updated;
-            },
-            child: Icon(Icons.close, size: 14, color: statusColor),
-          ),
-        ],
       ),
     );
   }
@@ -270,34 +222,11 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
           Icon(Icons.bed, size: 64, color: AppColors.grey400),
           const SizedBox(height: 16),
           const Text(
-            'No Rooms Found',
+            'No Rooms on this Floor',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Try adjusting your filters',
-            style: TextStyle(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () {
-              ref.read(selectedStatusFilterProvider.notifier).state = {};
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.black,
-              foregroundColor: AppColors.white,
-            ),
-            child: const Text('Clear Filters'),
           ),
         ],
       ),
-    );
-  }
-
-  void _showStatusFilterDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => const StatusFilterDialog(),
     );
   }
 
