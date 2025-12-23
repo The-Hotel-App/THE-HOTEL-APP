@@ -8,7 +8,10 @@ import 'package:rooms/src/features/bookings/presentation/providers/booking_provi
 import 'package:rooms/src/features/bookings/presentation/widgets/booking_widgets.dart';
 
 class BookingsPage extends ConsumerWidget {
-  const BookingsPage({super.key});
+  /// When true, hides back button for use as embedded tab content
+  final bool embedded;
+
+  const BookingsPage({super.key, this.embedded = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -21,10 +24,12 @@ class BookingsPage extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppColors.black,
         foregroundColor: AppColors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+        leading: embedded
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              ),
         title: const Row(
           children: [
             Icon(Icons.book_online, size: 24),

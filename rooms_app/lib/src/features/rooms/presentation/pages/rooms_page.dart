@@ -12,7 +12,10 @@ import 'package:rooms/src/features/rooms/presentation/widgets/status_filter_dial
 
 /// Main rooms page displaying floors and rooms grid
 class RoomsPage extends ConsumerStatefulWidget {
-  const RoomsPage({super.key});
+  /// When true, hides back button for use as embedded tab content
+  final bool embedded;
+
+  const RoomsPage({super.key, this.embedded = false});
 
   @override
   ConsumerState<RoomsPage> createState() => _RoomsPageState();
@@ -49,10 +52,12 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
                     ref.read(selectedFloorProvider.notifier).state = null;
                   },
                 )
-              : IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => context.pop(),
-                ),
+              : widget.embedded
+                  ? null // No back button when embedded as tab
+                  : IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () => context.pop(),
+                    ),
           title: Row(
             children: [
               Image.asset(

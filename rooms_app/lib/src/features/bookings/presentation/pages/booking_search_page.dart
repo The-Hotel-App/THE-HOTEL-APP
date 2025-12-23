@@ -67,7 +67,7 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
         foregroundColor: AppColors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(AppRoutes.welcome),
+          onPressed: () => context.pop(),
         ),
         title: const Row(
           children: [

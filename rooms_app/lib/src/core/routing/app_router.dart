@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rooms/src/core/navigation/main_shell.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/pages/home_page.dart';
 import 'package:rooms/src/features/auth/presentation/pages/hotel_login_page.dart';
@@ -40,6 +41,7 @@ class AppRoutes {
 
   static const String setup = '/setup';
   static const String home = '/';
+  static const String mainShell = '/main'; // New: unified bottom nav shell
   static const String rooms = '/rooms';
   static const String checkin = '/checkin';
   static const String checkout = '/checkout';
@@ -49,7 +51,7 @@ class AppRoutes {
   static const String staff = '/staff';
   static const String hotelSettings = '/hotel-settings';
   static const String notifications = '/notifications';
-  // New routes for role-based dashboards
+  // Legacy routes for role-based dashboards (kept for compatibility)
   static const String bookingSearch = '/booking-search';
   static const String ownerDashboard = '/owner-dashboard';
   static const String managerDashboard = '/manager-dashboard';
@@ -85,6 +87,28 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isWelcomeRoute = state.matchedLocation == AppRoutes.welcome;
       final isLoginRoute = state.matchedLocation == AppRoutes.login;
       final isSetupRoute = state.matchedLocation == AppRoutes.setup;
+      final isHotelLoginRoute = state.matchedLocation == AppRoutes.hotelLogin;
+      final isHotelSelectionRoute = state.matchedLocation == AppRoutes.hotelSelection;
+
+      // Define public routes that should always be accessible
+      // regardless of authentication or hotel selection state
+      // NOTE: hotelSelection is included here because it's navigated to immediately
+      // after login before providers have time to refresh with the new auth state
+      final isPublicRoute =
+          isWelcomeRoute ||
+          isLoginRoute ||
+          isSetupRoute ||
+          isHotelLoginRoute ||
+          isHotelSelectionRoute ||
+          state.matchedLocation == AppRoutes.bookingSearch ||
+          state.matchedLocation == AppRoutes.checkin;
+
+      // If on a public route, allow access without any restrictions
+      // This includes allowing logout to navigate to welcome even if auth is loading
+      if (isPublicRoute) {
+        debugPrint('✅ On public route, allowing access');
+        return null;
+      }
 
       // Check if user is navigating to a dashboard route
       final isDashboardRoute =
@@ -96,7 +120,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Check auth state
       final authState = ref.read(auth_new.currentUserProvider);
 
-      // If auth is still loading, don't redirect - let the current page load
+      // If auth is still loading and NOT on a public route, don't redirect
       if (authState.isLoading) {
         debugPrint('⏳ Auth loading, staying on current route');
         return null;
@@ -109,24 +133,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         '👤 Auth state: ${isAuthenticated ? 'Authenticated (${user.name})' : 'Not authenticated'}',
       );
 
-      // Define public routes that should always be accessible
-      // regardless of authentication or hotel selection state
-      final isHotelLoginRoute = state.matchedLocation == AppRoutes.hotelLogin;
-      final isPublicRoute =
-          isWelcomeRoute ||
-          isLoginRoute ||
-          isSetupRoute ||
-          isHotelLoginRoute ||
-          state.matchedLocation == AppRoutes.bookingSearch ||
-          state.matchedLocation == AppRoutes.checkin;
-
-      // If on a public route, allow access without any restrictions
-      if (isPublicRoute) {
-        debugPrint('✅ On public route, allowing access');
-        return null;
-      }
-
       // From here on, we're dealing with protected routes only
+      // (public routes already returned null above)
       
       // If not authenticated and trying to access protected route -> redirect to welcome
       if (!isAuthenticated) {
@@ -158,31 +166,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         '🏨 Selected hotel ID: $selectedHotelId, hasHotel: $hasHotel',
       );
 
-      // If user is navigating to a dashboard and has a hotel selected, allow it
+      // If user is navigating to a legacy dashboard route, redirect to MainShell
       if (isDashboardRoute && hasHotel) {
-        debugPrint('✅ Navigating to dashboard with hotel selected, allowing');
-        return null;
+        debugPrint('✅ Redirecting legacy dashboard to MainShell');
+        return AppRoutes.mainShell;
       }
 
-      // If user has hotel and is on home route, redirect to role-based dashboard
+      // If user has hotel and is on home route, redirect to MainShell (unified bottom nav)
       if (hasHotel && state.matchedLocation == AppRoutes.home) {
-        final role = selectedHotelAsync?.role;
-        if (role != null) {
-          debugPrint(
-            '✅ Has hotel with role: $role, redirecting to dashboard',
-          );
-
-          switch (role) {
-            case UserRole.owner:
-              return AppRoutes.ownerDashboard;
-            case UserRole.manager:
-              return AppRoutes.managerDashboard;
-            case UserRole.staff:
-              return AppRoutes.staffDashboard;
-            case UserRole.kitchenManager:
-              return AppRoutes.kitchenDashboard;
-          }
-        }
+        debugPrint('✅ Has hotel, redirecting to MainShell');
+        return AppRoutes.mainShell;
       }
 
       debugPrint('➡️  No redirect needed');
@@ -292,6 +285,18 @@ final routerProvider = Provider<GoRouter>((ref) {
               position: animation.drive(tween),
               child: child,
             );
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      // Main Shell with Bottom Navigation (unified navigation for all roles)
+      GoRoute(
+        path: AppRoutes.mainShell,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const MainShell(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
           },
           transitionDuration: const Duration(milliseconds: 200),
         ),

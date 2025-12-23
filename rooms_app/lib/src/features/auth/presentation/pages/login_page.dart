@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/constants/app_constants.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 
@@ -20,6 +21,46 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  List<Map<String, String>> _testEmails = [];
+  bool _isLoadingEmails = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTestEmails();
+  }
+
+  Future<void> _loadTestEmails() async {
+    try {
+      // Fetch all customers with email from the database
+      final response = await SupabaseService.instance.client
+          .from('customers')
+          .select('name, email')
+          .not('email', 'is', null)
+          .order('name');
+
+      final emails = <Map<String, String>>[];
+      for (final row in response) {
+        final email = row['email'] as String?;
+        final name = row['name'] as String? ?? 'Unknown';
+        if (email != null && email.isNotEmpty) {
+          emails.add({'email': email, 'label': name});
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _testEmails = emails;
+          _isLoadingEmails = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading test emails: $e');
+      if (mounted) {
+        setState(() => _isLoadingEmails = false);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -347,7 +388,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 16),
+
+                    // Quick Fill - Dev/Test Credentials
+                    _buildQuickFillSection(),
+                    const SizedBox(height: 24),
 
                     // Login Button
                     SizedBox(
@@ -389,6 +434,86 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Quick fill section with test credentials for development
+  Widget _buildQuickFillSection() {
+    if (_isLoadingEmails) {
+      return Row(
+        children: [
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Loading test accounts...',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (_testEmails.isEmpty) {
+      return Text(
+        'No test accounts found',
+        style: TextStyle(
+          fontSize: 12,
+          color: AppColors.textSecondary,
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Fill (Dev) - Password: 123456',
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _testEmails.map((cred) {
+            return InkWell(
+              onTap: () {
+                _emailController.text = cred['email']!;
+                _passwordController.text = '123456';
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.grey100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.grey300),
+                ),
+                child: Text(
+                  cred['label']!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.grey700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }

@@ -6,7 +6,10 @@ import 'package:rooms/src/features/customers/domain/entities/customer.dart';
 import 'package:rooms/src/features/customers/presentation/providers/customer_providers.dart';
 
 class CustomersPage extends ConsumerStatefulWidget {
-  const CustomersPage({super.key});
+  /// When true, hides back button for use as embedded tab content
+  final bool embedded;
+
+  const CustomersPage({super.key, this.embedded = false});
 
   @override
   ConsumerState<CustomersPage> createState() => _CustomersPageState();
@@ -36,10 +39,12 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
       appBar: AppBar(
         backgroundColor: AppColors.black,
         foregroundColor: AppColors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+        leading: widget.embedded
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              ),
         title: const Row(
           children: [
             Icon(Icons.people, size: 24),
