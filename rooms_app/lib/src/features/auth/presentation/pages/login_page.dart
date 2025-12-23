@@ -468,35 +468,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   /// Quick fill section with test credentials for development
   Widget _buildQuickFillSection() {
-    if (_isLoadingEmails) {
-      return Row(
-        children: [
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Loading test accounts...',
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-          ),
-        ],
-      );
-    }
-
-    if (_testEmails.isEmpty) {
-      return Text(
-        'No test accounts found',
-        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-      );
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Quick Fill (Dev) - Password: 123456',
+          'Quick Login (Dev)',
           style: TextStyle(
             fontSize: 12,
             color: AppColors.textSecondary,
@@ -504,38 +480,117 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
         ),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _testEmails.map((cred) {
-            return InkWell(
-              onTap: () {
-                _emailController.text = cred['email']!;
-                _passwordController.text = '123456';
-              },
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.grey100,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.grey300),
-                ),
-                child: Text(
-                  cred['label']!,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.grey700,
-                    fontWeight: FontWeight.w500,
+        Row(
+          children: [
+            // Owner button
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  _emailController.text = 'thai.adityabharti@gmail.com';
+                  _passwordController.text = '123456';
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.grey100,
+                  foregroundColor: AppColors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: const BorderSide(color: AppColors.grey300),
                   ),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                child: const Text(
+                  'Owner',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                 ),
               ),
-            );
-          }).toList(),
+            ),
+            const SizedBox(width: 8),
+            // Manager button
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  _emailController.text = 'staff@meow.com';
+                  _passwordController.text = '123456';
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.grey100,
+                  foregroundColor: AppColors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: const BorderSide(color: AppColors.grey300),
+                  ),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                child: const Text(
+                  'Manager',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ),
+          ],
         ),
+        if (_isLoadingEmails) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Loading test accounts...',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ] else if (_testEmails.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            'Other Accounts - Password: 123456',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _testEmails.map((cred) {
+              return InkWell(
+                onTap: () {
+                  _emailController.text = cred['email']!;
+                  _passwordController.text = '123456';
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.grey100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.grey300),
+                  ),
+                  child: Text(
+                    cred['label']!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.grey700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ],
     );
   }
