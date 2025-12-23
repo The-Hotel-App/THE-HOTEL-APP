@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 # Cancel in-progress runs for the same branch
 concurrency:
