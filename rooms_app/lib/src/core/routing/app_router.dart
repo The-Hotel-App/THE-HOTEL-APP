@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/navigation/main_shell.dart';
 import 'package:rooms/src/features/auth/presentation/pages/home_page.dart';
-import 'package:rooms/src/features/auth/presentation/pages/hotel_login_page.dart';
 import 'package:rooms/src/features/auth/presentation/pages/hotel_selection_page.dart';
 import 'package:rooms/src/features/auth/presentation/pages/login_page.dart';
 import 'package:rooms/src/features/auth/presentation/pages/welcome_screen.dart';
@@ -35,7 +34,6 @@ import 'package:rooms/src/features/settings/presentation/pages/staff_page.dart';
 class AppRoutes {
   static const String welcome = '/welcome';
   static const String login = '/login';
-  static const String hotelLogin = '/hotel-login';
   static const String hotelSelection = '/hotel-selection';
 
   static const String setup = '/setup';
@@ -87,7 +85,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isWelcomeRoute = state.matchedLocation == AppRoutes.welcome;
       final isLoginRoute = state.matchedLocation == AppRoutes.login;
       final isSetupRoute = state.matchedLocation == AppRoutes.setup;
-      final isHotelLoginRoute = state.matchedLocation == AppRoutes.hotelLogin;
       final isHotelSelectionRoute =
           state.matchedLocation == AppRoutes.hotelSelection;
 
@@ -99,7 +96,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           isWelcomeRoute ||
           isLoginRoute ||
           isSetupRoute ||
-          isHotelLoginRoute ||
           isHotelSelectionRoute ||
           state.matchedLocation == AppRoutes.bookingSearch ||
           state.matchedLocation == AppRoutes.checkin;
@@ -199,27 +195,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const LoginPage(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const begin = Offset(1.0, 0.0);
-            const end = Offset.zero;
-            const curve = Curves.easeInOut;
-            final tween = Tween(
-              begin: begin,
-              end: end,
-            ).chain(CurveTween(curve: curve));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
-          transitionDuration: const Duration(milliseconds: 200),
-        ),
-      ),
-      GoRoute(
-        path: AppRoutes.hotelLogin,
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const HotelLoginPage(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(1.0, 0.0);
             const end = Offset.zero;

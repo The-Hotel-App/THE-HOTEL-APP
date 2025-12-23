@@ -197,6 +197,23 @@ class HotelSelectionPage extends ConsumerWidget {
           );
         },
       ),
+      // Show + button for owners only
+      floatingActionButton: hotelsAsync.maybeWhen(
+        data: (hotels) {
+          // Show + button if user is owner of at least one hotel
+          if (hotels.any((h) => h.role == UserRole.owner)) {
+            return FloatingActionButton(
+              backgroundColor: AppColors.black,
+              foregroundColor: AppColors.white,
+              onPressed: () => context.push(AppRoutes.setup),
+              tooltip: 'Create New Hotel',
+              child: const Icon(Icons.add),
+            );
+          }
+          return null;
+        },
+        orElse: () => null,
+      ),
     );
   }
 }

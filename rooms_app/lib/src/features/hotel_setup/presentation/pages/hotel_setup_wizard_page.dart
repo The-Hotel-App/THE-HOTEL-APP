@@ -96,15 +96,45 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
   @override
   void initState() {
     super.initState();
-    // NOTE: We intentionally do NOT check existing auth state here.
-    // The "Create New Hotel" flow should ALWAYS show the LOGIN/SIGNUP choice first.
-    // Even if a user has an existing Supabase session (e.g., logged in as staff),
-    // they still need to explicitly choose to LOGIN or SIGNUP as an owner.
-    // Hotels are only fetched AFTER the user explicitly logs in via this wizard.
-    AppLogger.info(
-      'Hotel Setup Wizard initialized - showing auth choice',
-      tag: 'HotelSetup',
-    );
+    // Check if user is already authenticated (coming from dashboard)
+    _checkExistingAuth();
+  }
+
+  Future<void> _checkExistingAuth() async {
+    try {
+      final currentUser = ref.read(auth_new.currentUserProvider).valueOrNull;
+      
+      if (currentUser != null) {
+        // User is already authenticated, skip auth steps
+        AppLogger.info(
+          'User already authenticated: ${currentUser.email}',
+          tag: 'HotelSetup',
+        );
+        
+        setState(() {
+          _isAuthenticatedOwner = true;
+          _ownerId = currentUser.id;
+          _authChoice = OwnerAuthChoice.login; // Set to trigger hotels list
+          // Pre-fill owner details if available
+          _ownerNameController.text = currentUser.name;
+          _ownerPhoneController.text = currentUser.phone ?? '';
+        });
+        
+        // Fetch existing hotels
+        await _fetchOwnerHotels();
+      } else {
+        AppLogger.info(
+          'No authenticated user - showing auth choice',
+          tag: 'HotelSetup',
+        );
+      }
+    } catch (e) {
+      AppLogger.error(
+        'Error checking existing auth',
+        tag: 'HotelSetup',
+        error: e,
+      );
+    }
   }
 
   Future<void> _fetchOwnerHotels() async {
