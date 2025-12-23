@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/constants/app_constants.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/core/services/notification_service.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
@@ -129,6 +130,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         debugPrint('✅ Auto-selecting single hotel: ${hotels.first.hotelName}');
         ref.read(selectedHotelIdProvider.notifier).state = hotels.first.hotelId;
 
+        // Register FCM token for push notifications (Owners only)
+        final notificationService = ref.read(notificationServiceProvider);
+        await notificationService.registerTokenForUser();
+
         // Get the dashboard route before any async operations
         final dashboardRoute = _getDashboardRoute(hotels.first.role);
         debugPrint('🚀 Navigating to dashboard: $dashboardRoute');
@@ -230,10 +235,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       size: 16,
                       color: AppColors.black,
                     ),
-                    onTap: () {
+                    onTap: () async {
                       debugPrint('🏨 Selected hotel: ${hotel.hotelName}');
                       ref.read(selectedHotelIdProvider.notifier).state =
                           hotel.hotelId;
+
+                      // Register FCM token for push notifications (Owners only)
+                      final notificationService = ref.read(
+                        notificationServiceProvider,
+                      );
+                      await notificationService.registerTokenForUser();
+
                       Navigator.pop(context);
                       // Navigate directly to role-based dashboard
                       final dashboardRoute = _getDashboardRoute(hotel.role);
@@ -450,10 +462,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           const SizedBox(width: 8),
           Text(
             'Loading test accounts...',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
         ],
       );
@@ -462,10 +471,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (_testEmails.isEmpty) {
       return Text(
         'No test accounts found',
-        style: TextStyle(
-          fontSize: 12,
-          color: AppColors.textSecondary,
-        ),
+        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
       );
     }
 

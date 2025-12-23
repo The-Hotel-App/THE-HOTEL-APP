@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/navigation/main_shell.dart';
-import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/pages/home_page.dart';
 import 'package:rooms/src/features/auth/presentation/pages/hotel_login_page.dart';
 import 'package:rooms/src/features/auth/presentation/pages/hotel_selection_page.dart';
-
 import 'package:rooms/src/features/auth/presentation/pages/login_page.dart';
 import 'package:rooms/src/features/auth/presentation/pages/welcome_screen.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart'
@@ -22,13 +20,13 @@ import 'package:rooms/src/features/dashboards/presentation/pages/owner_dashboard
 import 'package:rooms/src/features/dashboards/presentation/pages/staff_dashboard_page.dart';
 import 'package:rooms/src/features/daybook/presentation/pages/daybook_page.dart';
 import 'package:rooms/src/features/hotel_setup/presentation/pages/hotel_setup_wizard_page.dart';
+import 'package:rooms/src/features/notifications/presentation/pages/notifications_page.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 import 'package:rooms/src/features/rooms/presentation/pages/rooms_management_page.dart';
 import 'package:rooms/src/features/rooms/presentation/pages/rooms_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/change_password_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/create_staff_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/hotel_settings_page.dart';
-import 'package:rooms/src/features/settings/presentation/pages/notifications_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/room_types_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/staff_page.dart';
 
@@ -61,7 +59,6 @@ class AppRoutes {
   static const String createStaff = '/create-staff';
   static const String roomTypes = '/room-types';
   static const String roomsManagement = '/rooms-management';
-
 }
 
 // NOTE: We intentionally do NOT use refreshListenable tied to auth state.
@@ -88,7 +85,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoginRoute = state.matchedLocation == AppRoutes.login;
       final isSetupRoute = state.matchedLocation == AppRoutes.setup;
       final isHotelLoginRoute = state.matchedLocation == AppRoutes.hotelLogin;
-      final isHotelSelectionRoute = state.matchedLocation == AppRoutes.hotelSelection;
+      final isHotelSelectionRoute =
+          state.matchedLocation == AppRoutes.hotelSelection;
 
       // Define public routes that should always be accessible
       // regardless of authentication or hotel selection state
@@ -135,7 +133,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // From here on, we're dealing with protected routes only
       // (public routes already returned null above)
-      
+
       // If not authenticated and trying to access protected route -> redirect to welcome
       if (!isAuthenticated) {
         debugPrint('🚫 Not authenticated, redirecting to welcome');
@@ -149,9 +147,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // don't interfere - the login page has already selected the hotel
       if (hotelsAsync.isLoading) {
         if (isDashboardRoute) {
-          debugPrint(
-            '⏳ Hotels loading but navigating to dashboard, allowing',
-          );
+          debugPrint('⏳ Hotels loading but navigating to dashboard, allowing');
           return null;
         }
         debugPrint('⏳ Hotels loading, staying on current route');
@@ -162,9 +158,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final selectedHotelAsync = ref.read(auth_new.currentHotelProvider);
       final hasHotel = selectedHotelAsync != null || selectedHotelId != null;
 
-      debugPrint(
-        '🏨 Selected hotel ID: $selectedHotelId, hasHotel: $hasHotel',
-      );
+      debugPrint('🏨 Selected hotel ID: $selectedHotelId, hasHotel: $hasHotel');
 
       // If user is navigating to a legacy dashboard route, redirect to MainShell
       if (isDashboardRoute && hasHotel) {
@@ -643,7 +637,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           transitionDuration: const Duration(milliseconds: 200),
         ),
       ),
-
     ],
   );
 });

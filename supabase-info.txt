@@ -23,3 +23,31 @@ Please use "npx supabase <command>" to use the CLI tools.
 - `supabase/migrations/20241212_onboarding_schema.sql`
 - `supabase/migrations/20241213_add_staff_function.sql`
 - `supabase/migrations/20241222_remove_join_workflow.sql` - Removed join_codes, join_requests tables and validate_join_code function
+- `supabase/migrations/20241223_push_notifications.sql` - Push notifications infrastructure
+
+---
+
+## Push Notifications (December 2024)
+
+### Tables:
+- `device_tokens` - Stores FCM tokens for each user/hotel combination
+  - Unique constraint on (user_id, hotel_id, fcm_token)
+  - RLS: Users can manage their own tokens
+- `notifications` - Stores notification history for in-app display
+  - Types: new_booking, room_status_change, checkout, payment, system
+  - Supports soft delete via `is_hidden` flag
+
+### Functions:
+- `get_owner_fcm_tokens(p_hotel_id)` - Gets FCM tokens for all owners of a hotel
+- `mark_notifications_read(p_notification_ids)` - Marks notifications as read
+- `toggle_notifications_visibility(p_hidden)` - Clear/restore notification history
+
+### Triggers:
+- `trg_notify_new_booking` - Fires on INSERT to bookings, creates notification for hotel owners
+- `trg_notify_room_status_change` - Fires on UPDATE of rooms.status, creates notification for owners
+
+### Edge Functions:
+- `send-push-notification` - Sends FCM push notifications using Firebase HTTP v1 API
+
+### Secrets:
+- `FIREBASE_SERVICE_ACCOUNT_BASE64` - Base64-encoded Firebase service account JSON
