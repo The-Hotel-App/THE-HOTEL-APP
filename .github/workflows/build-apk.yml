@@ -66,9 +66,9 @@ jobs:
       - name: Create google-services.json
         run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
 
-      - name: Build APK (arm64 only)
+      - name: Build APK (all ABIs)
         run: |
-          flutter build apk --split-per-abi --target-platform android-arm64 --release \
+          flutter build apk --split-per-abi --release \
             --no-tree-shake-icons \
             --suppress-analytics
 
