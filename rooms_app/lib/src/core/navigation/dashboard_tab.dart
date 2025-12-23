@@ -27,8 +27,32 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   @override
   Widget build(BuildContext context) {
     final hotel = ref.watch(currentHotelProvider);
-    final user = ref.watch(currentUserProvider).valueOrNull;
-    final role = hotel?.role ?? UserRole.staff;
+    final userAsync = ref.watch(currentUserProvider);
+    
+    // Show loading while hotel/user is loading to prevent staff view flash
+    if (hotel == null) {
+      return Scaffold(
+        backgroundColor: AppColors.grey100,
+        appBar: AppBar(
+          backgroundColor: AppColors.black,
+          foregroundColor: AppColors.white,
+          title: Row(
+            children: [
+              Image.asset(
+                'assets/new_images/black_logo_on_yellow_bg_new_fixed_ratio.png',
+                height: 28,
+              ),
+              const SizedBox(width: 12),
+              const Text('Loading...'),
+            ],
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    final user = userAsync.valueOrNull;
+    final role = hotel.role;
     final roomsAsync = ref.watch(roomsProvider);
 
     return Scaffold(
@@ -45,7 +69,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
             const SizedBox(width: 12),
             Flexible(
               child: Text(
-                hotel?.hotelName ?? 'ROOMS.io',
+                hotel.hotelName,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
