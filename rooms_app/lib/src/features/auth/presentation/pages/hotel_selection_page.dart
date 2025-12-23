@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/services/notification_service.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
@@ -172,7 +173,10 @@ class HotelSelectionPage extends ConsumerWidget {
                     roleColor: _getRoleColor(hotel.role),
                     roleIcon: _getRoleIcon(hotel.role),
                     onTap: () async {
-                      debugPrint('🏨 Selected hotel: ${hotel.hotelName}');
+                      AppLogger.info(
+                        'Selected hotel: ${hotel.hotelName}',
+                        tag: 'Auth',
+                      );
                       ref.read(selectedHotelIdProvider.notifier).state =
                           hotel.hotelId;
 

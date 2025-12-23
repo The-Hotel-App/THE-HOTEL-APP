@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/features/auth/data/repositories/supabase_auth_repository.dart';
@@ -100,7 +101,10 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
     // Even if a user has an existing Supabase session (e.g., logged in as staff),
     // they still need to explicitly choose to LOGIN or SIGNUP as an owner.
     // Hotels are only fetched AFTER the user explicitly logs in via this wizard.
-    debugPrint('🏨 Hotel Setup Wizard initialized - showing auth choice');
+    AppLogger.info(
+      'Hotel Setup Wizard initialized - showing auth choice',
+      tag: 'HotelSetup',
+    );
   }
 
   Future<void> _fetchOwnerHotels() async {
@@ -119,9 +123,16 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         _isLoadingHotels = false;
       });
 
-      debugPrint('✅ Fetched ${hotels.length} hotels for owner');
+      AppLogger.success(
+        'Fetched ${hotels.length} hotels for owner',
+        tag: 'HotelSetup',
+      );
     } catch (e) {
-      debugPrint('❌ Error fetching owner hotels: $e');
+      AppLogger.error(
+        'Error fetching owner hotels',
+        tag: 'HotelSetup',
+        error: e,
+      );
       setState(() {
         _isLoadingHotels = false;
       });
@@ -234,7 +245,10 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       if (!success || !mounted) {
         return; // Return if widget disposed during async
       }
-      debugPrint('✅ Profile updated for: $_ownerId, advancing to next page');
+      AppLogger.success(
+        'Profile updated for: $_ownerId, advancing to next page',
+        tag: 'HotelSetup',
+      );
     }
 
     // Advance to next page (only if still mounted)
@@ -283,7 +297,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
     }
 
     try {
-      debugPrint('🔐 Attempting owner login for: $email');
+      AppLogger.auth('Attempting owner login for: $email');
 
       showDialog(
         context: context,
@@ -299,11 +313,14 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         Navigator.of(context).pop();
       }
 
-      debugPrint('✅ Login successful: ${user.name}');
+      AppLogger.success('Login successful: ${user.name}', tag: 'Auth');
 
       // Only update state if widget is still mounted
       if (!mounted) {
-        debugPrint('⚠️ Widget disposed during login, but login was successful');
+        AppLogger.warning(
+          'Widget disposed during login, but login was successful',
+          tag: 'Auth',
+        );
         return true; // Login succeeded, just can't update UI
       }
 
@@ -319,14 +336,14 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         }
       });
 
-      debugPrint('✅ Owner logged in: $_ownerId');
+      AppLogger.success('Owner logged in: $_ownerId', tag: 'Auth');
 
       // Fetch owner's hotels
       await _fetchOwnerHotels();
 
       return true;
     } catch (e) {
-      debugPrint('❌ Login error: $e');
+      AppLogger.error('Login error', tag: 'Auth', error: e);
       if (mounted) {
         Navigator.of(context).pop();
         setState(() {
@@ -358,7 +375,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
     }
 
     try {
-      debugPrint('📝 Creating account for: $email');
+      AppLogger.info('Creating account for: $email', tag: 'Auth');
 
       showDialog(
         context: context,
@@ -384,8 +401,9 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       // Only update state if widget is still mounted
       // (Router refresh may dispose widget during auth state change)
       if (!mounted) {
-        debugPrint(
-          '⚠️ Widget disposed during signup, returning success anyway',
+        AppLogger.warning(
+          'Widget disposed during signup, returning success anyway',
+          tag: 'Auth',
         );
         return true; // Signup succeeded, just can't update UI
       }
@@ -397,10 +415,10 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         // Pre-fill email if needed
         _emailController.text = email;
       });
-      debugPrint('✅ Account created successfully: $_ownerId');
+      AppLogger.success('Account created successfully: $_ownerId', tag: 'Auth');
       return true;
     } catch (e) {
-      debugPrint('❌ Account creation error: $e');
+      AppLogger.error('Account creation error', tag: 'Auth', error: e);
       if (mounted) {
         Navigator.of(context).pop();
         _showErrorDialog('Account creation failed: ${e.toString()}');
@@ -431,7 +449,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
 
   Future<bool> _updateOwnerProfile() async {
     try {
-      debugPrint('📝 Updating owner profile...');
+      AppLogger.info('Updating owner profile...', tag: 'HotelSetup');
 
       showDialog(
         context: context,
@@ -447,7 +465,10 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         phone: _ownerPhoneController.text.trim(),
       );
 
-      debugPrint('✅ Profile updated for user: $_ownerId');
+      AppLogger.success(
+        'Profile updated for user: $_ownerId',
+        tag: 'HotelSetup',
+      );
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -455,7 +476,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
 
       return true;
     } catch (e) {
-      debugPrint('❌ Profile update error: $e');
+      AppLogger.error('Profile update error', tag: 'HotelSetup', error: e);
       if (mounted) {
         Navigator.of(context).pop();
         _showErrorDialog('Profile update failed: ${e.toString()}');
@@ -470,7 +491,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       return;
     }
 
-    debugPrint('🏨 Starting hotel setup...');
+    AppLogger.info('Starting hotel setup...', tag: 'HotelSetup');
 
     try {
       showDialog(
@@ -491,7 +512,10 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         }
       }
 
-      debugPrint('📊 Creating hotel with ${floorConfigs.length} floors');
+      AppLogger.info(
+        'Creating hotel with ${floorConfigs.length} floors',
+        tag: 'HotelSetup',
+      );
 
       final supabaseHotelRepo = SupabaseHotelSetupRepository();
       final createdHotel = await supabaseHotelRepo.createHotel(
@@ -514,12 +538,15 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         floorConfigs: floorConfigs,
       );
 
-      debugPrint('✅ Hotel created: ${createdHotel.id}');
+      AppLogger.success('Hotel created: ${createdHotel.id}', tag: 'HotelSetup');
 
       // Create room types
       List<hotel_new.RoomType> createdRoomTypes = [];
       if (_roomTypes.isNotEmpty) {
-        debugPrint('🛏️ Creating ${_roomTypes.length} room types...');
+        AppLogger.info(
+          'Creating ${_roomTypes.length} room types...',
+          tag: 'HotelSetup',
+        );
         final roomTypesData = _roomTypes
             .map(
               (rt) => hotel_new.RoomType(
@@ -539,7 +566,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         createdRoomTypes = await supabaseHotelRepo.getRoomTypes(
           createdHotel.id,
         );
-        debugPrint('✅ Room types created');
+        AppLogger.success('Room types created', tag: 'HotelSetup');
       }
 
       // Create rooms with room type assignments
@@ -557,7 +584,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         }
       }
 
-      debugPrint('🚪 Creating rooms...');
+      AppLogger.info('Creating rooms...', tag: 'HotelSetup');
       await supabaseHotelRepo.createRooms(
         hotelId: createdHotel.id,
         floorConfigs: floorConfigs,
@@ -565,7 +592,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       );
 
       await supabaseHotelRepo.completeSetup(createdHotel.id);
-      debugPrint('✅ Hotel setup complete!');
+      AppLogger.success('Hotel setup complete!', tag: 'HotelSetup');
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -594,7 +621,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         }
       }
     } catch (e) {
-      debugPrint('❌ Hotel setup error: $e');
+      AppLogger.error('Hotel setup error', tag: 'HotelSetup', error: e);
       if (mounted) {
         Navigator.of(context).pop();
         _showErrorDialog('Failed to create hotel: ${e.toString()}');

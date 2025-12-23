@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 
 /// Welcome screen - first screen shown when app opens
@@ -13,7 +14,7 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('🏠 Building WelcomeScreen');
+    AppLogger.navigation('Building WelcomeScreen');
 
     return Scaffold(
       backgroundColor: AppColors.black,
@@ -75,7 +76,9 @@ class WelcomeScreen extends StatelessWidget {
                       height: 56,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          debugPrint('🔘 Create New Hotel button tapped');
+                          AppLogger.navigation(
+                            'Create New Hotel button tapped',
+                          );
                           context.go(AppRoutes.setup);
                         },
                         icon: const Icon(
@@ -108,7 +111,7 @@ class WelcomeScreen extends StatelessWidget {
                       height: 56,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          debugPrint('🔘 Login to Hotel button tapped');
+                          AppLogger.navigation('Login to Hotel button tapped');
                           context.go(AppRoutes.hotelLogin);
                         },
                         icon: const Icon(Icons.login, color: Colors.white),
@@ -130,7 +133,6 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-
                   ],
                 ),
               ),

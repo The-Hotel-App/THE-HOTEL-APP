@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/notifications/domain/entities/app_notification.dart';
 import 'package:rooms/src/features/notifications/domain/repositories/notification_repository.dart';
@@ -16,7 +16,10 @@ class SupabaseNotificationRepository implements NotificationRepository {
   @override
   Future<List<AppNotification>> getNotifications(String userId) async {
     try {
-      debugPrint('📦 Fetching notifications for user: $userId');
+      AppLogger.debug(
+        'Fetching notifications for user: $userId',
+        tag: 'Notifications',
+      );
 
       final response = await _client
           .from('notifications')
@@ -30,10 +33,17 @@ class SupabaseNotificationRepository implements NotificationRepository {
           .map((json) => AppNotification.fromJson(json))
           .toList();
 
-      debugPrint('✅ Fetched ${notifications.length} notifications');
+      AppLogger.success(
+        'Fetched ${notifications.length} notifications',
+        tag: 'Notifications',
+      );
       return notifications;
     } catch (e) {
-      debugPrint('❌ Error fetching notifications: $e');
+      AppLogger.error(
+        'Error fetching notifications',
+        tag: 'Notifications',
+        error: e,
+      );
       rethrow;
     }
   }
@@ -57,7 +67,11 @@ class SupabaseNotificationRepository implements NotificationRepository {
           .map((json) => AppNotification.fromJson(json))
           .toList();
     } catch (e) {
-      debugPrint('❌ Error fetching notifications for hotel: $e');
+      AppLogger.error(
+        'Error fetching notifications for hotel',
+        tag: 'Notifications',
+        error: e,
+      );
       rethrow;
     }
   }
@@ -74,7 +88,11 @@ class SupabaseNotificationRepository implements NotificationRepository {
 
       return (response as List).length;
     } catch (e) {
-      debugPrint('❌ Error getting unread count: $e');
+      AppLogger.error(
+        'Error getting unread count',
+        tag: 'Notifications',
+        error: e,
+      );
       return 0;
     }
   }
@@ -88,9 +106,16 @@ class SupabaseNotificationRepository implements NotificationRepository {
         'mark_notifications_read',
         params: {'p_notification_ids': notificationIds},
       );
-      debugPrint('✅ Marked ${notificationIds.length} notifications as read');
+      AppLogger.success(
+        'Marked ${notificationIds.length} notifications as read',
+        tag: 'Notifications',
+      );
     } catch (e) {
-      debugPrint('❌ Error marking notifications as read: $e');
+      AppLogger.error(
+        'Error marking notifications as read',
+        tag: 'Notifications',
+        error: e,
+      );
       rethrow;
     }
   }
@@ -104,9 +129,16 @@ class SupabaseNotificationRepository implements NotificationRepository {
           .eq('user_id', userId)
           .eq('is_read', false);
 
-      debugPrint('✅ Marked all notifications as read');
+      AppLogger.success(
+        'Marked all notifications as read',
+        tag: 'Notifications',
+      );
     } catch (e) {
-      debugPrint('❌ Error marking all as read: $e');
+      AppLogger.error(
+        'Error marking all as read',
+        tag: 'Notifications',
+        error: e,
+      );
       rethrow;
     }
   }
@@ -118,9 +150,13 @@ class SupabaseNotificationRepository implements NotificationRepository {
         'toggle_notifications_visibility',
         params: {'p_hidden': true},
       );
-      debugPrint('✅ All notifications hidden');
+      AppLogger.success('All notifications hidden', tag: 'Notifications');
     } catch (e) {
-      debugPrint('❌ Error hiding notifications: $e');
+      AppLogger.error(
+        'Error hiding notifications',
+        tag: 'Notifications',
+        error: e,
+      );
       rethrow;
     }
   }
@@ -132,9 +168,13 @@ class SupabaseNotificationRepository implements NotificationRepository {
         'toggle_notifications_visibility',
         params: {'p_hidden': false},
       );
-      debugPrint('✅ All notifications restored');
+      AppLogger.success('All notifications restored', tag: 'Notifications');
     } catch (e) {
-      debugPrint('❌ Error restoring notifications: $e');
+      AppLogger.error(
+        'Error restoring notifications',
+        tag: 'Notifications',
+        error: e,
+      );
       rethrow;
     }
   }

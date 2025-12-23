@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -76,7 +76,10 @@ class RoomTypesRepository {
   /// Get all room types for a hotel
   Future<List<RoomType>> getRoomTypes(String hotelId) async {
     try {
-      debugPrint('📦 Fetching room types for hotel: $hotelId');
+      AppLogger.debug(
+        'Fetching room types for hotel: $hotelId',
+        tag: 'RoomTypes',
+      );
       final response = await _client
           .from('room_types')
           .select()
@@ -87,10 +90,13 @@ class RoomTypesRepository {
           .map((json) => RoomType.fromJson(json))
           .toList();
 
-      debugPrint('✅ Fetched ${roomTypes.length} room types');
+      AppLogger.success(
+        'Fetched ${roomTypes.length} room types',
+        tag: 'RoomTypes',
+      );
       return roomTypes;
     } catch (e) {
-      debugPrint('❌ Error fetching room types: $e');
+      AppLogger.error('Error fetching room types', tag: 'RoomTypes', error: e);
       rethrow;
     }
   }
@@ -104,7 +110,7 @@ class RoomTypesRepository {
     String? description,
   }) async {
     try {
-      debugPrint('📦 Creating room type: $name');
+      AppLogger.info('Creating room type: $name', tag: 'RoomTypes');
       final response = await _client
           .from('room_types')
           .insert({
@@ -117,10 +123,10 @@ class RoomTypesRepository {
           .select()
           .single();
 
-      debugPrint('✅ Room type created');
+      AppLogger.success('Room type created', tag: 'RoomTypes');
       return RoomType.fromJson(response);
     } catch (e) {
-      debugPrint('❌ Error creating room type: $e');
+      AppLogger.error('Error creating room type', tag: 'RoomTypes', error: e);
       rethrow;
     }
   }
@@ -134,7 +140,7 @@ class RoomTypesRepository {
     String? description,
   }) async {
     try {
-      debugPrint('📦 Updating room type: $id');
+      AppLogger.debug('Updating room type: $id', tag: 'RoomTypes');
       final updates = <String, dynamic>{};
       if (name != null) updates['name'] = name;
       if (basePrice != null) updates['base_price'] = basePrice;
@@ -148,10 +154,10 @@ class RoomTypesRepository {
           .select()
           .single();
 
-      debugPrint('✅ Room type updated');
+      AppLogger.success('Room type updated', tag: 'RoomTypes');
       return RoomType.fromJson(response);
     } catch (e) {
-      debugPrint('❌ Error updating room type: $e');
+      AppLogger.error('Error updating room type', tag: 'RoomTypes', error: e);
       rethrow;
     }
   }
@@ -159,12 +165,12 @@ class RoomTypesRepository {
   /// Delete a room type
   Future<void> deleteRoomType(String id) async {
     try {
-      debugPrint('📦 Deleting room type: $id');
+      AppLogger.info('Deleting room type: $id', tag: 'RoomTypes');
       await _client.from('room_types').delete().eq('id', id);
 
-      debugPrint('✅ Room type deleted');
+      AppLogger.success('Room type deleted', tag: 'RoomTypes');
     } catch (e) {
-      debugPrint('❌ Error deleting room type: $e');
+      AppLogger.error('Error deleting room type', tag: 'RoomTypes', error: e);
       rethrow;
     }
   }

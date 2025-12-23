@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/features/auth/domain/entities/user.dart';
 import 'package:rooms/src/features/auth/domain/repositories/auth_repository.dart';
 
@@ -51,40 +52,44 @@ class DummyAuthRepository implements AuthRepository {
 
   @override
   Future<User> login({required String email, required String password}) async {
-    debugPrint('🔍 DummyAuthRepository: Login attempt');
-    debugPrint('📧 Email received: $email');
+    AppLogger.auth('Login attempt');
+    AppLogger.debug('Email received: $email', tag: 'Auth');
 
     // Simulate network delay
     await Future.delayed(const Duration(milliseconds: 500));
 
     // Check credentials
     final expectedPassword = _credentials[email];
-    debugPrint(
-      '🔑 Expected password for $email: ${expectedPassword != null ? '***' : 'NOT FOUND'}',
+    AppLogger.debug(
+      'Expected password for $email: ${expectedPassword != null ? '***' : 'NOT FOUND'}',
+      tag: 'Auth',
     );
 
     if (expectedPassword == null || expectedPassword != password) {
-      debugPrint('❌ Invalid credentials!');
+      AppLogger.warning('Invalid credentials!', tag: 'Auth');
       throw Exception('Invalid email or password');
     }
 
-    debugPrint('✅ Credentials valid!');
+    AppLogger.success('Credentials valid!', tag: 'Auth');
 
     // Find and return user
     final user = _dummyUsers.firstWhere(
       (u) => u.email == email,
       orElse: () {
-        debugPrint('❌ User not found in dummy users list');
+        AppLogger.error('User not found in dummy users list', tag: 'Auth');
         throw Exception('User not found');
       },
     );
 
-    debugPrint('✅ User found: ${user.name} (${user.role.displayName})');
+    AppLogger.success(
+      'User found: ${user.name} (${user.role.displayName})',
+      tag: 'Auth',
+    );
 
     _currentUser = user;
     _authStateController.add(_currentUser);
 
-    debugPrint('✅ Auth state updated, user is now logged in');
+    AppLogger.success('Auth state updated, user is now logged in', tag: 'Auth');
 
     return user;
   }

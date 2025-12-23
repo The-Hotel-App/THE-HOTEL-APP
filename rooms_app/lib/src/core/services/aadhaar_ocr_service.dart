@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 
 /// Service for extracting Aadhaar number from ID card images using OCR
 class AadhaarOcrService {
@@ -18,7 +18,7 @@ class AadhaarOcrService {
   /// Pick image from camera or gallery and extract Aadhaar number
   Future<AadhaarOcrResult> pickAndExtract({required ImageSource source}) async {
     try {
-      debugPrint('📷 Picking image from ${source.name}');
+      AppLogger.info('Picking image from ${source.name}', tag: 'OCR');
 
       final XFile? image = await _imagePicker.pickImage(
         source: source,
@@ -33,7 +33,7 @@ class AadhaarOcrService {
 
       return await extractFromFile(File(image.path));
     } catch (e) {
-      debugPrint('❌ Error picking image: $e');
+      AppLogger.error('Error picking image', tag: 'OCR', error: e);
       return AadhaarOcrResult(
         success: false,
         message: 'Failed to pick image: $e',
@@ -44,14 +44,17 @@ class AadhaarOcrService {
   /// Extract Aadhaar number from a file
   Future<AadhaarOcrResult> extractFromFile(File imageFile) async {
     try {
-      debugPrint('🔍 Extracting text from image: ${imageFile.path}');
+      AppLogger.debug('Extracting text from image', tag: 'OCR');
 
       final inputImage = InputImage.fromFile(imageFile);
       final RecognizedText recognizedText = await _textRecognizer.processImage(
         inputImage,
       );
 
-      debugPrint('📝 Recognized text: ${recognizedText.text}');
+      AppLogger.debug(
+        'Text recognized, searching for Aadhaar pattern',
+        tag: 'OCR',
+      );
 
       // Search for Aadhaar pattern in recognized text
       final match = _aadhaarPattern.firstMatch(recognizedText.text);
@@ -60,7 +63,7 @@ class AadhaarOcrService {
         // Clean up the Aadhaar number (remove spaces)
         final aadhaarNumber = match.group(0)!.replaceAll(' ', '');
 
-        debugPrint('✅ Found Aadhaar number: $aadhaarNumber');
+        AppLogger.success('Found Aadhaar number', tag: 'OCR');
 
         return AadhaarOcrResult(
           success: true,
@@ -70,7 +73,7 @@ class AadhaarOcrService {
           message: 'Aadhaar number extracted successfully',
         );
       } else {
-        debugPrint('⚠️ No Aadhaar number found in text');
+        AppLogger.warning('No Aadhaar number found in text', tag: 'OCR');
 
         return AadhaarOcrResult(
           success: false,
@@ -81,7 +84,7 @@ class AadhaarOcrService {
         );
       }
     } catch (e) {
-      debugPrint('❌ Error extracting text: $e');
+      AppLogger.error('Error extracting text', tag: 'OCR', error: e);
       return AadhaarOcrResult(
         success: false,
         message: 'Failed to process image: $e',

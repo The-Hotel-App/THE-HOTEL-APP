@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
@@ -74,7 +75,7 @@ class _HotelLoginPageState extends ConsumerState<HotelLoginPage> {
         });
       }
     } catch (e) {
-      debugPrint('Error loading staff: $e');
+      AppLogger.error('Error loading staff', tag: 'Auth', error: e);
       if (mounted) {
         setState(() {
           _testEmails = devEmails;
@@ -113,21 +114,21 @@ class _HotelLoginPageState extends ConsumerState<HotelLoginPage> {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
 
-      debugPrint('🔐 Login attempt for: $email');
+      AppLogger.auth('Login attempt for: $email');
 
       final authRepo = ref.read(authRepositoryProvider);
       final user = await authRepo.login(email: email, password: password);
 
       if (!mounted) return;
 
-      debugPrint('✅ Login successful: ${user.name}');
+      AppLogger.success('Login successful: ${user.name}', tag: 'Auth');
 
       // Get user's hotels directly from repository
       final hotels = await authRepo.getUserHotels(user.id);
 
       if (!mounted) return;
 
-      debugPrint('🏨 User has ${hotels.length} hotels');
+      AppLogger.info('User has ${hotels.length} hotels', tag: 'Auth');
 
       // Invalidate provider for fresh data on next read
       ref.invalidate(userHotelsProvider);
@@ -147,8 +148,8 @@ class _HotelLoginPageState extends ConsumerState<HotelLoginPage> {
         final hotel = hotels.first;
         ref.read(selectedHotelIdProvider.notifier).state = hotel.hotelId;
 
-        debugPrint(
-          '🚀 Single hotel, navigating to ${hotel.role.displayName} dashboard',
+        AppLogger.navigation(
+          'Single hotel, navigating to ${hotel.role.displayName} dashboard',
         );
 
         if (mounted) {
@@ -157,7 +158,10 @@ class _HotelLoginPageState extends ConsumerState<HotelLoginPage> {
         }
       } else {
         // Multiple hotels - go to hotel selection page
-        debugPrint('🏨 Multiple hotels, navigating to selection page');
+        AppLogger.info(
+          'Multiple hotels, navigating to selection page',
+          tag: 'Auth',
+        );
 
         if (mounted) {
           setState(() => _isLoading = false);
@@ -165,7 +169,7 @@ class _HotelLoginPageState extends ConsumerState<HotelLoginPage> {
         }
       }
     } catch (e) {
-      debugPrint('❌ Login error: $e');
+      AppLogger.error('Login error', tag: 'Auth', error: e);
       _showError('Login failed: ${e.toString().replaceAll('Exception: ', '')}');
       if (mounted) {
         setState(() => _isLoading = false);

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/hotel_setup/domain/entities/hotel_new.dart';
 import 'package:rooms/src/features/hotel_setup/domain/repositories/hotel_setup_repository_new.dart';
@@ -25,7 +25,7 @@ class SupabaseHotelSetupRepository implements HotelSetupRepository {
     String? hotelCode,
   }) async {
     try {
-      debugPrint('🏨 Creating hotel: $name');
+      AppLogger.info('Creating hotel: $name', tag: 'HotelSetup');
 
       final totalRooms = floorConfigs.fold<int>(
         0,
@@ -49,7 +49,7 @@ class SupabaseHotelSetupRepository implements HotelSetupRepository {
           .select()
           .single();
 
-      debugPrint('✅ Hotel created: ${response['id']}');
+      AppLogger.success('Hotel created: ${response['id']}', tag: 'HotelSetup');
 
       final hotel = Hotel.fromJson(response);
 
@@ -62,11 +62,11 @@ class SupabaseHotelSetupRepository implements HotelSetupRepository {
         'created_by': ownerId,
       });
 
-      debugPrint('✅ Owner assigned to hotel');
+      AppLogger.success('Owner assigned to hotel', tag: 'HotelSetup');
 
       return hotel;
     } catch (e) {
-      debugPrint('❌ Error creating hotel: $e');
+      AppLogger.error('Error creating hotel', tag: 'HotelSetup', error: e);
       rethrow;
     }
   }
@@ -74,7 +74,7 @@ class SupabaseHotelSetupRepository implements HotelSetupRepository {
   @override
   Future<Hotel?> getHotel(String hotelId) async {
     try {
-      debugPrint('🏨 Fetching hotel: $hotelId');
+      AppLogger.debug('Fetching hotel: $hotelId', tag: 'HotelSetup');
 
       final response = await _client
           .from('hotels')
@@ -83,13 +83,13 @@ class SupabaseHotelSetupRepository implements HotelSetupRepository {
           .maybeSingle();
 
       if (response == null) {
-        debugPrint('⚠️ Hotel not found');
+        AppLogger.warning('Hotel not found', tag: 'HotelSetup');
         return null;
       }
 
       return Hotel.fromJson(response);
     } catch (e) {
-      debugPrint('❌ Error fetching hotel: $e');
+      AppLogger.error('Error fetching hotel', tag: 'HotelSetup', error: e);
       return null;
     }
   }
@@ -97,13 +97,13 @@ class SupabaseHotelSetupRepository implements HotelSetupRepository {
   @override
   Future<void> updateHotel(Hotel hotel) async {
     try {
-      debugPrint('🏨 Updating hotel: ${hotel.id}');
+      AppLogger.debug('Updating hotel: ${hotel.id}', tag: 'HotelSetup');
 
       await _client.from('hotels').update(hotel.toJson()).eq('id', hotel.id);
 
-      debugPrint('✅ Hotel updated');
+      AppLogger.success('Hotel updated', tag: 'HotelSetup');
     } catch (e) {
-      debugPrint('❌ Error updating hotel: $e');
+      AppLogger.error('Error updating hotel', tag: 'HotelSetup', error: e);
       rethrow;
     }
   }
@@ -111,16 +111,16 @@ class SupabaseHotelSetupRepository implements HotelSetupRepository {
   @override
   Future<void> completeSetup(String hotelId) async {
     try {
-      debugPrint('🏨 Completing setup for hotel: $hotelId');
+      AppLogger.info('Completing setup for hotel: $hotelId', tag: 'HotelSetup');
 
       await _client
           .from('hotels')
           .update({'is_setup_completed': true})
           .eq('id', hotelId);
 
-      debugPrint('✅ Hotel setup completed');
+      AppLogger.success('Hotel setup completed', tag: 'HotelSetup');
     } catch (e) {
-      debugPrint('❌ Error completing setup: $e');
+      AppLogger.error('Error completing setup', tag: 'HotelSetup', error: e);
       rethrow;
     }
   }
@@ -131,7 +131,10 @@ class SupabaseHotelSetupRepository implements HotelSetupRepository {
     required List<RoomType> roomTypes,
   }) async {
     try {
-      debugPrint('🏨 Creating ${roomTypes.length} room types');
+      AppLogger.info(
+        'Creating ${roomTypes.length} room types',
+        tag: 'HotelSetup',
+      );
 
       final data = roomTypes
           .map(
@@ -147,9 +150,9 @@ class SupabaseHotelSetupRepository implements HotelSetupRepository {
 
       await _client.from('room_types').insert(data);
 
-      debugPrint('✅ Room types created');
+      AppLogger.success('Room types created', tag: 'HotelSetup');
     } catch (e) {
-      debugPrint('❌ Error creating room types: $e');
+      AppLogger.error('Error creating room types', tag: 'HotelSetup', error: e);
       rethrow;
     }
   }
@@ -157,7 +160,10 @@ class SupabaseHotelSetupRepository implements HotelSetupRepository {
   @override
   Future<List<RoomType>> getRoomTypes(String hotelId) async {
     try {
-      debugPrint('🏨 Fetching room types for hotel: $hotelId');
+      AppLogger.debug(
+        'Fetching room types for hotel: $hotelId',
+        tag: 'HotelSetup',
+      );
 
       final response = await _client
           .from('room_types')
@@ -169,7 +175,7 @@ class SupabaseHotelSetupRepository implements HotelSetupRepository {
           .map((json) => RoomType.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      debugPrint('❌ Error fetching room types: $e');
+      AppLogger.error('Error fetching room types', tag: 'HotelSetup', error: e);
       return [];
     }
   }
@@ -181,7 +187,7 @@ class SupabaseHotelSetupRepository implements HotelSetupRepository {
     required Map<String, String> roomTypeAssignments,
   }) async {
     try {
-      debugPrint('🏨 Creating rooms for hotel: $hotelId');
+      AppLogger.info('Creating rooms for hotel: $hotelId', tag: 'HotelSetup');
 
       final rooms = <Map<String, dynamic>>[];
 
@@ -202,19 +208,22 @@ class SupabaseHotelSetupRepository implements HotelSetupRepository {
         }
       }
 
-      debugPrint('🏨 Creating ${rooms.length} rooms');
+      AppLogger.debug('Creating ${rooms.length} rooms', tag: 'HotelSetup');
 
       // Insert in batches of 100 to avoid payload size limits
       const batchSize = 100;
       for (int i = 0; i < rooms.length; i += batchSize) {
         final batch = rooms.skip(i).take(batchSize).toList();
         await _client.from('rooms').insert(batch);
-        debugPrint('✅ Inserted batch ${(i / batchSize).floor() + 1}');
+        AppLogger.debug(
+          'Inserted batch ${(i / batchSize).floor() + 1}',
+          tag: 'HotelSetup',
+        );
       }
 
-      debugPrint('✅ All rooms created');
+      AppLogger.success('All rooms created', tag: 'HotelSetup');
     } catch (e) {
-      debugPrint('❌ Error creating rooms: $e');
+      AppLogger.error('Error creating rooms', tag: 'HotelSetup', error: e);
       rethrow;
     }
   }

@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -68,7 +68,7 @@ class StaffRepository {
   /// Get all staff for a hotel
   Future<List<StaffMember>> getStaff(String hotelId) async {
     try {
-      debugPrint('📦 Fetching staff for hotel: $hotelId');
+      AppLogger.debug('Fetching staff for hotel: $hotelId', tag: 'Staff');
       // Use the explicit relationship name to avoid ambiguity
       // hotel_staff has TWO foreign keys to user_profiles (user_id and created_by)
       // We want the user_id relationship, so we specify: user_profiles!hotel_staff_user_id_fkey
@@ -82,10 +82,10 @@ class StaffRepository {
           .map((json) => StaffMember.fromJson(json))
           .toList();
 
-      debugPrint('✅ Fetched ${staff.length} staff members');
+      AppLogger.success('Fetched ${staff.length} staff members', tag: 'Staff');
       return staff;
     } catch (e) {
-      debugPrint('❌ Error fetching staff: $e');
+      AppLogger.error('Error fetching staff', tag: 'Staff', error: e);
       rethrow;
     }
   }
@@ -94,23 +94,26 @@ class StaffRepository {
   /// This deletes from hotel_staff and user_profiles if staff only works at this hotel
   Future<void> removeStaff(String staffId, String hotelId) async {
     try {
-      debugPrint('📦 Removing staff completely: $staffId from hotel: $hotelId');
-      
+      AppLogger.info(
+        'Removing staff: $staffId from hotel: $hotelId',
+        tag: 'Staff',
+      );
+
       // Call the RPC function for complete deletion
-      final response = await _client.rpc('delete_staff_completely', params: {
-        'p_staff_id': staffId,
-        'p_hotel_id': hotelId,
-      });
-      
+      final response = await _client.rpc(
+        'delete_staff_completely',
+        params: {'p_staff_id': staffId, 'p_hotel_id': hotelId},
+      );
+
       final result = response as Map<String, dynamic>;
-      
+
       if (result['success'] == true) {
-        debugPrint('✅ ${result['message']}');
+        AppLogger.success('${result['message']}', tag: 'Staff');
       } else {
         throw Exception(result['error'] ?? 'Failed to remove staff');
       }
     } catch (e) {
-      debugPrint('❌ Error removing staff: $e');
+      AppLogger.error('Error removing staff', tag: 'Staff', error: e);
       rethrow;
     }
   }
@@ -118,14 +121,17 @@ class StaffRepository {
   /// Toggle staff active status
   Future<void> toggleStaffActive(String staffId, bool isActive) async {
     try {
-      debugPrint('📦 Toggling staff active: $staffId -> $isActive');
+      AppLogger.debug(
+        'Toggling staff active: $staffId -> $isActive',
+        tag: 'Staff',
+      );
       await _client
           .from('hotel_staff')
           .update({'is_active': isActive})
           .eq('id', staffId);
-      debugPrint('✅ Staff status updated');
+      AppLogger.success('Staff status updated', tag: 'Staff');
     } catch (e) {
-      debugPrint('❌ Error updating staff status: $e');
+      AppLogger.error('Error updating staff status', tag: 'Staff', error: e);
       rethrow;
     }
   }

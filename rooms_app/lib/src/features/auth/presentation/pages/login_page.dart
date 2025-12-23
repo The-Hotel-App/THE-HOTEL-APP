@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/constants/app_constants.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/services/notification_service.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
@@ -56,7 +57,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         });
       }
     } catch (e) {
-      debugPrint('Error loading test emails: $e');
+      AppLogger.error('Error loading test emails', tag: 'Auth', error: e);
       if (mounted) {
         setState(() => _isLoadingEmails = false);
       }
@@ -85,40 +86,43 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Future<void> _handleLogin() async {
-    debugPrint('🔐 Login attempt started');
+    AppLogger.auth('Login attempt started');
 
     if (!_formKey.currentState!.validate()) {
-      debugPrint('❌ Form validation failed');
+      AppLogger.warning('Form validation failed', tag: 'Auth');
       return;
     }
 
-    debugPrint('✅ Form validated');
+    AppLogger.debug('Form validated', tag: 'Auth');
     setState(() => _isLoading = true);
 
     try {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
-      debugPrint('📧 Email: $email');
+      AppLogger.debug('Email: $email', tag: 'Auth');
 
       final authRepo = ref.read(authRepositoryProvider);
-      debugPrint('🏪 Auth repository obtained');
+      AppLogger.debug('Auth repository obtained', tag: 'Auth');
 
       await authRepo.login(email: email, password: password);
 
-      debugPrint('✅ Login successful!');
+      AppLogger.success('Login successful!', tag: 'Auth');
 
       if (!mounted) return;
 
       // Get user's hotels before any navigation
       final hotels = await ref.read(userHotelsProvider.future);
 
-      debugPrint('🏨 User has ${hotels.length} hotel(s)');
+      AppLogger.info('User has ${hotels.length} hotel(s)', tag: 'Auth');
 
       if (!mounted) return;
 
       if (hotels.isEmpty) {
         // User has no hotels - let router handle redirect to setup
-        debugPrint('⚠️  User has no hotels, router will redirect to setup');
+        AppLogger.warning(
+          'User has no hotels, router will redirect to setup',
+          tag: 'Auth',
+        );
         setState(() => _isLoading = false);
         // Invalidate auth providers to trigger router refresh
         ref.invalidate(currentUserProvider);
@@ -127,7 +131,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
       if (hotels.length == 1) {
         // Auto-select the only hotel
-        debugPrint('✅ Auto-selecting single hotel: ${hotels.first.hotelName}');
+        AppLogger.success(
+          'Auto-selecting single hotel: ${hotels.first.hotelName}',
+          tag: 'Auth',
+        );
         ref.read(selectedHotelIdProvider.notifier).state = hotels.first.hotelId;
 
         // Register FCM token for push notifications (Owners only)
@@ -136,7 +143,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
         // Get the dashboard route before any async operations
         final dashboardRoute = _getDashboardRoute(hotels.first.role);
-        debugPrint('🚀 Navigating to dashboard: $dashboardRoute');
+        AppLogger.navigation('Navigating to dashboard: $dashboardRoute');
 
         // Small delay to ensure provider state propagates
         await Future.delayed(const Duration(milliseconds: 100));
@@ -152,14 +159,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       }
 
       // Multiple hotels - show selector
-      debugPrint('🏨 Multiple hotels, showing selector');
+      AppLogger.info('Multiple hotels, showing selector', tag: 'Auth');
       setState(() => _isLoading = false);
       if (mounted) {
         await _showHotelSelector(hotels);
       }
     } catch (e, stackTrace) {
-      debugPrint('❌ Login failed with error: $e');
-      debugPrint('📍 Stack trace: $stackTrace');
+      AppLogger.error(
+        'Login failed',
+        tag: 'Auth',
+        error: e,
+        stackTrace: stackTrace,
+      );
 
       if (mounted) {
         setState(() => _isLoading = false);
@@ -236,7 +247,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       color: AppColors.black,
                     ),
                     onTap: () async {
-                      debugPrint('🏨 Selected hotel: ${hotel.hotelName}');
+                      AppLogger.info(
+                        'Selected hotel: ${hotel.hotelName}',
+                        tag: 'Auth',
+                      );
                       ref.read(selectedHotelIdProvider.notifier).state =
                           hotel.hotelId;
 
@@ -249,8 +263,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         Navigator.pop(context);
                         // Navigate directly to role-based dashboard
                         final dashboardRoute = _getDashboardRoute(hotel.role);
-                        debugPrint(
-                          '🚀 Navigating to dashboard: $dashboardRoute',
+                        AppLogger.navigation(
+                          'Navigating to dashboard: $dashboardRoute',
                         );
                         context.go(dashboardRoute);
                       }

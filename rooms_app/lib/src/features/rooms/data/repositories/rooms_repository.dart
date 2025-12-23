@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -115,7 +115,7 @@ class RoomsRepository {
   /// Get all rooms for a hotel with room type info
   Future<List<ManagedRoom>> getRooms(String hotelId) async {
     try {
-      debugPrint('📦 Fetching rooms for hotel: $hotelId');
+      AppLogger.debug('Fetching rooms for hotel: $hotelId', tag: 'Rooms');
       final response = await _client
           .from('rooms')
           .select('*, room_types(name, base_price, max_occupancy)')
@@ -127,10 +127,10 @@ class RoomsRepository {
           .map((json) => ManagedRoom.fromJson(json))
           .toList();
 
-      debugPrint('✅ Fetched ${rooms.length} rooms');
+      AppLogger.success('Fetched ${rooms.length} rooms', tag: 'Rooms');
       return rooms;
     } catch (e) {
-      debugPrint('❌ Error fetching rooms: $e');
+      AppLogger.error('Error fetching rooms', tag: 'Rooms', error: e);
       rethrow;
     }
   }
@@ -154,7 +154,10 @@ class RoomsRepository {
     String? roomTypeId,
   }) async {
     try {
-      debugPrint('📦 Fetching available rooms for hotel: $hotelId');
+      AppLogger.debug(
+        'Fetching available rooms for hotel: $hotelId',
+        tag: 'Rooms',
+      );
 
       var query = _client
           .from('rooms')
@@ -179,10 +182,10 @@ class RoomsRepository {
             .toList();
       }
 
-      debugPrint('✅ Found ${rooms.length} available rooms');
+      AppLogger.success('Found ${rooms.length} available rooms', tag: 'Rooms');
       return rooms;
     } catch (e) {
-      debugPrint('❌ Error fetching available rooms: $e');
+      AppLogger.error('Error fetching available rooms', tag: 'Rooms', error: e);
       rethrow;
     }
   }
@@ -195,7 +198,7 @@ class RoomsRepository {
     String? roomTypeId,
   }) async {
     try {
-      debugPrint('📦 Creating room: $roomNumber');
+      AppLogger.info('Creating room: $roomNumber', tag: 'Rooms');
       final response = await _client
           .from('rooms')
           .insert({
@@ -208,10 +211,10 @@ class RoomsRepository {
           .select('*, room_types(name, base_price, max_occupancy)')
           .single();
 
-      debugPrint('✅ Room created');
+      AppLogger.success('Room created', tag: 'Rooms');
       return ManagedRoom.fromJson(response);
     } catch (e) {
-      debugPrint('❌ Error creating room: $e');
+      AppLogger.error('Error creating room', tag: 'Rooms', error: e);
       rethrow;
     }
   }
@@ -223,7 +226,7 @@ class RoomsRepository {
     RoomStatus? status,
   }) async {
     try {
-      debugPrint('📦 Updating room: $id');
+      AppLogger.debug('Updating room: $id', tag: 'Rooms');
       final updates = <String, dynamic>{};
       if (roomTypeId != null) updates['room_type_id'] = roomTypeId;
       if (status != null) {
@@ -237,10 +240,10 @@ class RoomsRepository {
           .select('*, room_types(name, base_price, max_occupancy)')
           .single();
 
-      debugPrint('✅ Room updated');
+      AppLogger.success('Room updated', tag: 'Rooms');
       return ManagedRoom.fromJson(response);
     } catch (e) {
-      debugPrint('❌ Error updating room: $e');
+      AppLogger.error('Error updating room', tag: 'Rooms', error: e);
       rethrow;
     }
   }
@@ -252,7 +255,10 @@ class RoomsRepository {
     String? updatedBy,
   }) async {
     try {
-      debugPrint('📦 Updating room status: $roomId -> ${status.name}');
+      AppLogger.debug(
+        'Updating room status: $roomId -> ${status.name}',
+        tag: 'Rooms',
+      );
       final updates = <String, dynamic>{
         'status': ManagedRoom._statusToString(status),
       };
@@ -260,9 +266,9 @@ class RoomsRepository {
         updates['updated_by'] = updatedBy;
       }
       await _client.from('rooms').update(updates).eq('id', roomId);
-      debugPrint('✅ Room status updated');
+      AppLogger.success('Room status updated', tag: 'Rooms');
     } catch (e) {
-      debugPrint('❌ Error updating room status: $e');
+      AppLogger.error('Error updating room status', tag: 'Rooms', error: e);
       rethrow;
     }
   }
@@ -273,7 +279,7 @@ class RoomsRepository {
     required String roomTypeId,
   }) async {
     try {
-      debugPrint('📦 Bulk updating ${roomIds.length} rooms');
+      AppLogger.info('Bulk updating ${roomIds.length} rooms', tag: 'Rooms');
 
       for (final roomId in roomIds) {
         await _client
@@ -282,9 +288,9 @@ class RoomsRepository {
             .eq('id', roomId);
       }
 
-      debugPrint('✅ Bulk update complete');
+      AppLogger.success('Bulk update complete', tag: 'Rooms');
     } catch (e) {
-      debugPrint('❌ Error bulk updating rooms: $e');
+      AppLogger.error('Error bulk updating rooms', tag: 'Rooms', error: e);
       rethrow;
     }
   }
@@ -292,11 +298,11 @@ class RoomsRepository {
   /// Delete a room
   Future<void> deleteRoom(String id) async {
     try {
-      debugPrint('📦 Deleting room: $id');
+      AppLogger.info('Deleting room: $id', tag: 'Rooms');
       await _client.from('rooms').delete().eq('id', id);
-      debugPrint('✅ Room deleted');
+      AppLogger.success('Room deleted', tag: 'Rooms');
     } catch (e) {
-      debugPrint('❌ Error deleting room: $e');
+      AppLogger.error('Error deleting room', tag: 'Rooms', error: e);
       rethrow;
     }
   }

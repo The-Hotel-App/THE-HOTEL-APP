@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 
 /// Service for extracting ID numbers from government ID card images using OCR
 /// Supports: Aadhaar, PAN, Passport, Driving License, Voter ID
@@ -39,7 +39,7 @@ class IdOcrService {
   /// Pick image from camera or gallery and extract ID number
   Future<IdOcrResult> pickAndExtract({required ImageSource source}) async {
     try {
-      debugPrint('📷 Picking image from ${source.name}');
+      AppLogger.info('Picking image from ${source.name}', tag: 'OCR');
 
       final XFile? image = await _imagePicker.pickImage(
         source: source,
@@ -54,7 +54,7 @@ class IdOcrService {
 
       return await extractFromFile(File(image.path));
     } catch (e) {
-      debugPrint('❌ Error picking image: $e');
+      AppLogger.error('Error picking image', tag: 'OCR', error: e);
       return IdOcrResult(success: false, message: 'Failed to pick image: $e');
     }
   }
@@ -62,14 +62,14 @@ class IdOcrService {
   /// Extract ID number from a file - tries all ID patterns
   Future<IdOcrResult> extractFromFile(File imageFile) async {
     try {
-      debugPrint('🔍 Extracting text from image: ${imageFile.path}');
+      AppLogger.debug('Extracting text from image', tag: 'OCR');
 
       final inputImage = InputImage.fromFile(imageFile);
       final RecognizedText recognizedText = await _textRecognizer.processImage(
         inputImage,
       );
 
-      debugPrint('📝 Recognized text: ${recognizedText.text}');
+      AppLogger.debug('Text recognized, searching for ID patterns', tag: 'OCR');
 
       // Try all patterns in order of likelihood
       String? idNumber;
@@ -80,7 +80,7 @@ class IdOcrService {
       if (aadhaarMatch != null) {
         idNumber = aadhaarMatch.group(0)!.replaceAll(' ', '');
         idType = 'Aadhaar';
-        debugPrint('✅ Found Aadhaar number: $idNumber');
+        AppLogger.success('Found Aadhaar number', tag: 'OCR');
       }
 
       // Try PAN
@@ -89,7 +89,7 @@ class IdOcrService {
         if (panMatch != null) {
           idNumber = panMatch.group(0)!;
           idType = 'PAN';
-          debugPrint('✅ Found PAN number: $idNumber');
+          AppLogger.success('Found PAN number', tag: 'OCR');
         }
       }
 
@@ -99,7 +99,7 @@ class IdOcrService {
         if (passportMatch != null) {
           idNumber = passportMatch.group(0)!;
           idType = 'Passport';
-          debugPrint('✅ Found Passport number: $idNumber');
+          AppLogger.success('Found Passport number', tag: 'OCR');
         }
       }
 
@@ -109,7 +109,7 @@ class IdOcrService {
         if (dlMatch != null) {
           idNumber = dlMatch.group(0)!.replaceAll(' ', '').replaceAll('-', '');
           idType = 'Driving License';
-          debugPrint('✅ Found Driving License number: $idNumber');
+          AppLogger.success('Found Driving License number', tag: 'OCR');
         }
       }
 
@@ -119,7 +119,7 @@ class IdOcrService {
         if (voterMatch != null) {
           idNumber = voterMatch.group(0)!;
           idType = 'Voter ID';
-          debugPrint('✅ Found Voter ID number: $idNumber');
+          AppLogger.success('Found Voter ID number', tag: 'OCR');
         }
       }
 
@@ -133,7 +133,7 @@ class IdOcrService {
           message: '$idType number extracted successfully',
         );
       } else {
-        debugPrint('⚠️ No ID number found in text');
+        AppLogger.warning('No ID number found in text', tag: 'OCR');
 
         return IdOcrResult(
           success: false,
@@ -143,7 +143,7 @@ class IdOcrService {
         );
       }
     } catch (e) {
-      debugPrint('❌ Error extracting text: $e');
+      AppLogger.error('Error extracting text', tag: 'OCR', error: e);
       return IdOcrResult(
         success: false,
         message: 'Failed to process image: $e',

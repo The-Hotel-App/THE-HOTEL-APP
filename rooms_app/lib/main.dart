@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rooms/src/app.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/services/notification_service.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 
@@ -21,10 +22,10 @@ void main() async {
 Future<void> _initFirebase() async {
   try {
     await Firebase.initializeApp();
-    debugPrint('✅ Firebase initialized successfully');
+    AppLogger.success('Firebase initialized successfully');
   } catch (e) {
-    debugPrint('⚠️ Firebase initialization failed: $e');
-    debugPrint('Push notifications will not work');
+    AppLogger.warning('Firebase initialization failed: $e');
+    AppLogger.warning('Push notifications will not work');
   }
 }
 
@@ -54,12 +55,15 @@ class _AppWithNotificationsState extends ConsumerState<_AppWithNotifications> {
 
       // Set up notification tap handler
       NotificationService.onNotificationTap = (hotelId, type, data) {
-        debugPrint('🔔 Notification tapped: $type for hotel $hotelId');
+        AppLogger.info(
+          'Notification tapped: $type for hotel $hotelId',
+          tag: 'Notification',
+        );
         // Navigate to dashboard or specific screen
         // The navigation will be handled by the router based on current state
       };
     } catch (e) {
-      debugPrint('⚠️ Notification service init failed: $e');
+      AppLogger.warning('Notification service init failed: $e');
     }
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/navigation/main_shell.dart';
 import 'package:rooms/src/features/auth/presentation/pages/home_page.dart';
 import 'package:rooms/src/features/auth/presentation/pages/hotel_login_page.dart';
@@ -79,7 +80,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ),
     redirect: (context, state) {
-      debugPrint('🧭 Router redirect called for: ${state.matchedLocation}');
+      AppLogger.navigation(
+        'Router redirect called for: ${state.matchedLocation}',
+      );
 
       final isWelcomeRoute = state.matchedLocation == AppRoutes.welcome;
       final isLoginRoute = state.matchedLocation == AppRoutes.login;
@@ -104,7 +107,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // If on a public route, allow access without any restrictions
       // This includes allowing logout to navigate to welcome even if auth is loading
       if (isPublicRoute) {
-        debugPrint('✅ On public route, allowing access');
+        AppLogger.navigation('On public route, allowing access');
         return null;
       }
 
@@ -120,15 +123,15 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // If auth is still loading and NOT on a public route, don't redirect
       if (authState.isLoading) {
-        debugPrint('⏳ Auth loading, staying on current route');
+        AppLogger.navigation('Auth loading, staying on current route');
         return null;
       }
 
       final user = authState.valueOrNull;
       final isAuthenticated = user != null;
 
-      debugPrint(
-        '👤 Auth state: ${isAuthenticated ? 'Authenticated (${user.name})' : 'Not authenticated'}',
+      AppLogger.navigation(
+        'Auth state: ${isAuthenticated ? 'Authenticated (${user.name})' : 'Not authenticated'}',
       );
 
       // From here on, we're dealing with protected routes only
@@ -136,7 +139,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // If not authenticated and trying to access protected route -> redirect to welcome
       if (!isAuthenticated) {
-        debugPrint('🚫 Not authenticated, redirecting to welcome');
+        AppLogger.navigation('Not authenticated, redirecting to welcome');
         return AppRoutes.welcome;
       }
 
@@ -147,10 +150,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       // don't interfere - the login page has already selected the hotel
       if (hotelsAsync.isLoading) {
         if (isDashboardRoute) {
-          debugPrint('⏳ Hotels loading but navigating to dashboard, allowing');
+          AppLogger.navigation(
+            'Hotels loading but navigating to dashboard, allowing',
+          );
           return null;
         }
-        debugPrint('⏳ Hotels loading, staying on current route');
+        AppLogger.navigation('Hotels loading, staying on current route');
         return null;
       }
 
@@ -158,21 +163,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       final selectedHotelAsync = ref.read(auth_new.currentHotelProvider);
       final hasHotel = selectedHotelAsync != null || selectedHotelId != null;
 
-      debugPrint('🏨 Selected hotel ID: $selectedHotelId, hasHotel: $hasHotel');
+      AppLogger.navigation(
+        'Selected hotel ID: $selectedHotelId, hasHotel: $hasHotel',
+      );
 
       // If user is navigating to a legacy dashboard route, redirect to MainShell
       if (isDashboardRoute && hasHotel) {
-        debugPrint('✅ Redirecting legacy dashboard to MainShell');
+        AppLogger.navigation('Redirecting legacy dashboard to MainShell');
         return AppRoutes.mainShell;
       }
 
       // If user has hotel and is on home route, redirect to MainShell (unified bottom nav)
       if (hasHotel && state.matchedLocation == AppRoutes.home) {
-        debugPrint('✅ Has hotel, redirecting to MainShell');
+        AppLogger.navigation('Has hotel, redirecting to MainShell');
         return AppRoutes.mainShell;
       }
 
-      debugPrint('➡️  No redirect needed');
+      AppLogger.navigation('No redirect needed');
       return null; // No redirect needed
     },
     routes: [

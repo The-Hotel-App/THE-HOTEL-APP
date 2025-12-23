@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/rooms/data/repositories/rooms_repository.dart';
@@ -20,8 +20,9 @@ final roomsProvider = StreamProvider<List<Room>>((ref) {
   final client = SupabaseService.instance.client;
   final hotelId = hotel.hotelId;
 
-  debugPrint(
-    '🔴 Setting up realtime subscription for rooms in hotel: $hotelId',
+  AppLogger.info(
+    'Setting up realtime subscription for rooms in hotel: $hotelId',
+    tag: 'Rooms',
   );
 
   // Create a stream that emits room updates
@@ -30,7 +31,10 @@ final roomsProvider = StreamProvider<List<Room>>((ref) {
       .stream(primaryKey: ['id'])
       .eq('hotel_id', hotelId)
       .map((data) {
-        debugPrint('🔴 Realtime update received: ${data.length} rooms');
+        AppLogger.debug(
+          'Realtime update received: ${data.length} rooms',
+          tag: 'Rooms',
+        );
         return data.map((json) => ManagedRoom.fromJson(json).toRoom()).toList();
       });
 });

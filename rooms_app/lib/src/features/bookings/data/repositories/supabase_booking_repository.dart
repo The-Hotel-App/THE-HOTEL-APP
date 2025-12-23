@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/bookings/domain/entities/booking.dart';
 import 'package:rooms/src/features/bookings/domain/repositories/booking_repository.dart';
@@ -11,7 +11,7 @@ class SupabaseBookingRepository implements BookingRepository {
   final SupabaseClient _client;
 
   SupabaseBookingRepository({SupabaseClient? client})
-      : _client = client ?? SupabaseService.instance.client;
+    : _client = client ?? SupabaseService.instance.client;
 
   /// Parse booking status from database string to enum
   static BookingStatus _parseStatus(String status) {
@@ -80,19 +80,20 @@ class SupabaseBookingRepository implements BookingRepository {
   @override
   Future<List<Booking>> getBookings(String hotelId) async {
     try {
-      debugPrint('📦 Fetching bookings for hotel: $hotelId');
+      AppLogger.debug('Fetching bookings for hotel: $hotelId', tag: 'Bookings');
       final response = await _client
           .from('bookings')
           .select('*, guests(name), rooms(room_number)')
           .eq('hotel_id', hotelId)
           .order('check_in', ascending: false);
 
-      final bookings =
-          (response as List).map((json) => _fromJson(json)).toList();
-      debugPrint('✅ Fetched ${bookings.length} bookings');
+      final bookings = (response as List)
+          .map((json) => _fromJson(json))
+          .toList();
+      AppLogger.success('Fetched ${bookings.length} bookings', tag: 'Bookings');
       return bookings;
     } catch (e) {
-      debugPrint('❌ Error fetching bookings: $e');
+      AppLogger.error('Error fetching bookings', tag: 'Bookings', error: e);
       rethrow;
     }
   }
@@ -115,7 +116,11 @@ class SupabaseBookingRepository implements BookingRepository {
                   .single();
               bookings.add(_fromJson(fullData));
             } catch (e) {
-              debugPrint('Error fetching booking details: $e');
+              AppLogger.error(
+                'Error fetching booking details',
+                tag: 'Bookings',
+                error: e,
+              );
             }
           }
           return bookings;
@@ -134,7 +139,11 @@ class SupabaseBookingRepository implements BookingRepository {
       if (response == null) return null;
       return _fromJson(response);
     } catch (e) {
-      debugPrint('❌ Error fetching booking by ID: $e');
+      AppLogger.error(
+        'Error fetching booking by ID',
+        tag: 'Bookings',
+        error: e,
+      );
       return null;
     }
   }
@@ -151,7 +160,11 @@ class SupabaseBookingRepository implements BookingRepository {
 
       return (response as List).map((json) => _fromJson(json)).toList();
     } catch (e) {
-      debugPrint('❌ Error fetching active bookings: $e');
+      AppLogger.error(
+        'Error fetching active bookings',
+        tag: 'Bookings',
+        error: e,
+      );
       rethrow;
     }
   }
@@ -167,7 +180,11 @@ class SupabaseBookingRepository implements BookingRepository {
 
       return (response as List).map((json) => _fromJson(json)).toList();
     } catch (e) {
-      debugPrint('❌ Error fetching bookings for room: $e');
+      AppLogger.error(
+        'Error fetching bookings for room',
+        tag: 'Bookings',
+        error: e,
+      );
       rethrow;
     }
   }
@@ -183,7 +200,11 @@ class SupabaseBookingRepository implements BookingRepository {
 
       return (response as List).map((json) => _fromJson(json)).toList();
     } catch (e) {
-      debugPrint('❌ Error fetching bookings for customer: $e');
+      AppLogger.error(
+        'Error fetching bookings for customer',
+        tag: 'Bookings',
+        error: e,
+      );
       rethrow;
     }
   }
@@ -191,7 +212,10 @@ class SupabaseBookingRepository implements BookingRepository {
   @override
   Future<Booking> createBooking(Booking booking) async {
     try {
-      debugPrint('📦 Creating booking for room: ${booking.roomNumber}');
+      AppLogger.info(
+        'Creating booking for room: ${booking.roomNumber}',
+        tag: 'Bookings',
+      );
       final response = await _client
           .from('bookings')
           .insert({
@@ -210,10 +234,10 @@ class SupabaseBookingRepository implements BookingRepository {
           .select('*, guests(name), rooms(room_number)')
           .single();
 
-      debugPrint('✅ Booking created');
+      AppLogger.success('Booking created', tag: 'Bookings');
       return _fromJson(response);
     } catch (e) {
-      debugPrint('❌ Error creating booking: $e');
+      AppLogger.error('Error creating booking', tag: 'Bookings', error: e);
       rethrow;
     }
   }
@@ -232,9 +256,9 @@ class SupabaseBookingRepository implements BookingRepository {
             'status': _statusToString(booking.status),
           })
           .eq('id', booking.id);
-      debugPrint('✅ Booking updated');
+      AppLogger.success('Booking updated', tag: 'Bookings');
     } catch (e) {
-      debugPrint('❌ Error updating booking: $e');
+      AppLogger.error('Error updating booking', tag: 'Bookings', error: e);
       rethrow;
     }
   }
@@ -249,9 +273,16 @@ class SupabaseBookingRepository implements BookingRepository {
           .from('bookings')
           .update({'status': _statusToString(status)})
           .eq('id', bookingId);
-      debugPrint('✅ Booking status updated to ${status.name}');
+      AppLogger.success(
+        'Booking status updated to ${status.name}',
+        tag: 'Bookings',
+      );
     } catch (e) {
-      debugPrint('❌ Error updating booking status: $e');
+      AppLogger.error(
+        'Error updating booking status',
+        tag: 'Bookings',
+        error: e,
+      );
       rethrow;
     }
   }
@@ -273,9 +304,12 @@ class SupabaseBookingRepository implements BookingRepository {
           .from('bookings')
           .update({'amount_paid': newPaid})
           .eq('id', bookingId);
-      debugPrint('✅ Payment updated: +$amount (total: $newPaid)');
+      AppLogger.success(
+        'Payment updated: +$amount (total: $newPaid)',
+        tag: 'Bookings',
+      );
     } catch (e) {
-      debugPrint('❌ Error updating payment: $e');
+      AppLogger.error('Error updating payment', tag: 'Bookings', error: e);
       rethrow;
     }
   }
@@ -297,7 +331,11 @@ class SupabaseBookingRepository implements BookingRepository {
 
       return (response as List).map((json) => _fromJson(json)).toList();
     } catch (e) {
-      debugPrint('❌ Error fetching today check-ins: $e');
+      AppLogger.error(
+        'Error fetching today check-ins',
+        tag: 'Bookings',
+        error: e,
+      );
       rethrow;
     }
   }
@@ -319,7 +357,11 @@ class SupabaseBookingRepository implements BookingRepository {
 
       return (response as List).map((json) => _fromJson(json)).toList();
     } catch (e) {
-      debugPrint('❌ Error fetching today check-outs: $e');
+      AppLogger.error(
+        'Error fetching today check-outs',
+        tag: 'Bookings',
+        error: e,
+      );
       rethrow;
     }
   }
@@ -327,8 +369,11 @@ class SupabaseBookingRepository implements BookingRepository {
   /// Checkout any active (checked_in) bookings for a specific room
   Future<void> checkoutActiveBookingForRoom(String roomId) async {
     try {
-      debugPrint('📦 Checking out active booking(s) for room: $roomId');
-      
+      AppLogger.info(
+        'Checking out active booking(s) for room: $roomId',
+        tag: 'Bookings',
+      );
+
       // Update ALL active bookings for this room to checked_out
       // Only update status, don't change check_out date to avoid constraint issues
       await _client
@@ -336,10 +381,17 @@ class SupabaseBookingRepository implements BookingRepository {
           .update({'status': 'checked_out'})
           .eq('room_id', roomId)
           .eq('status', 'checked_in');
-      
-      debugPrint('✅ Active booking(s) checked out for room');
+
+      AppLogger.success(
+        'Active booking(s) checked out for room',
+        tag: 'Bookings',
+      );
     } catch (e) {
-      debugPrint('❌ Error checking out active booking: $e');
+      AppLogger.error(
+        'Error checking out active booking',
+        tag: 'Bookings',
+        error: e,
+      );
       rethrow;
     }
   }

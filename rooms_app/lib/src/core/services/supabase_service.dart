@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:rooms/src/core/config/supabase_config.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Supabase client service - Singleton pattern
 class SupabaseService {
@@ -18,7 +18,7 @@ class SupabaseService {
   /// Initialize Supabase
   static Future<void> initialize() async {
     try {
-      debugPrint('🔧 Initializing Supabase...');
+      AppLogger.info('Initializing Supabase...', tag: 'Supabase');
 
       await Supabase.initialize(
         url: SupabaseConfig.supabaseUrl,
@@ -27,11 +27,15 @@ class SupabaseService {
 
       _client = Supabase.instance.client;
 
-      debugPrint('✅ Supabase initialized successfully');
-      debugPrint('📍 URL: ${SupabaseConfig.supabaseUrl}');
+      AppLogger.success('Supabase initialized successfully', tag: 'Supabase');
+      AppLogger.debug('URL: ${SupabaseConfig.supabaseUrl}', tag: 'Supabase');
     } catch (e, stackTrace) {
-      debugPrint('❌ Supabase initialization failed: $e');
-      debugPrint('Stack trace: $stackTrace');
+      AppLogger.error(
+        'Supabase initialization failed',
+        tag: 'Supabase',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }

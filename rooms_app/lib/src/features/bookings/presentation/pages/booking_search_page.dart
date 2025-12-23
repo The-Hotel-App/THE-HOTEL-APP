@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/booking_floor_rooms_page.dart';
 import 'package:rooms/src/features/rooms/data/repositories/room_types_repository.dart';
@@ -52,7 +53,7 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
         _isLoadingTypes = false;
       });
     } catch (e) {
-      debugPrint('Error loading room types: $e');
+      AppLogger.error('Error loading room types', tag: 'Bookings', error: e);
       setState(() => _isLoadingTypes = false);
     }
   }

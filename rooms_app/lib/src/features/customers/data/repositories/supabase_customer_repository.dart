@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/customers/domain/entities/customer.dart';
 import 'package:rooms/src/features/customers/domain/repositories/customer_repository.dart';
@@ -15,7 +15,7 @@ class SupabaseCustomerRepository implements CustomerRepository {
   @override
   Future<List<Customer>> getCustomers(String hotelId) async {
     try {
-      debugPrint('📦 Fetching guests for hotel: $hotelId');
+      AppLogger.debug('Fetching guests for hotel: $hotelId', tag: 'Customers');
       final response = await _client
           .from('guests')
           .select()
@@ -26,10 +26,10 @@ class SupabaseCustomerRepository implements CustomerRepository {
           .map((json) => _customerFromJson(json))
           .toList();
 
-      debugPrint('✅ Fetched ${customers.length} guests');
+      AppLogger.success('Fetched ${customers.length} guests', tag: 'Customers');
       return customers;
     } catch (e) {
-      debugPrint('❌ Error fetching guests: $e');
+      AppLogger.error('Error fetching guests', tag: 'Customers', error: e);
       rethrow;
     }
   }
@@ -43,7 +43,7 @@ class SupabaseCustomerRepository implements CustomerRepository {
   @override
   Future<Customer?> getCustomerById(String customerId) async {
     try {
-      debugPrint('📦 Fetching guest: $customerId');
+      AppLogger.debug('Fetching guest: $customerId', tag: 'Customers');
       final response = await _client
           .from('guests')
           .select()
@@ -53,7 +53,7 @@ class SupabaseCustomerRepository implements CustomerRepository {
       if (response == null) return null;
       return _customerFromJson(response);
     } catch (e) {
-      debugPrint('❌ Error fetching guest: $e');
+      AppLogger.error('Error fetching guest', tag: 'Customers', error: e);
       rethrow;
     }
   }
@@ -61,7 +61,7 @@ class SupabaseCustomerRepository implements CustomerRepository {
   @override
   Future<List<Customer>> searchCustomers(String hotelId, String query) async {
     try {
-      debugPrint('📦 Searching guests: $query');
+      AppLogger.debug('Searching guests: $query', tag: 'Customers');
       final response = await _client
           .from('guests')
           .select()
@@ -73,10 +73,10 @@ class SupabaseCustomerRepository implements CustomerRepository {
           .map((json) => _customerFromJson(json))
           .toList();
 
-      debugPrint('✅ Found ${customers.length} guests');
+      AppLogger.success('Found ${customers.length} guests', tag: 'Customers');
       return customers;
     } catch (e) {
-      debugPrint('❌ Error searching guests: $e');
+      AppLogger.error('Error searching guests', tag: 'Customers', error: e);
       rethrow;
     }
   }
@@ -84,7 +84,7 @@ class SupabaseCustomerRepository implements CustomerRepository {
   @override
   Future<Customer> createCustomer(Customer customer) async {
     try {
-      debugPrint('📦 Creating guest: ${customer.name}');
+      AppLogger.info('Creating guest: ${customer.name}', tag: 'Customers');
       final response = await _client
           .from('guests')
           .insert({
@@ -99,10 +99,10 @@ class SupabaseCustomerRepository implements CustomerRepository {
           .select()
           .single();
 
-      debugPrint('✅ Guest created');
+      AppLogger.success('Guest created', tag: 'Customers');
       return _customerFromJson(response);
     } catch (e) {
-      debugPrint('❌ Error creating guest: $e');
+      AppLogger.error('Error creating guest', tag: 'Customers', error: e);
       rethrow;
     }
   }
@@ -110,7 +110,7 @@ class SupabaseCustomerRepository implements CustomerRepository {
   @override
   Future<void> updateCustomer(Customer customer) async {
     try {
-      debugPrint('📦 Updating guest: ${customer.id}');
+      AppLogger.debug('Updating guest: ${customer.id}', tag: 'Customers');
       await _client
           .from('guests')
           .update({
@@ -123,9 +123,9 @@ class SupabaseCustomerRepository implements CustomerRepository {
           })
           .eq('id', customer.id);
 
-      debugPrint('✅ Guest updated');
+      AppLogger.success('Guest updated', tag: 'Customers');
     } catch (e) {
-      debugPrint('❌ Error updating guest: $e');
+      AppLogger.error('Error updating guest', tag: 'Customers', error: e);
       rethrow;
     }
   }

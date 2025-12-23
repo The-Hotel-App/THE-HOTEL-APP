@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart' as app;
 import 'package:rooms/src/features/auth/domain/repositories/auth_repository_new.dart';
@@ -21,7 +21,7 @@ class SupabaseAuthRepository implements AuthRepository {
     String? phone,
   }) async {
     try {
-      debugPrint('🔐 SupabaseAuth: Sign up attempt for $email');
+      AppLogger.auth('Sign up attempt for $email');
 
       // Check if email already exists
       final exists = await emailExists(email);
@@ -40,7 +40,7 @@ class SupabaseAuthRepository implements AuthRepository {
         throw Exception('Sign up failed - no user returned');
       }
 
-      debugPrint('✅ User signed up: ${response.user!.id}');
+      AppLogger.success('User signed up: ${response.user!.id}', tag: 'Auth');
 
       // Fetch the created user profile with retry (database trigger might take a moment)
       app.User? userProfile;
@@ -49,12 +49,11 @@ class SupabaseAuthRepository implements AuthRepository {
 
       while (userProfile == null && retries < maxRetries) {
         if (retries > 0) {
-          debugPrint(
-            '⏳ Waiting for profile creation... (attempt ${retries + 1}/$maxRetries)',
+          AppLogger.debug(
+            'Waiting for profile creation... (attempt ${retries + 1}/$maxRetries)',
+            tag: 'Auth',
           );
-          await Future.delayed(
-            Duration(milliseconds: 500 * retries),
-          ); // Progressive delay
+          await Future.delayed(Duration(milliseconds: 500 * retries));
         }
 
         userProfile = await _getUserProfile(response.user!.id);
@@ -65,14 +64,14 @@ class SupabaseAuthRepository implements AuthRepository {
         throw Exception('User profile not created after $maxRetries attempts');
       }
 
-      debugPrint('✅ User profile created successfully');
+      AppLogger.success('User profile created successfully', tag: 'Auth');
 
       return userProfile;
     } on sb.AuthException catch (e) {
-      debugPrint('❌ Supabase Auth error: ${e.message}');
+      AppLogger.error('Supabase Auth error', tag: 'Auth', error: e.message);
       throw Exception('Sign up failed: ${e.message}');
     } catch (e) {
-      debugPrint('❌ Sign up error: $e');
+      AppLogger.error('Sign up error', tag: 'Auth', error: e);
       rethrow;
     }
   }
@@ -83,7 +82,7 @@ class SupabaseAuthRepository implements AuthRepository {
     required String password,
   }) async {
     try {
-      debugPrint('🔐 SupabaseAuth: Login attempt for $email');
+      AppLogger.auth('Login attempt for $email');
 
       final response = await _client.auth.signInWithPassword(
         email: email,
@@ -94,7 +93,7 @@ class SupabaseAuthRepository implements AuthRepository {
         throw Exception('Login failed - no user returned');
       }
 
-      debugPrint('✅ User logged in: ${response.user!.id}');
+      AppLogger.success('User logged in: ${response.user!.id}', tag: 'Auth');
 
       // Fetch user profile
       final userProfile = await _getUserProfile(response.user!.id);
@@ -102,7 +101,10 @@ class SupabaseAuthRepository implements AuthRepository {
       if (userProfile == null) {
         // Profile doesn't exist yet - create a minimal user from auth data
         // This allows the router to redirect them to the setup page
-        debugPrint('⚠️ No profile found, creating minimal user for setup flow');
+        AppLogger.warning(
+          'No profile found, creating minimal user for setup flow',
+          tag: 'Auth',
+        );
         final authUser = response.user!;
         return app.User(
           id: authUser.id,
@@ -123,14 +125,14 @@ class SupabaseAuthRepository implements AuthRepository {
         throw Exception('Account is deactivated. Contact administrator.');
       }
 
-      debugPrint('✅ Login successful: ${userProfile.name}');
+      AppLogger.success('Login successful: ${userProfile.name}', tag: 'Auth');
 
       return userProfile;
     } on sb.AuthException catch (e) {
-      debugPrint('❌ Supabase Auth error: ${e.message}');
+      AppLogger.error('Supabase Auth error', tag: 'Auth', error: e.message);
       throw Exception('Login failed: ${e.message}');
     } catch (e) {
-      debugPrint('❌ Login error: $e');
+      AppLogger.error('Login error', tag: 'Auth', error: e);
       rethrow;
     }
   }
@@ -138,11 +140,11 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<void> logout() async {
     try {
-      debugPrint('🔐 SupabaseAuth: Logout');
+      AppLogger.auth('Logout');
       await _client.auth.signOut();
-      debugPrint('✅ Logged out successfully');
+      AppLogger.success('Logged out successfully', tag: 'Auth');
     } catch (e) {
-      debugPrint('❌ Logout error: $e');
+      AppLogger.error('Logout error', tag: 'Auth', error: e);
       rethrow;
     }
   }
@@ -153,16 +155,19 @@ class SupabaseAuthRepository implements AuthRepository {
       final authUser = _client.auth.currentUser;
 
       if (authUser == null) {
-        debugPrint('ℹ️ No authenticated user');
+        AppLogger.info('No authenticated user', tag: 'Auth');
         return null;
       }
 
-      debugPrint('ℹ️ Getting profile for user: ${authUser.id}');
+      AppLogger.debug('Getting profile for user: ${authUser.id}', tag: 'Auth');
       final userProfile = await _getUserProfile(authUser.id);
 
       if (userProfile == null) {
         // Profile doesn't exist yet - create minimal user for setup flow
-        debugPrint('⚠️ No profile found, creating minimal user for setup flow');
+        AppLogger.warning(
+          'No profile found, creating minimal user for setup flow',
+          tag: 'Auth',
+        );
         return app.User(
           id: authUser.id,
           name:
@@ -179,7 +184,7 @@ class SupabaseAuthRepository implements AuthRepository {
 
       return userProfile;
     } catch (e) {
-      debugPrint('❌ Error getting current user: $e');
+      AppLogger.error('Error getting current user', tag: 'Auth', error: e);
       return null;
     }
   }
@@ -194,7 +199,10 @@ class SupabaseAuthRepository implements AuthRepository {
 
       if (userProfile == null) {
         // Profile doesn't exist yet - create minimal user for setup flow
-        debugPrint('⚠️ No profile found in auth state, creating minimal user');
+        AppLogger.warning(
+          'No profile found in auth state, creating minimal user',
+          tag: 'Auth',
+        );
         return app.User(
           id: authUser.id,
           name:
@@ -216,7 +224,7 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<List<app.UserHotel>> getUserHotels(String userId) async {
     try {
-      debugPrint('🏨 Getting hotels for user: $userId');
+      AppLogger.debug('Getting hotels for user: $userId', tag: 'Auth');
 
       final response = await _client.rpc(
         'get_user_hotels',
@@ -227,11 +235,11 @@ class SupabaseAuthRepository implements AuthRepository {
           .map((json) => app.UserHotel.fromJson(json as Map<String, dynamic>))
           .toList();
 
-      debugPrint('✅ Found ${hotels.length} hotels for user');
+      AppLogger.success('Found ${hotels.length} hotels for user', tag: 'Auth');
 
       return hotels;
     } catch (e) {
-      debugPrint('❌ Error getting user hotels: $e');
+      AppLogger.error('Error getting user hotels', tag: 'Auth', error: e);
       return [];
     }
   }
@@ -243,7 +251,10 @@ class SupabaseAuthRepository implements AuthRepository {
     String? phone,
   }) async {
     try {
-      debugPrint('👤 Updating/creating profile for user: $userId');
+      AppLogger.debug(
+        'Updating/creating profile for user: $userId',
+        tag: 'Auth',
+      );
 
       // Use upsert to ensure profile exists - if it doesn't exist, create it
       final profileData = <String, dynamic>{'id': userId, 'is_active': true};
@@ -252,9 +263,9 @@ class SupabaseAuthRepository implements AuthRepository {
 
       await _client.from('user_profiles').upsert(profileData, onConflict: 'id');
 
-      debugPrint('✅ Profile updated/created successfully');
+      AppLogger.success('Profile updated/created successfully', tag: 'Auth');
     } catch (e) {
-      debugPrint('❌ Error updating profile: $e');
+      AppLogger.error('Error updating profile', tag: 'Auth', error: e);
       rethrow;
     }
   }
@@ -265,7 +276,10 @@ class SupabaseAuthRepository implements AuthRepository {
     required bool hasBiometric,
   }) async {
     try {
-      debugPrint('👆 Updating biometric status for user: $userId');
+      AppLogger.debug(
+        'Updating biometric status for user: $userId',
+        tag: 'Auth',
+      );
 
       await _client
           .from('user_profiles')
@@ -277,9 +291,9 @@ class SupabaseAuthRepository implements AuthRepository {
           })
           .eq('id', userId);
 
-      debugPrint('✅ Biometric status updated');
+      AppLogger.success('Biometric status updated', tag: 'Auth');
     } catch (e) {
-      debugPrint('❌ Error updating biometric status: $e');
+      AppLogger.error('Error updating biometric status', tag: 'Auth', error: e);
       rethrow;
     }
   }
@@ -291,7 +305,7 @@ class SupabaseAuthRepository implements AuthRepository {
       // This will be caught during sign up
       return false;
     } catch (e) {
-      debugPrint('ℹ️ Email check error: $e');
+      AppLogger.info('Email check error: $e', tag: 'Auth');
       return false;
     }
   }
@@ -306,7 +320,7 @@ class SupabaseAuthRepository implements AuthRepository {
           .maybeSingle();
 
       if (response == null) {
-        debugPrint('⚠️ User profile not found for: $userId');
+        AppLogger.warning('User profile not found for: $userId', tag: 'Auth');
         return null;
       }
 
@@ -319,7 +333,7 @@ class SupabaseAuthRepository implements AuthRepository {
 
       return app.User.fromJson(profileData);
     } catch (e) {
-      debugPrint('❌ Error fetching user profile: $e');
+      AppLogger.error('Error fetching user profile', tag: 'Auth', error: e);
       return null;
     }
   }
@@ -331,15 +345,15 @@ class SupabaseAuthRepository implements AuthRepository {
     required String newPassword,
   }) async {
     try {
-      debugPrint('🔐 SupabaseAuth: Changing password');
+      AppLogger.auth('Changing password');
 
       // Supabase requires the user to be signed in with the current session
       // The updateUser method will update the password
       await _client.auth.updateUser(sb.UserAttributes(password: newPassword));
 
-      debugPrint('✅ Password changed successfully');
+      AppLogger.success('Password changed successfully', tag: 'Auth');
     } catch (e) {
-      debugPrint('❌ Error changing password: $e');
+      AppLogger.error('Error changing password', tag: 'Auth', error: e);
       throw Exception('Failed to change password: $e');
     }
   }
@@ -356,18 +370,19 @@ class SupabaseAuthRepository implements AuthRepository {
     required String hotelId,
   }) async {
     try {
-      debugPrint('🔐 SupabaseAuth: Creating staff account for $email');
+      AppLogger.auth('Creating staff account for $email');
 
       // IMPORTANT: Save the owner's session BEFORE signing up the new user
       // because signUp() auto-logs in as the new user
       final ownerSession = _client.auth.currentSession;
       final ownerId = _client.auth.currentUser?.id;
-      
+
       if (ownerId == null || ownerSession == null) {
-        throw Exception('You must be logged in as the hotel owner to create staff accounts');
+        throw Exception(
+          'You must be logged in as the hotel owner to create staff accounts',
+        );
       }
-      debugPrint('👤 Owner creating staff: $ownerId');
-      debugPrint('💾 Saved owner session for restoration');
+      AppLogger.debug('Owner creating staff: $ownerId', tag: 'Auth');
 
       // Create user via Supabase Auth
       // Note: This will log us in as the new user!
@@ -384,29 +399,34 @@ class SupabaseAuthRepository implements AuthRepository {
       }
 
       final newUserId = response.user!.id;
-      debugPrint('✅ Staff user created: $newUserId');
+      AppLogger.success('Staff user created: $newUserId', tag: 'Auth');
 
       // Wait for the user_profiles trigger to create the profile
       await Future.delayed(const Duration(milliseconds: 500));
 
       // Use RPC function to add staff (bypasses RLS since it uses SECURITY DEFINER)
       // The function verifies that p_created_by is the hotel owner
-      await _client.rpc('add_staff_to_hotel', params: {
-        'p_hotel_id': hotelId,
-        'p_user_id': newUserId,
-        'p_role': role.dbValue,
-        'p_created_by': ownerId,
-      });
+      await _client.rpc(
+        'add_staff_to_hotel',
+        params: {
+          'p_hotel_id': hotelId,
+          'p_user_id': newUserId,
+          'p_role': role.dbValue,
+          'p_created_by': ownerId,
+        },
+      );
 
-      debugPrint('✅ Staff added to hotel with role: ${role.displayName}');
-      
+      AppLogger.success(
+        'Staff added to hotel with role: ${role.displayName}',
+        tag: 'Auth',
+      );
+
       // CRITICAL: Restore owner's session after creating staff
-      debugPrint('🔄 Restoring owner session...');
+      AppLogger.debug('Restoring owner session...', tag: 'Auth');
       await _client.auth.setSession(ownerSession.refreshToken!);
-      debugPrint('✅ Owner session restored: ${_client.auth.currentUser?.id}');
-      
+      AppLogger.success('Owner session restored', tag: 'Auth');
     } catch (e) {
-      debugPrint('❌ Error creating staff account: $e');
+      AppLogger.error('Error creating staff account', tag: 'Auth', error: e);
       throw Exception('Failed to create staff account: $e');
     }
   }
@@ -415,7 +435,7 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<Map<String, dynamic>?> getHotelByCode(String hotelCode) async {
     try {
-      debugPrint('🏨 Looking up hotel by code: $hotelCode');
+      AppLogger.debug('Looking up hotel by code: $hotelCode', tag: 'Auth');
 
       // Use the get_hotel_by_code RPC function (SECURITY DEFINER)
       // This ensures consistent access regardless of auth state
@@ -425,15 +445,15 @@ class SupabaseAuthRepository implements AuthRepository {
       );
 
       if (response == null || (response as List).isEmpty) {
-        debugPrint('⚠️ Hotel not found for code: $hotelCode');
+        AppLogger.warning('Hotel not found for code: $hotelCode', tag: 'Auth');
         return null;
       }
 
       final hotel = response.first as Map<String, dynamic>;
-      debugPrint('✅ Found hotel: ${hotel['name']}');
+      AppLogger.success('Found hotel: ${hotel['name']}', tag: 'Auth');
       return hotel;
     } catch (e) {
-      debugPrint('❌ Error looking up hotel: $e');
+      AppLogger.error('Error looking up hotel', tag: 'Auth', error: e);
       return null;
     }
   }
@@ -442,7 +462,10 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<bool> isHotelCodeAvailable(String hotelCode) async {
     try {
-      debugPrint('🔍 Checking hotel code availability: $hotelCode');
+      AppLogger.debug(
+        'Checking hotel code availability: $hotelCode',
+        tag: 'Auth',
+      );
 
       final response = await _client
           .from('hotels')
@@ -451,10 +474,10 @@ class SupabaseAuthRepository implements AuthRepository {
           .maybeSingle();
 
       final isAvailable = response == null;
-      debugPrint('✅ Hotel code available: $isAvailable');
+      AppLogger.success('Hotel code available: $isAvailable', tag: 'Auth');
       return isAvailable;
     } catch (e) {
-      debugPrint('❌ Error checking hotel code: $e');
+      AppLogger.error('Error checking hotel code', tag: 'Auth', error: e);
       return false;
     }
   }
@@ -463,11 +486,13 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<List<Map<String, dynamic>>> getOwnerHotels(String userId) async {
     try {
-      debugPrint('🏨 Getting hotels owned by user: $userId');
+      AppLogger.debug('Getting hotels owned by user: $userId', tag: 'Auth');
 
       final response = await _client
           .from('hotels')
-          .select('id, name, address, phone, email, hotel_code, is_setup_completed, created_at')
+          .select(
+            'id, name, address, phone, email, hotel_code, is_setup_completed, created_at',
+          )
           .eq('owner_id', userId)
           .order('created_at', ascending: false);
 
@@ -475,11 +500,14 @@ class SupabaseAuthRepository implements AuthRepository {
           .map((json) => json as Map<String, dynamic>)
           .toList();
 
-      debugPrint('✅ Found ${hotels.length} hotels owned by user');
+      AppLogger.success(
+        'Found ${hotels.length} hotels owned by user',
+        tag: 'Auth',
+      );
 
       return hotels;
     } catch (e) {
-      debugPrint('❌ Error getting owner hotels: $e');
+      AppLogger.error('Error getting owner hotels', tag: 'Auth', error: e);
       return [];
     }
   }

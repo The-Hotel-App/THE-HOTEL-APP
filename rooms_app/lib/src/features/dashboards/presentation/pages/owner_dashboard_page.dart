@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/services/notification_service.dart';
 import 'package:rooms/src/core/widgets/app_dialog.dart';
@@ -41,7 +42,11 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
       // Register FCM token for this owner's hotels
       await notificationService.registerTokenForUser();
     } catch (e) {
-      debugPrint('❌ Error initializing notifications for owner: $e');
+      AppLogger.error(
+        'Error initializing notifications for owner',
+        tag: 'Notification',
+        error: e,
+      );
     }
   }
 
