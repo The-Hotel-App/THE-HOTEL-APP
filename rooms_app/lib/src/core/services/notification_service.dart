@@ -160,7 +160,8 @@ class NotificationService {
   Future<bool> requestPermissionAgain(BuildContext context) async {
     final settings = await _messaging.getNotificationSettings();
 
-    if (settings.authorizationStatus == AuthorizationStatus.denied) {
+    if (settings.authorizationStatus == AuthorizationStatus.denied &&
+        context.mounted) {
       // Show dialog explaining why notifications are important
       final shouldOpenSettings = await showDialog<bool>(
         context: context,

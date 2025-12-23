@@ -185,8 +185,9 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         _currentPage == 1 &&
         !_isAuthenticatedOwner) {
       final success = await _performLogin();
-      if (!success || !mounted)
+      if (!success || !mounted) {
         return; // Return if widget disposed during async
+      }
 
       // After successful login, the step list changes completely
       // Reset to page 0 (which will now be the hotels list)
@@ -202,8 +203,9 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         _currentPage == 1 &&
         !_isAuthenticatedOwner) {
       final success = await _createAccount();
-      if (!success || !mounted)
+      if (!success || !mounted) {
         return; // Return if widget disposed during async
+      }
 
       // After successful account creation, the step list changes completely
       // Reset to page 0 (which will now be owner profile for signup flow)
@@ -229,8 +231,9 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       }
 
       final success = await _updateOwnerProfile();
-      if (!success || !mounted)
+      if (!success || !mounted) {
         return; // Return if widget disposed during async
+      }
       debugPrint('✅ Profile updated for: $_ownerId, advancing to next page');
     }
 
