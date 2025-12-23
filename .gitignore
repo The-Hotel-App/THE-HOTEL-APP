@@ -1,3 +1,167 @@
+# ==========================================
+# THE HOTEL APP - Root .gitignore
+# ==========================================
+
+# ------------------------------------------
+# Project Specific
+# ------------------------------------------
 INITIAL-PROMPT.md
+logs.log
+*.log
+
+# ------------------------------------------
+# Credentials & Secrets (CRITICAL)
+# ------------------------------------------
 rooms_app/assets/credentials/
-rooms_app/node_modules/
+*.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.keystore
+*.jks
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+
+# ------------------------------------------
+# Node.js / Supabase Functions
+# ------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ------------------------------------------
+# Supabase
+# ------------------------------------------
+supabase/.temp/
+supabase/.branches/
+.supabase/
+
+# ------------------------------------------
+# OS Generated Files
+# ------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ------------------------------------------
+# IDE / Editor
+# ------------------------------------------
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains (IntelliJ, Android Studio, etc.)
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# ------------------------------------------
+# Flutter / Dart (also covered in rooms_app/.gitignore)
+# ------------------------------------------
+rooms_app/.dart_tool/
+rooms_app/.flutter-plugins
+rooms_app/.flutter-plugins-dependencies
+rooms_app/.packages
+rooms_app/.pub-cache/
+rooms_app/.pub/
+rooms_app/build/
+rooms_app/coverage/
+rooms_app/**/doc/api/
+rooms_app/.metadata
+
+# Symbolication related
+*.symbols
+
+# Obfuscation related
+*.map.json
+
+# ------------------------------------------
+# Android
+# ------------------------------------------
+rooms_app/android/.gradle/
+rooms_app/android/app/debug/
+rooms_app/android/app/profile/
+rooms_app/android/app/release/
+rooms_app/android/local.properties
+rooms_app/android/*.keystore
+rooms_app/android/key.properties
+rooms_app/android/app/google-services.json
+
+# ------------------------------------------
+# iOS (if added later)
+# ------------------------------------------
+rooms_app/ios/Pods/
+rooms_app/ios/.symlinks/
+rooms_app/ios/Flutter/Flutter.framework
+rooms_app/ios/Flutter/Flutter.podspec
+rooms_app/ios/Flutter/.last_build_id
+rooms_app/ios/Flutter/App.framework
+rooms_app/ios/Flutter/Generated.xcconfig
+rooms_app/ios/ServiceDefinitions.json
+rooms_app/ios/Runner/GeneratedPluginRegistrant.*
+
+# ------------------------------------------
+# Web (if added later)
+# ------------------------------------------
+rooms_app/web/.dart_tool/
+rooms_app/web/.packages
+
+# ------------------------------------------
+# Build Outputs
+# ------------------------------------------
+*.apk
+*.aab
+*.ipa
+*.app
+*.exe
+*.dll
+*.so
+*.dylib
+
+# ------------------------------------------
+# Test & Coverage
+# ------------------------------------------
+coverage/
+.test_coverage/
+*.lcov
+
+# ------------------------------------------
+# Misc
+# ------------------------------------------
+*.class
+*.pyc
+*.pyo
+__pycache__/
+.history/
+.svn/
+.hg/
+.bzr/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.cache
