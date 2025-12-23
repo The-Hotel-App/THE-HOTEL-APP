@@ -9,6 +9,14 @@ on:
       - "rooms_app/android/**"
       - ".github/workflows/**"
 
+permissions:
+  contents: write
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -32,15 +40,37 @@ jobs:
           flutter-version: "3.38.5"
           cache: true
 
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            rooms_app/.dart_tool
+          key: pub-${{ hashFiles('rooms_app/pubspec.lock') }}
+          restore-keys: pub-
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            rooms_app/android/.gradle
+            rooms_app/build
+          key: gradle-${{ hashFiles('rooms_app/android/**/*.gradle*', 'rooms_app/pubspec.lock') }}
+          restore-keys: gradle-
+
       - name: Get dependencies
         run: flutter pub get
 
       - name: Create google-services.json
-        run: |
-          echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
+        run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
 
       - name: Build APK (arm64 only)
-        run: flutter build apk --split-per-abi --target-platform android-arm64 --release
+        run: |
+          flutter build apk --split-per-abi --target-platform android-arm64 --release \
+            --no-tree-shake-icons \
+            --suppress-analytics
 
       - name: Get version
         id: version
