@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/services/id_ocr_service.dart';
+import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/checkin/presentation/providers/checkin_providers.dart';
 import 'package:rooms/src/features/customers/domain/entities/customer.dart';
+import 'package:rooms/src/features/customers/presentation/providers/customer_providers.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 
 /// Step 1: Customer Information
@@ -522,25 +524,53 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
     );
   }
 
-  void _handleNext() {
+  bool _isSaving = false;
+
+  Future<void> _handleNext() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_isSaving) return;
 
-    // Create customer and update state
-    final customer = Customer(
-      id: 'cust-${DateTime.now().millisecondsSinceEpoch}',
-      hotelId: 'hotel-001',
-      name: _nameController.text.trim(),
-      phone: _phoneController.text.trim(),
-      gender: _selectedGender,
-      idType: _selectedIdType,
-      idNumber: _idNumberController.text.trim(),
-      createdAt: DateTime.now(),
-    );
+    setState(() => _isSaving = true);
 
-    ref.read(checkinStateProvider.notifier).setCustomer(customer);
-    ref.read(checkinStateProvider.notifier).setGuestCount(_guestCount);
-    ref.read(checkinStateProvider.notifier).setDates(_checkIn, _checkOut);
+    try {
+      final hotel = ref.read(currentHotelProvider);
+      if (hotel == null) {
+        throw Exception('No hotel selected');
+      }
 
-    widget.onNext();
+      // Create customer object with temporary ID
+      final customerData = Customer(
+        id: '', // Will be replaced by Supabase
+        hotelId: hotel.hotelId,
+        name: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        gender: _selectedGender,
+        idType: _selectedIdType,
+        idNumber: _idNumberController.text.trim(),
+        createdAt: DateTime.now(),
+      );
+
+      // Save customer to Supabase and get back with real UUID
+      final customerRepo = ref.read(customerRepositoryProvider);
+      final savedCustomer = await customerRepo.createCustomer(customerData);
+
+      // Update check-in state with saved customer (has real UUID)
+      ref.read(checkinStateProvider.notifier).setCustomer(savedCustomer);
+      ref.read(checkinStateProvider.notifier).setGuestCount(_guestCount);
+      ref.read(checkinStateProvider.notifier).setDates(_checkIn, _checkOut);
+
+      widget.onNext();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving customer: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 }
