@@ -7,14 +7,24 @@ import 'package:rooms/src/features/bookings/domain/entities/booking.dart';
 import 'package:rooms/src/features/bookings/presentation/providers/booking_providers.dart';
 import 'package:rooms/src/features/bookings/presentation/widgets/booking_widgets.dart';
 
-class BookingsPage extends ConsumerWidget {
+class BookingsPage extends ConsumerStatefulWidget {
   /// When true, hides back button for use as embedded tab content
   final bool embedded;
 
   const BookingsPage({super.key, this.embedded = false});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BookingsPage> createState() => _BookingsPageState();
+}
+
+class _BookingsPageState extends ConsumerState<BookingsPage> {
+  Future<void> _refresh() async {
+    ref.invalidate(bookingsProvider);
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final bookingsAsync = ref.watch(bookingsProvider);
     final currentUser = ref.watch(currentUserProvider).valueOrNull;
     final canViewMoney = currentUser?.role.canViewMoneyDetails ?? false;
@@ -24,7 +34,7 @@ class BookingsPage extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppColors.black,
         foregroundColor: AppColors.white,
-        leading: embedded
+        leading: widget.embedded
             ? null
             : IconButton(
                 icon: const Icon(Icons.arrow_back),
@@ -40,11 +50,23 @@ class BookingsPage extends ConsumerWidget {
             const Text('Bookings'),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refresh,
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
-      body: bookingsAsync.when(
-        data: (bookings) => _buildBookingsList(context, bookings, canViewMoney),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: bookingsAsync.when(
+          data: (bookings) => _buildBookingsList(context, bookings, canViewMoney),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => ListView(
+            children: [Center(child: Padding(padding: const EdgeInsets.all(32), child: Text('Error: $e')))],
+          ),
+        ),
       ),
     );
   }

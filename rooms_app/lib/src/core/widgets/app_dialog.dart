@@ -43,20 +43,9 @@ class AppDialog extends StatelessWidget {
             const SizedBox(height: 16),
             content,
             const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (secondaryButtonText != null) ...[
-                  TextButton(
-                    onPressed:
-                        onSecondaryPressed ?? () => Navigator.of(context).pop(),
-                    child: Text(
-                      secondaryButtonText!,
-                      style: const TextStyle(color: AppColors.textSecondary),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                ],
                 if (primaryButtonText != null)
                   ElevatedButton(
                     onPressed:
@@ -66,11 +55,22 @@ class AppDialog extends StatelessWidget {
                       foregroundColor: AppColors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
-                        vertical: 12,
+                        vertical: 14,
                       ),
                     ),
                     child: Text(primaryButtonText!),
                   ),
+                if (secondaryButtonText != null) ...[
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed:
+                        onSecondaryPressed ?? () => Navigator.of(context).pop(),
+                    child: Text(
+                      secondaryButtonText!,
+                      style: const TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ),
+                ],
               ],
             ),
           ],

@@ -323,4 +323,24 @@ class SupabaseBookingRepository implements BookingRepository {
       rethrow;
     }
   }
+
+  /// Checkout any active (checked_in) bookings for a specific room
+  Future<void> checkoutActiveBookingForRoom(String roomId) async {
+    try {
+      debugPrint('📦 Checking out active booking(s) for room: $roomId');
+      
+      // Update ALL active bookings for this room to checked_out
+      // Only update status, don't change check_out date to avoid constraint issues
+      await _client
+          .from('bookings')
+          .update({'status': 'checked_out'})
+          .eq('room_id', roomId)
+          .eq('status', 'checked_in');
+      
+      debugPrint('✅ Active booking(s) checked out for room');
+    } catch (e) {
+      debugPrint('❌ Error checking out active booking: $e');
+      rethrow;
+    }
+  }
 }

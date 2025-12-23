@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/core/widgets/app_dialog.dart';
+import 'package:rooms/src/features/bookings/data/repositories/supabase_booking_repository.dart';
+import 'package:rooms/src/features/bookings/presentation/providers/booking_providers.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
 
@@ -181,14 +184,9 @@ class RoomDetailsSheet extends ConsumerWidget {
   }
 
   Widget _buildStatusGrid(BuildContext context, WidgetRef ref) {
-    // Define status buttons with icons and colors
+    // Define status buttons with icons and colors - no "Occupied" option
+    // Rooms can only become occupied via check-in
     final statusButtons = [
-      _StatusButtonData(
-        status: RoomStatus.occupied,
-        label: 'Occupied',
-        icon: Icons.cancel,
-        color: AppColors.roomOccupied,
-      ),
       _StatusButtonData(
         status: RoomStatus.cleaning,
         label: 'Cleaning',
@@ -209,24 +207,12 @@ class RoomDetailsSheet extends ConsumerWidget {
       ),
     ];
 
+    // Use vertical layout with full-width buttons to prevent overflow
     return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(child: _buildStatusButton(context, ref, statusButtons[0])),
-            const SizedBox(width: 12),
-            Expanded(child: _buildStatusButton(context, ref, statusButtons[1])),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _buildStatusButton(context, ref, statusButtons[2])),
-            const SizedBox(width: 12),
-            Expanded(child: _buildStatusButton(context, ref, statusButtons[3])),
-          ],
-        ),
-      ],
+      children: statusButtons.map((data) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: _buildStatusButton(context, ref, data),
+      )).toList(),
     );
   }
 
@@ -241,12 +227,18 @@ class RoomDetailsSheet extends ConsumerWidget {
       onTap: isCurrentStatus
           ? null
           : () async {
-              await _updateRoomStatus(ref, room.id, data.status);
-              if (context.mounted) Navigator.pop(context);
+              // If room is occupied, ask for checkout confirmation first
+              if (room.status == RoomStatus.occupied) {
+                _showCheckoutConfirmation(context, ref, data.status);
+              } else {
+                await _updateRoomStatus(ref, room.id, data.status);
+                if (context.mounted) Navigator.pop(context);
+              }
             },
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         decoration: BoxDecoration(
           color: isCurrentStatus
               ? data.color.withValues(alpha: 0.15)
@@ -262,21 +254,61 @@ class RoomDetailsSheet extends ConsumerWidget {
           children: [
             Icon(
               data.icon,
-              size: 18,
+              size: 20,
               color: isCurrentStatus ? data.color : AppColors.grey600,
             ),
-            const SizedBox(width: 8),
-            Text(
-              data.label,
-              style: TextStyle(
-                color: isCurrentStatus ? data.color : AppColors.grey700,
-                fontWeight: isCurrentStatus ? FontWeight.bold : FontWeight.w500,
-                fontSize: 14,
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                data.label,
+                style: TextStyle(
+                  color: isCurrentStatus ? data.color : AppColors.grey700,
+                  fontWeight: isCurrentStatus ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 15,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showCheckoutConfirmation(
+    BuildContext context,
+    WidgetRef ref,
+    RoomStatus newStatus,
+  ) {
+    AppDialog.show(
+      context: context,
+      title: 'Guest is Checked In',
+      content: const Text(
+        'This room has a guest checked in. You need to check out the guest before changing the room status.',
+      ),
+      primaryButtonText: 'Check Out & Change Status',
+      onPrimaryPressed: () async {
+        Navigator.pop(context); // Close dialog
+        
+        try {
+          // Checkout any active booking for this room
+          final bookingRepo = ref.read(bookingRepositoryProvider) as SupabaseBookingRepository;
+          await bookingRepo.checkoutActiveBookingForRoom(room.id);
+          
+          // Update room status
+          await _updateRoomStatus(ref, room.id, newStatus);
+          ref.invalidate(bookingsProvider);
+          
+          if (context.mounted) Navigator.pop(context); // Close sheet
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+            );
+          }
+        }
+      },
+      secondaryButtonText: 'Cancel',
     );
   }
 

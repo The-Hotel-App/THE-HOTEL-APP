@@ -25,6 +25,9 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _idNumberController = TextEditingController();
+  
+  // Additional guest name controllers
+  final List<TextEditingController> _additionalGuestControllers = [];
 
   Gender _selectedGender = Gender.male;
   IdType _selectedIdType = IdType.aadhar;
@@ -37,12 +40,30 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
   String? _idImagePath;
   bool _isProcessingOcr = false;
   final IdOcrService _ocrService = IdOcrService();
+  
+  void _updateAdditionalGuestControllers() {
+    // Need controllers for guest 2 onwards (guest 1 is primary)
+    final neededCount = _guestCount - 1;
+    
+    // Remove extra controllers
+    while (_additionalGuestControllers.length > neededCount) {
+      _additionalGuestControllers.removeLast().dispose();
+    }
+    
+    // Add missing controllers
+    while (_additionalGuestControllers.length < neededCount) {
+      _additionalGuestControllers.add(TextEditingController());
+    }
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
     _idNumberController.dispose();
+    for (final controller in _additionalGuestControllers) {
+      controller.dispose();
+    }
     _ocrService.dispose();
     super.dispose();
   }
@@ -80,6 +101,11 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
             const SizedBox(height: 12),
             _buildGuestCountSelector(),
             const SizedBox(height: 12),
+            // Show additional guest name fields if more than 1 guest
+            if (_guestCount > 1) ...[
+              _buildAdditionalGuestsSection(),
+              const SizedBox(height: 12),
+            ],
             _buildDateSelectors(),
             const SizedBox(height: 32),
 
@@ -325,7 +351,10 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
           const Spacer(),
           IconButton(
             onPressed: _guestCount > 1
-                ? () => setState(() => _guestCount--)
+                ? () => setState(() {
+                      _guestCount--;
+                      _updateAdditionalGuestControllers();
+                    })
                 : null,
             icon: const Icon(Icons.remove_circle_outline),
             color: AppColors.black,
@@ -340,13 +369,46 @@ class _StepCustomerInfoState extends ConsumerState<StepCustomerInfo> {
           ),
           IconButton(
             onPressed: _guestCount < widget.room.maxOccupancy
-                ? () => setState(() => _guestCount++)
+                ? () => setState(() {
+                      _guestCount++;
+                      _updateAdditionalGuestControllers();
+                    })
                 : null,
             icon: const Icon(Icons.add_circle_outline),
             color: AppColors.black,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAdditionalGuestsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Additional Guest Names',
+          style: TextStyle(
+            fontSize: 14,
+            color: AppColors.grey600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...List.generate(_additionalGuestControllers.length, (index) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: TextFormField(
+              controller: _additionalGuestControllers[index],
+              textCapitalization: TextCapitalization.words,
+              decoration: _inputDecoration(
+                'Guest ${index + 2} Name',
+                Icons.person_outline,
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 
