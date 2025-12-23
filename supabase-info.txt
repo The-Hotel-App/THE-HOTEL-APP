@@ -24,6 +24,8 @@ Please use "npx supabase <command>" to use the CLI tools.
 - `supabase/migrations/20241213_add_staff_function.sql`
 - `supabase/migrations/20241222_remove_join_workflow.sql` - Removed join_codes, join_requests tables and validate_join_code function
 - `supabase/migrations/20241223_push_notifications.sql` - Push notifications infrastructure
+- `supabase/migrations/20241223_auto_invoke_edge_function.sql` - Auto-invoke Edge Function via pg_net
+- `supabase/migrations/20241223_fix_get_owner_fcm_tokens.sql` - Fix: get email from auth.users not user_profiles
 
 ---
 

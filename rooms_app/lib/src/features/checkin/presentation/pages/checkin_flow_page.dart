@@ -172,7 +172,7 @@ class _CheckinFlowPageState extends ConsumerState<CheckinFlowPage> {
       final checkinState = ref.read(checkinStateProvider);
       final hotel = ref.read(currentHotelProvider);
       final user = ref.read(currentUserProvider).valueOrNull;
-      
+
       if (hotel == null || checkinState.customer == null) {
         throw Exception('Missing hotel or customer data');
       }
@@ -195,8 +195,8 @@ class _CheckinFlowPageState extends ConsumerState<CheckinFlowPage> {
         paymentStatus: checkinState.paidAmount >= checkinState.totalAmount
             ? PaymentStatus.paid
             : checkinState.paidAmount > 0
-                ? PaymentStatus.partial
-                : PaymentStatus.pending,
+            ? PaymentStatus.partial
+            : PaymentStatus.pending,
         notes: checkinState.notes,
         createdAt: DateTime.now(),
         createdBy: user?.id ?? '',
@@ -206,12 +206,16 @@ class _CheckinFlowPageState extends ConsumerState<CheckinFlowPage> {
 
       // Update room status to occupied
       final roomRepo = ref.read(roomRepositoryProvider);
-      await roomRepo.updateRoomStatus(widget.room.id, RoomStatus.occupied);
+      await roomRepo.updateRoomStatus(
+        widget.room.id,
+        RoomStatus.occupied,
+        updatedBy: user?.id,
+      );
 
       // Invalidate providers to refresh data
       ref.invalidate(bookingsProvider);
       ref.invalidate(roomsProvider);
-      
+
       // Reset check-in state
       ref.read(checkinStateProvider.notifier).reset();
 

@@ -274,8 +274,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.black),
-          onPressed: () => context.go(AppRoutes.welcome),
-          tooltip: 'Back to Welcome',
+          onPressed: () => context.pop(),
+          tooltip: 'Back',
         ),
       ),
       body: SafeArea(

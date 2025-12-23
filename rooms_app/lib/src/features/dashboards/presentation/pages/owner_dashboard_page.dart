@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/core/services/notification_service.dart';
 import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/core/widgets/hotel_switcher_button.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
@@ -16,6 +17,34 @@ class OwnerDashboardPage extends ConsumerStatefulWidget {
 }
 
 class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Register FCM token after dashboard is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initNotificationsForOwner();
+    });
+  }
+
+  /// Initialize notifications and register FCM token for the owner
+  Future<void> _initNotificationsForOwner() async {
+    try {
+      final notificationService = ref.read(notificationServiceProvider);
+
+      // Check if permission is granted, if not request again
+      if (!await notificationService.hasPermission) {
+        if (mounted) {
+          await notificationService.requestPermissionAgain(context);
+        }
+      }
+
+      // Register FCM token for this owner's hotels
+      await notificationService.registerTokenForUser();
+    } catch (e) {
+      debugPrint('❌ Error initializing notifications for owner: $e');
+    }
+  }
+
   Future<void> _refresh() async {
     // Invalidate providers to force refresh from database
     ref.invalidate(currentUserProvider);

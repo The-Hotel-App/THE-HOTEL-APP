@@ -59,7 +59,6 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
   final _loginEmailController = TextEditingController();
   final _loginPasswordController = TextEditingController();
 
-
   // Step 0 (signup only): Account Creation
   final _accountEmailController = TextEditingController();
   final _accountPasswordController = TextEditingController();
@@ -103,7 +102,6 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
     // Hotels are only fetched AFTER the user explicitly logs in via this wizard.
     debugPrint('🏨 Hotel Setup Wizard initialized - showing auth choice');
   }
-
 
   Future<void> _fetchOwnerHotels() async {
     if (_ownerId == null) return;
@@ -183,10 +181,13 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
     }
 
     // Handle login step
-    if (_authChoice == OwnerAuthChoice.login && _currentPage == 1 && !_isAuthenticatedOwner) {
+    if (_authChoice == OwnerAuthChoice.login &&
+        _currentPage == 1 &&
+        !_isAuthenticatedOwner) {
       final success = await _performLogin();
-      if (!success || !mounted) return; // Return if widget disposed during async
-      
+      if (!success || !mounted)
+        return; // Return if widget disposed during async
+
       // After successful login, the step list changes completely
       // Reset to page 0 (which will now be the hotels list)
       setState(() {
@@ -197,10 +198,13 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
     }
 
     // Handle account creation step (signup flow)
-    if (_authChoice == OwnerAuthChoice.signup && _currentPage == 1 && !_isAuthenticatedOwner) {
+    if (_authChoice == OwnerAuthChoice.signup &&
+        _currentPage == 1 &&
+        !_isAuthenticatedOwner) {
       final success = await _createAccount();
-      if (!success || !mounted) return; // Return if widget disposed during async
-      
+      if (!success || !mounted)
+        return; // Return if widget disposed during async
+
       // After successful account creation, the step list changes completely
       // Reset to page 0 (which will now be owner profile for signup flow)
       setState(() {
@@ -225,7 +229,8 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       }
 
       final success = await _updateOwnerProfile();
-      if (!success || !mounted) return; // Return if widget disposed during async
+      if (!success || !mounted)
+        return; // Return if widget disposed during async
       debugPrint('✅ Profile updated for: $_ownerId, advancing to next page');
     }
 
@@ -247,11 +252,11 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
     if (!_isAuthenticatedOwner) {
       return -1; // Not applicable yet
     }
-    
+
     if (_authChoice == OwnerAuthChoice.login) {
       return 1; // After hotels list (page 0)
     }
-    
+
     // Signup flow - owner profile is the first step after account creation
     return 0;
   }
@@ -322,7 +327,8 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       if (mounted) {
         Navigator.of(context).pop();
         setState(() {
-          _loginErrorMessage = 'Login failed: ${e.toString().replaceAll('Exception: ', '')}';
+          _loginErrorMessage =
+              'Login failed: ${e.toString().replaceAll('Exception: ', '')}';
         });
       }
       return false;
@@ -359,7 +365,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       );
 
       final authRepo = SupabaseAuthRepository();
-      
+
       // Register returns the User object directly - use it instead of provider
       // (Router redirect may dispose widget before we can read from provider)
       final newUser = await authRepo.signUp(
@@ -375,7 +381,9 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       // Only update state if widget is still mounted
       // (Router refresh may dispose widget during auth state change)
       if (!mounted) {
-        debugPrint('⚠️ Widget disposed during signup, returning success anyway');
+        debugPrint(
+          '⚠️ Widget disposed during signup, returning success anyway',
+        );
         return true; // Signup succeeded, just can't update UI
       }
 
@@ -755,7 +763,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
   bool get _isOnLastStep {
     // The last step is always Room Types, which only appears after authentication
     if (!_isAuthenticatedOwner) return false;
-    
+
     final steps = _buildWizardSteps();
     return _currentPage >= steps.length - 1;
   }
@@ -850,7 +858,8 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
         RoomTypesStep(
           roomTypes: _roomTypes,
           onAddRoomType: _showAddRoomTypeDialog,
-          onRemoveRoomType: (index) => setState(() => _roomTypes.removeAt(index)),
+          onRemoveRoomType: (index) =>
+              setState(() => _roomTypes.removeAt(index)),
         ),
       );
     }
@@ -875,8 +884,14 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
               elevation: 0,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back, color: AppColors.black),
-                onPressed: () => context.go(AppRoutes.welcome),
-                tooltip: 'Back to Welcome',
+                onPressed: () {
+                  if (GoRouter.of(context).canPop()) {
+                    context.pop();
+                  } else {
+                    context.go(AppRoutes.welcome);
+                  }
+                },
+                tooltip: 'Back',
               ),
               title: const Text(
                 'Create New Hotel',
@@ -911,7 +926,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
   Widget _buildNavigationButtons(int stepCount) {
     // Only show "Complete Setup" if we're authenticated AND on the last step
     final showComplete = _isOnLastStep;
-    
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(

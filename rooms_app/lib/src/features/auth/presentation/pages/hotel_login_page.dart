@@ -8,7 +8,7 @@ import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 
 /// Simplified Login Page - Just email and password
-/// After login: 
+/// After login:
 /// - If user has 1 hotel → go directly to dashboard
 /// - If user has 2+ hotels → go to hotel selection page
 class HotelLoginPage extends ConsumerStatefulWidget {
@@ -50,17 +50,20 @@ class _HotelLoginPageState extends ConsumerState<HotelLoginPage> {
 
       final staffEmails = <Map<String, String>>[];
       final seenIds = <String>{};
-      
+
       for (final row in response) {
         final userId = row['user_id'] as String?;
         final profile = row['user_profiles'] as Map<String, dynamic>?;
         final name = profile?['name'] as String? ?? 'Staff';
-        
+
         if (userId != null && !seenIds.contains(userId)) {
           seenIds.add(userId);
           // Show name but clicking won't work (no email)
           // The user would need to know their own email
-          staffEmails.add({'email': '', 'label': '$name (enter email manually)'});
+          staffEmails.add({
+            'email': '',
+            'label': '$name (enter email manually)',
+          });
         }
       }
 
@@ -143,9 +146,11 @@ class _HotelLoginPageState extends ConsumerState<HotelLoginPage> {
         // Single hotel - go directly to dashboard
         final hotel = hotels.first;
         ref.read(selectedHotelIdProvider.notifier).state = hotel.hotelId;
-        
-        debugPrint('🚀 Single hotel, navigating to ${hotel.role.displayName} dashboard');
-        
+
+        debugPrint(
+          '🚀 Single hotel, navigating to ${hotel.role.displayName} dashboard',
+        );
+
         if (mounted) {
           setState(() => _isLoading = false);
           context.go(_getDashboardRoute(hotel.role));
@@ -153,7 +158,7 @@ class _HotelLoginPageState extends ConsumerState<HotelLoginPage> {
       } else {
         // Multiple hotels - go to hotel selection page
         debugPrint('🏨 Multiple hotels, navigating to selection page');
-        
+
         if (mounted) {
           setState(() => _isLoading = false);
           context.go(AppRoutes.hotelSelection);
@@ -184,13 +189,10 @@ class _HotelLoginPageState extends ConsumerState<HotelLoginPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.black),
-          onPressed: () => context.go(AppRoutes.welcome),
+          onPressed: () => context.pop(),
           tooltip: 'Back',
         ),
-        title: const Text(
-          'Login',
-          style: TextStyle(color: AppColors.black),
-        ),
+        title: const Text('Login', style: TextStyle(color: AppColors.black)),
       ),
       body: SafeArea(
         child: Center(
@@ -216,7 +218,7 @@ class _HotelLoginPageState extends ConsumerState<HotelLoginPage> {
           // Logo/Icon
           Icon(Icons.login, size: 80, color: AppColors.info),
           const SizedBox(height: 24),
-          
+
           Text(
             'Welcome Back',
             textAlign: TextAlign.center,
@@ -229,9 +231,9 @@ class _HotelLoginPageState extends ConsumerState<HotelLoginPage> {
           Text(
             'Sign in to access your hotels',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textSecondary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 40),
 
@@ -367,10 +369,7 @@ class _HotelLoginPageState extends ConsumerState<HotelLoginPage> {
           const SizedBox(width: 8),
           Text(
             'Loading test accounts...',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
         ],
       );
@@ -379,10 +378,7 @@ class _HotelLoginPageState extends ConsumerState<HotelLoginPage> {
     if (_testEmails.isEmpty) {
       return Text(
         'No test accounts found',
-        style: TextStyle(
-          fontSize: 12,
-          color: AppColors.textSecondary,
-        ),
+        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
       );
     }
 

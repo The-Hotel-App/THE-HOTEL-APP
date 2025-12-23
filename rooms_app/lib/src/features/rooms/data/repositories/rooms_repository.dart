@@ -246,13 +246,20 @@ class RoomsRepository {
   }
 
   /// Update room status only
-  Future<void> updateRoomStatus(String roomId, RoomStatus status) async {
+  Future<void> updateRoomStatus(
+    String roomId,
+    RoomStatus status, {
+    String? updatedBy,
+  }) async {
     try {
       debugPrint('📦 Updating room status: $roomId -> ${status.name}');
-      await _client
-          .from('rooms')
-          .update({'status': ManagedRoom._statusToString(status)})
-          .eq('id', roomId);
+      final updates = <String, dynamic>{
+        'status': ManagedRoom._statusToString(status),
+      };
+      if (updatedBy != null) {
+        updates['updated_by'] = updatedBy;
+      }
+      await _client.from('rooms').update(updates).eq('id', roomId);
       debugPrint('✅ Room status updated');
     } catch (e) {
       debugPrint('❌ Error updating room status: $e');

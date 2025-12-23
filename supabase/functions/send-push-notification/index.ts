@@ -1,6 +1,6 @@
 // Supabase Edge Function: Send Push Notifications via FCM
 // Triggered by database changes (new bookings, room status changes)
-// Polls notifications table and sends to FCM
+// Auto-invoked from database triggers via pg_net
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -11,7 +11,7 @@ const corsHeaders = {
 };
 
 // FCM HTTP v1 API endpoint
-const FCM_URL = "https://fcm.googleapis.com/v1/projects/rooms-app-d4f03/messages:send";
+const FCM_URL = "https://fcm.googleapis.com/v1/projects/the-hotel-app-f0953/messages:send";
 
 interface NotificationPayload {
     notification_id: string;
@@ -81,6 +81,11 @@ async function getAccessToken(serviceAccount: Record<string, string>): Promise<s
     });
 
     const tokenData = await tokenResponse.json();
+    
+    if (!tokenData.access_token) {
+        console.error("❌ Failed to get access token:", tokenData);
+        throw new Error("Failed to get access token");
+    }
     return tokenData.access_token;
 }
 
@@ -90,55 +95,63 @@ async function sendFcmNotification(
     fcmToken: string,
     notification: NotificationPayload
 ): Promise<boolean> {
+    
     try {
+        const fcmPayload = {
+            message: {
+                token: fcmToken,
+                notification: {
+                    title: notification.title,
+                    body: notification.body,
+                },
+                data: {
+                    type: notification.type,
+                    hotel_id: notification.hotel_id,
+                    notification_id: notification.notification_id,
+                    click_action: "FLUTTER_NOTIFICATION_CLICK",
+                    ...Object.fromEntries(
+                        Object.entries(notification.data).map(([k, v]) => [k, String(v)])
+                    ),
+                },
+                android: {
+                    priority: "high",
+                    notification: {
+                        channel_id: "hotel_notifications",
+                        icon: "ic_notification",
+                        color: "#FFD700",
+                    },
+                },
+            },
+        };
+        
+
+        
         const response = await fetch(FCM_URL, {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${accessToken}`,
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-                message: {
-                    token: fcmToken,
-                    notification: {
-                        title: notification.title,
-                        body: notification.body,
-                    },
-                    data: {
-                        type: notification.type,
-                        hotel_id: notification.hotel_id,
-                        notification_id: notification.notification_id,
-                        click_action: "FLUTTER_NOTIFICATION_CLICK",
-                        ...Object.fromEntries(
-                            Object.entries(notification.data).map(([k, v]) => [k, String(v)])
-                        ),
-                    },
-                    android: {
-                        priority: "high",
-                        notification: {
-                            channel_id: "hotel_notifications",
-                            icon: "ic_notification",
-                            color: "#FFD700",
-                        },
-                    },
-                },
-            }),
+            body: JSON.stringify(fcmPayload),
         });
 
+        const responseText = await response.text();
+        
         if (!response.ok) {
-            const error = await response.text();
-            console.error("FCM error:", error);
+            console.error("❌ FCM error response:", responseText);
             return false;
         }
 
+        console.log("✅ FCM sent");
         return true;
     } catch (error) {
-        console.error("Error sending FCM:", error);
+        console.error("❌ Error sending FCM:", error);
         return false;
     }
 }
 
 serve(async (req) => {
+    
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
@@ -148,9 +161,9 @@ serve(async (req) => {
         // Get service account from environment (Base64 encoded)
         const serviceAccountBase64 = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_BASE64");
         if (!serviceAccountBase64) {
+            console.error("❌ FIREBASE_SERVICE_ACCOUNT_BASE64 not configured");
             throw new Error("FIREBASE_SERVICE_ACCOUNT_BASE64 not configured");
         }
-
         // Decode the service account
         const serviceAccountJson = atob(serviceAccountBase64);
         const serviceAccount = JSON.parse(serviceAccountJson);
@@ -174,7 +187,10 @@ serve(async (req) => {
                 .select("*")
                 .in("id", notification_ids);
 
-            if (error) throw error;
+            if (error) {
+                console.error("❌ Error fetching notifications:", error);
+                throw error;
+            }
             notificationsToSend = data;
         } else {
             // Get recent notifications (last 5 minutes) that haven't been sent
@@ -187,7 +203,10 @@ serve(async (req) => {
                 .gte("created_at", fiveMinutesAgo)
                 .order("created_at", { ascending: true });
 
-            if (error) throw error;
+            if (error) {
+                console.error("❌ Error fetching recent notifications:", error);
+                throw error;
+            }
             notificationsToSend = data;
         }
 
@@ -198,25 +217,39 @@ serve(async (req) => {
             );
         }
 
+
         // Get FCM access token
         const accessToken = await getAccessToken(serviceAccount);
 
         // Process each notification
         const results = [];
         for (const notification of notificationsToSend) {
+            console.log(`📦 ${notification.type}: ${notification.title}`);
+            
             // Get FCM tokens for owners of this hotel
             const { data: tokens, error: tokenError } = await supabase
                 .rpc("get_owner_fcm_tokens", { p_hotel_id: notification.hotel_id });
 
             if (tokenError) {
-                console.error("Error getting tokens:", tokenError);
+                console.error("❌ Error getting tokens:", tokenError);
+                continue;
+            }
+
+
+            
+            if (!tokens || tokens.length === 0) {
+                console.log("⚠️ No FCM tokens found for this hotel's owners");
                 continue;
             }
 
             // Send to each token
-            for (const tokenRecord of tokens || []) {
+            for (const tokenRecord of tokens) {
                 // Skip if this is the same user (don't notify yourself)
-                if (tokenRecord.user_id === notification.user_id) continue;
+                if (tokenRecord.user_id === notification.user_id) {
+
+                    continue;
+                }
+
 
                 const success = await sendFcmNotification(accessToken, tokenRecord.fcm_token, {
                     notification_id: notification.id,
@@ -230,18 +263,21 @@ serve(async (req) => {
 
                 results.push({
                     notification_id: notification.id,
+                    user_email: tokenRecord.user_email,
                     fcm_token: tokenRecord.fcm_token.substring(0, 20) + "...",
                     success,
                 });
             }
         }
 
+        console.log(`✅ Sent ${results.filter(r => r.success).length}/${results.length} notifications`);
+        
         return new Response(
             JSON.stringify({ success: true, results }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     } catch (error) {
-        console.error("Error:", error);
+        console.error("❌ Error:", error);
         const errorMessage = error instanceof Error ? error.message : String(error);
         return new Response(
             JSON.stringify({ error: errorMessage }),

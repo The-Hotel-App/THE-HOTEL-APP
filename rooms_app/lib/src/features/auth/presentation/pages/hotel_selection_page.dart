@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/core/services/notification_service.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 
@@ -165,16 +166,28 @@ class HotelSelectionPage extends ConsumerWidget {
                 const SizedBox(height: 16),
 
                 // Hotel cards
-                ...hotels.map((hotel) => _HotelCard(
-                  hotel: hotel,
-                  roleColor: _getRoleColor(hotel.role),
-                  roleIcon: _getRoleIcon(hotel.role),
-                  onTap: () {
-                    debugPrint('🏨 Selected hotel: ${hotel.hotelName}');
-                    ref.read(selectedHotelIdProvider.notifier).state = hotel.hotelId;
-                    context.go(_getDashboardRoute(hotel.role));
-                  },
-                )),
+                ...hotels.map(
+                  (hotel) => _HotelCard(
+                    hotel: hotel,
+                    roleColor: _getRoleColor(hotel.role),
+                    roleIcon: _getRoleIcon(hotel.role),
+                    onTap: () async {
+                      debugPrint('🏨 Selected hotel: ${hotel.hotelName}');
+                      ref.read(selectedHotelIdProvider.notifier).state =
+                          hotel.hotelId;
+
+                      // Register FCM token for push notifications (Owners only)
+                      final notificationService = ref.read(
+                        notificationServiceProvider,
+                      );
+                      await notificationService.registerTokenForUser();
+
+                      if (context.mounted) {
+                        context.go(_getDashboardRoute(hotel.role));
+                      }
+                    },
+                  ),
+                ),
               ],
             ),
           );
@@ -214,10 +227,7 @@ class _HotelCard extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.grey200,
-                width: 1,
-              ),
+              border: Border.all(color: AppColors.grey200, width: 1),
             ),
             child: Row(
               children: [
@@ -229,11 +239,7 @@ class _HotelCard extends StatelessWidget {
                     color: roleColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    Icons.hotel,
-                    size: 32,
-                    color: roleColor,
-                  ),
+                  child: Icon(Icons.hotel, size: 32, color: roleColor),
                 ),
                 const SizedBox(width: 16),
 

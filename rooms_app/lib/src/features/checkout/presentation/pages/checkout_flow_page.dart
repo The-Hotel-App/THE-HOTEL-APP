@@ -327,7 +327,12 @@ class _CheckoutFlowPageState extends ConsumerState<CheckoutFlowPage> {
 
     final newStatus = _setToCleaning ? RoomStatus.cleaning : RoomStatus.free;
     final roomRepo = ref.read(roomRepositoryProvider);
-    await roomRepo.updateRoomStatus(widget.room.id, newStatus);
+    final currentUser = ref.read(currentUserProvider).valueOrNull;
+    await roomRepo.updateRoomStatus(
+      widget.room.id,
+      newStatus,
+      updatedBy: currentUser?.id,
+    );
 
     if (mounted) {
       Navigator.pop(context);

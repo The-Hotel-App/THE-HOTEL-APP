@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/features/bookings/data/repositories/supabase_booking_repository.dart';
 import 'package:rooms/src/features/bookings/presentation/providers/booking_providers.dart';
@@ -209,10 +210,14 @@ class RoomDetailsSheet extends ConsumerWidget {
 
     // Use vertical layout with full-width buttons to prevent overflow
     return Column(
-      children: statusButtons.map((data) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: _buildStatusButton(context, ref, data),
-      )).toList(),
+      children: statusButtons
+          .map(
+            (data) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildStatusButton(context, ref, data),
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -263,7 +268,9 @@ class RoomDetailsSheet extends ConsumerWidget {
                 data.label,
                 style: TextStyle(
                   color: isCurrentStatus ? data.color : AppColors.grey700,
-                  fontWeight: isCurrentStatus ? FontWeight.bold : FontWeight.w500,
+                  fontWeight: isCurrentStatus
+                      ? FontWeight.bold
+                      : FontWeight.w500,
                   fontSize: 15,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -289,16 +296,17 @@ class RoomDetailsSheet extends ConsumerWidget {
       primaryButtonText: 'Check Out & Change Status',
       onPrimaryPressed: () async {
         Navigator.pop(context); // Close dialog
-        
+
         try {
           // Checkout any active booking for this room
-          final bookingRepo = ref.read(bookingRepositoryProvider) as SupabaseBookingRepository;
+          final bookingRepo =
+              ref.read(bookingRepositoryProvider) as SupabaseBookingRepository;
           await bookingRepo.checkoutActiveBookingForRoom(room.id);
-          
+
           // Update room status
           await _updateRoomStatus(ref, room.id, newStatus);
           ref.invalidate(bookingsProvider);
-          
+
           if (context.mounted) Navigator.pop(context); // Close sheet
         } catch (e) {
           if (context.mounted) {
@@ -318,7 +326,9 @@ class RoomDetailsSheet extends ConsumerWidget {
     RoomStatus status,
   ) async {
     final repo = ref.read(roomRepositoryProvider);
-    await repo.updateRoomStatus(roomId, status);
+    // Get current user ID for notification attribution
+    final currentUserId = SupabaseService.instance.client.auth.currentUser?.id;
+    await repo.updateRoomStatus(roomId, status, updatedBy: currentUserId);
     // Invalidate providers to refresh data
     ref.invalidate(roomsProvider);
   }
