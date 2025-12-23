@@ -317,16 +317,20 @@ class _CreateStaffPageState extends ConsumerState<CreateStaffPage> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${_selectedRole.displayName} account created successfully!',
-            ),
-            backgroundColor: AppColors.success,
+      // Invalidate providers to refresh with owner's data
+      ref.invalidate(currentUserProvider);
+      ref.invalidate(userHotelsProvider);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${_selectedRole.displayName} account created successfully!',
           ),
-        );
-        context.pop();
-      }
+          backgroundColor: AppColors.success,
+        ),
+      );
+      context.pop();
+    }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

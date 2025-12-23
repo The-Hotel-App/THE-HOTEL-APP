@@ -411,7 +411,10 @@ class _StaffPageState extends ConsumerState<StaffPage> {
           context: context,
           builder: (ctx) => AlertDialog(
             title: const Text('Remove Staff?'),
-            content: Text('Remove ${member.name} from this hotel?'),
+            content: Text(
+              'Remove ${member.name} from this hotel?\n\n'
+              'This will permanently delete their account if they only work at this hotel.',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
@@ -430,12 +433,16 @@ class _StaffPageState extends ConsumerState<StaffPage> {
         if (confirmed == true) {
           try {
             final repository = ref.read(staffRepositoryProvider);
-            await repository.removeStaff(member.id);
+            final hotel = ref.read(currentHotelProvider);
+            if (hotel == null) {
+              throw Exception('No hotel selected');
+            }
+            await repository.removeStaff(member.id, hotel.hotelId);
             await _loadStaff();
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Staff removed'),
+                  content: Text('Staff removed completely'),
                   backgroundColor: AppColors.success,
                 ),
               );

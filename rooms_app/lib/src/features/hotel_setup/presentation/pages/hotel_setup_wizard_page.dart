@@ -362,7 +362,7 @@ class _HotelSetupWizardPageState extends ConsumerState<HotelSetupWizardPage> {
       
       // Register returns the User object directly - use it instead of provider
       // (Router redirect may dispose widget before we can read from provider)
-      final newUser = await authRepo.register(
+      final newUser = await authRepo.signUp(
         email: email,
         password: password,
         name: 'New Owner', // Will be updated in next step

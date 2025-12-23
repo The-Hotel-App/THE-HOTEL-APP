@@ -345,6 +345,7 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   /// Create a staff account (owner only)
+  /// IMPORTANT: This method preserves the owner's session after creating the staff account
   @override
   Future<void> createStaffAccount({
     required String email,
@@ -357,13 +358,16 @@ class SupabaseAuthRepository implements AuthRepository {
     try {
       debugPrint('🔐 SupabaseAuth: Creating staff account for $email');
 
-      // IMPORTANT: Save the owner's ID BEFORE signing up the new user
+      // IMPORTANT: Save the owner's session BEFORE signing up the new user
       // because signUp() auto-logs in as the new user
+      final ownerSession = _client.auth.currentSession;
       final ownerId = _client.auth.currentUser?.id;
-      if (ownerId == null) {
+      
+      if (ownerId == null || ownerSession == null) {
         throw Exception('You must be logged in as the hotel owner to create staff accounts');
       }
       debugPrint('👤 Owner creating staff: $ownerId');
+      debugPrint('💾 Saved owner session for restoration');
 
       // Create user via Supabase Auth
       // Note: This will log us in as the new user!
@@ -374,6 +378,8 @@ class SupabaseAuthRepository implements AuthRepository {
       );
 
       if (response.user == null) {
+        // Restore owner session before throwing
+        await _client.auth.setSession(ownerSession.refreshToken!);
         throw Exception('Failed to create staff account');
       }
 
@@ -393,21 +399,16 @@ class SupabaseAuthRepository implements AuthRepository {
       });
 
       debugPrint('✅ Staff added to hotel with role: ${role.displayName}');
+      
+      // CRITICAL: Restore owner's session after creating staff
+      debugPrint('🔄 Restoring owner session...');
+      await _client.auth.setSession(ownerSession.refreshToken!);
+      debugPrint('✅ Owner session restored: ${_client.auth.currentUser?.id}');
+      
     } catch (e) {
       debugPrint('❌ Error creating staff account: $e');
       throw Exception('Failed to create staff account: $e');
     }
-  }
-
-  /// Register a new user (for employee join flow)
-  @override
-  Future<app.User> register({
-    required String email,
-    required String password,
-    required String name,
-    String? phone,
-  }) async {
-    return signUp(email: email, password: password, name: name, phone: phone);
   }
 
   /// Get hotel by hotel code
@@ -434,64 +435,6 @@ class SupabaseAuthRepository implements AuthRepository {
     } catch (e) {
       debugPrint('❌ Error looking up hotel: $e');
       return null;
-    }
-  }
-
-  /// Validate join code
-  @override
-  Future<Map<String, dynamic>> validateJoinCode(
-    String hotelCode,
-    String joinCode,
-  ) async {
-    try {
-      debugPrint('🔑 Validating join code: $joinCode for hotel: $hotelCode');
-
-      final response = await _client.rpc(
-        'validate_join_code',
-        params: {
-          'p_hotel_code': hotelCode.toLowerCase(),
-          'p_join_code': joinCode,
-        },
-      );
-
-      if (response == null || (response as List).isEmpty) {
-        return {'is_valid': false, 'error_message': 'Invalid codes'};
-      }
-
-      final result = response[0] as Map<String, dynamic>;
-      debugPrint('✅ Join code validation result: ${result['is_valid']}');
-      return result;
-    } catch (e) {
-      debugPrint('❌ Error validating join code: $e');
-      return {'is_valid': false, 'error_message': 'Error validating codes: $e'};
-    }
-  }
-
-  /// Submit join request
-  @override
-  Future<void> submitJoinRequest({
-    required String hotelId,
-    String? joinCodeId,
-  }) async {
-    try {
-      final userId = _client.auth.currentUser?.id;
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
-      debugPrint('📝 Submitting join request for hotel: $hotelId');
-
-      await _client.from('join_requests').insert({
-        'hotel_id': hotelId,
-        'user_id': userId,
-        'join_code_id': joinCodeId,
-        'status': 'pending',
-      });
-
-      debugPrint('✅ Join request submitted');
-    } catch (e) {
-      debugPrint('❌ Error submitting join request: $e');
-      rethrow;
     }
   }
 

@@ -11,22 +11,15 @@ Please use "npx supabase <command>" to use the CLI tools.
 
 ## Tables and Schema Updates (Onboarding Flow - December 2024)
 
-### New Columns:
+### Columns:
 - `hotels.hotel_code` - Unique code for each hotel (e.g., "taj-chennai")
 
-### New Tables:
-- `join_codes` - Temporary codes for employee onboarding
-  - Fields: id, hotel_id, code, expires_at, max_uses, current_uses, is_active, created_at, created_by
-  
-- `join_requests` - Pending employee approval requests
-  - Fields: id, hotel_id, user_id, join_code_id, status, requested_at, processed_at, processed_by, assigned_role, notes
-
-### New Functions:
-- `validate_join_code(p_hotel_code, p_join_code)` - Validates hotel and join codes
+### Functions:
 - `is_hotel_code_available(p_hotel_code)` - Checks if hotel code is taken
 - `get_hotel_by_code(p_hotel_code)` - Gets hotel details by code
 - `add_staff_to_hotel(p_hotel_id, p_user_id, p_role, p_created_by)` - Adds staff to hotel (bypasses RLS, verifies owner)
 
-Migration files:
+### Migration files:
 - `supabase/migrations/20241212_onboarding_schema.sql`
 - `supabase/migrations/20241213_add_staff_function.sql`
+- `supabase/migrations/20241222_remove_join_workflow.sql` - Removed join_codes, join_requests tables and validate_join_code function

@@ -130,36 +130,7 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
 
-                    // 3. Join a Hotel (Yellow) - For new employees
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          debugPrint('🔘 Join a Hotel button tapped');
-                          context.go(AppRoutes.joinHotel);
-                        },
-                        icon: Icon(Icons.person_add, color: AppColors.black),
-                        label: Text(
-                          'Join a Hotel',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.black,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.warning,
-                          foregroundColor: AppColors.black,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 2,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),

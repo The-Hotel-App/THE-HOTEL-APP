@@ -90,12 +90,25 @@ class StaffRepository {
     }
   }
 
-  /// Remove staff from hotel
-  Future<void> removeStaff(String staffId) async {
+  /// Remove staff from hotel completely
+  /// This deletes from hotel_staff and user_profiles if staff only works at this hotel
+  Future<void> removeStaff(String staffId, String hotelId) async {
     try {
-      debugPrint('📦 Removing staff: $staffId');
-      await _client.from('hotel_staff').delete().eq('id', staffId);
-      debugPrint('✅ Staff removed');
+      debugPrint('📦 Removing staff completely: $staffId from hotel: $hotelId');
+      
+      // Call the RPC function for complete deletion
+      final response = await _client.rpc('delete_staff_completely', params: {
+        'p_staff_id': staffId,
+        'p_hotel_id': hotelId,
+      });
+      
+      final result = response as Map<String, dynamic>;
+      
+      if (result['success'] == true) {
+        debugPrint('✅ ${result['message']}');
+      } else {
+        throw Exception(result['error'] ?? 'Failed to remove staff');
+      }
     } catch (e) {
       debugPrint('❌ Error removing staff: $e');
       rethrow;

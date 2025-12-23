@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/widgets/app_dialog.dart';
+import 'package:rooms/src/core/widgets/hotel_switcher_button.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 
 /// Owner Dashboard - Full access to all hotel features
@@ -52,10 +53,17 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
           children: [
             Icon(Icons.admin_panel_settings, size: 24),
             const SizedBox(width: 8),
-            Text(hotel?.hotelName ?? 'Owner Dashboard'),
+            Flexible(
+              child: Text(
+                hotel?.hotelName ?? 'Owner Dashboard',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         actions: [
+          // Hotel switcher for users with multiple hotels
+          const HotelSwitcherButton(),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => _showLogoutConfirmation(context),

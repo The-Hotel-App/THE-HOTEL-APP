@@ -10,14 +10,6 @@ abstract class AuthRepository {
     String? phone,
   });
 
-  /// Register a new user (for employee join flow)
-  Future<User> register({
-    required String email,
-    required String password,
-    required String name,
-    String? phone,
-  });
-
   /// Log in with email and password
   Future<User> login({required String email, required String password});
 
@@ -67,15 +59,6 @@ abstract class AuthRepository {
 
   /// Get hotel by hotel code
   Future<Map<String, dynamic>?> getHotelByCode(String hotelCode);
-
-  /// Validate join code
-  Future<Map<String, dynamic>> validateJoinCode(
-    String hotelCode,
-    String joinCode,
-  );
-
-  /// Submit join request
-  Future<void> submitJoinRequest({required String hotelId, String? joinCodeId});
 
   /// Check if hotel code is available
   Future<bool> isHotelCodeAvailable(String hotelCode);
