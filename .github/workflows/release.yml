@@ -130,7 +130,7 @@ jobs:
           CURRENT_RUN_ID=${{ github.run_id }}
 
           # Get workflow runs, skip the first one (current/latest)
-          RUNS=$(gh run list --workflow=build-apk.yml --repo ${{ github.repository }} --limit 100 --json databaseId,status --jq ".[] | select(.databaseId != $CURRENT_RUN_ID) | .databaseId")
+          RUNS=$(gh run list --workflow=release.yml --repo ${{ github.repository }} --limit 100 --json databaseId,status --jq ".[] | select(.databaseId != $CURRENT_RUN_ID) | .databaseId")
 
           for RUN_ID in $RUNS; do
             echo "Deleting workflow run: $RUN_ID"
