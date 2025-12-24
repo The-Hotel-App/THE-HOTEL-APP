@@ -17,7 +17,7 @@ class HotelSwitcherButton extends ConsumerWidget {
 
     return hotelsAsync.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (hotels) {
         // Always show the hotel switcher button (even with 1 hotel)
         // so users can see their hotel and add new ones
