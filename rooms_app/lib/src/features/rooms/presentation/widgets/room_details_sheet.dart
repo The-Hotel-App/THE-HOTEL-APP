@@ -273,7 +273,7 @@ class RoomDetailsSheet extends ConsumerWidget {
               : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isCurrentStatus ? data.color : AppColors.grey300,
+            color: Colors.black,
             width: isCurrentStatus ? 2 : 1,
           ),
         ),

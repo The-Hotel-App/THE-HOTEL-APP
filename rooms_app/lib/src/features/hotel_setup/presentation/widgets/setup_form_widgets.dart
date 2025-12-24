@@ -38,7 +38,7 @@ class SetupTextField extends StatelessWidget {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.grey300),
+          borderSide: BorderSide(color: Colors.black),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -73,7 +73,7 @@ class NumberSelector extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.grey300),
+        border: Border.all(color: Colors.black),
       ),
       child: Row(
         children: [
@@ -86,7 +86,7 @@ class NumberSelector extends StatelessWidget {
           const SizedBox(width: 16),
           Container(
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.grey300),
+              border: Border.all(color: Colors.black),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(

@@ -329,7 +329,7 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
       decoration: BoxDecoration(
         color: AppColors.warning.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+        border: Border.all(color: Colors.black),
       ),
       child: Row(
         children: [
@@ -378,7 +378,7 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.grey200),
+        border: Border.all(color: Colors.black),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -425,7 +425,7 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: color, width: 2),
+            border: Border.all(color: Colors.black, width: 2),
           ),
         ),
         const SizedBox(width: 4),
@@ -508,7 +508,6 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
         room.roomTypeId != null && room.roomTypeId != widget.roomType.id;
 
     Color tileColor;
-    Color borderColor;
     Color textColor;
 
     if (isSelected) {
@@ -516,24 +515,20 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
       final currentTypeColor =
           _roomTypeColorMap[widget.roomType.id] ?? AppColors.warning;
       tileColor = currentTypeColor.withValues(alpha: 0.3);
-      borderColor = currentTypeColor;
       textColor = currentTypeColor;
     } else if (isAssignedToOtherType && room.roomTypeId != null) {
       // Assigned to another room type - use that type's color
       final otherTypeColor =
           _roomTypeColorMap[room.roomTypeId!] ?? AppColors.grey400;
       tileColor = otherTypeColor.withValues(alpha: 0.15);
-      borderColor = otherTypeColor.withValues(alpha: 0.5);
       textColor = otherTypeColor;
     } else if (isAssignedToCurrentType && !isSelected) {
       // Originally assigned to current type but now deselected
       tileColor = AppColors.grey100;
-      borderColor = AppColors.grey300;
       textColor = AppColors.grey500;
     } else {
       // Unassigned
       tileColor = AppColors.white;
-      borderColor = AppColors.grey300;
       textColor = AppColors.black;
     }
 
@@ -545,7 +540,7 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
         decoration: BoxDecoration(
           color: tileColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: borderColor, width: 2),
+          border: Border.all(color: Colors.black, width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

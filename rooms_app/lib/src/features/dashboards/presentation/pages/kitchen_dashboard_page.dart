@@ -177,7 +177,7 @@ class _KitchenDashboardPageState extends ConsumerState<KitchenDashboardPage> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.grey300),
+        border: Border.all(color: Colors.black),
       ),
       child: Column(
         children: [
@@ -212,7 +212,7 @@ class _KitchenDashboardPageState extends ConsumerState<KitchenDashboardPage> {
             decoration: BoxDecoration(
               color: AppColors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.grey300),
+              border: Border.all(color: Colors.black),
             ),
             child: Row(
               children: [

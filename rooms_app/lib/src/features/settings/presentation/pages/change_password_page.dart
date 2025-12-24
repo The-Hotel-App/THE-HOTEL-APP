@@ -157,7 +157,7 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.error),
+          borderSide: const BorderSide(color: Colors.black),
         ),
       ),
     );

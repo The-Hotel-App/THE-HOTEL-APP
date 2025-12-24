@@ -143,7 +143,7 @@ class StaffMemberCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: roleColor.withValues(alpha: 0.3)),
+        border: Border.all(color: Colors.black),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),

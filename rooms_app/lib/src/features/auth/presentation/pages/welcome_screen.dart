@@ -471,15 +471,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.grey600),
+                borderSide: BorderSide(color: Colors.black),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.grey600),
+                borderSide: BorderSide(color: Colors.black),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.info, width: 2),
+                borderSide: BorderSide(color: Colors.black, width: 2),
               ),
               filled: true,
               fillColor: AppColors.grey900,
@@ -509,15 +509,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.grey600),
+                borderSide: BorderSide(color: Colors.black),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.grey600),
+                borderSide: BorderSide(color: Colors.black),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.info, width: 2),
+                borderSide: BorderSide(color: Colors.black, width: 2),
               ),
               filled: true,
               fillColor: AppColors.grey900,
@@ -778,7 +778,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                 decoration: BoxDecoration(
                   color: AppColors.grey800,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.grey600),
+                  border: Border.all(color: Colors.black),
                 ),
                 child: Text(
                   account['label']!,

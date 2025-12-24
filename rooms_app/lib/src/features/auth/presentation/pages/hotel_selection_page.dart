@@ -507,7 +507,7 @@ class _HotelCard extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.grey200, width: 1),
+              border: Border.all(color: Colors.black, width: 1),
             ),
             child: Row(
               children: [

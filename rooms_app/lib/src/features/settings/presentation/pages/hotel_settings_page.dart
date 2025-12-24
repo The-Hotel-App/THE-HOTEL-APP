@@ -493,7 +493,7 @@ class _HotelSettingsPageState extends ConsumerState<HotelSettingsPage> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.black),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),

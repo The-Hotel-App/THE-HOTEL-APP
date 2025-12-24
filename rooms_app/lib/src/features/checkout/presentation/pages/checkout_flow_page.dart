@@ -255,10 +255,7 @@ class _CheckoutFlowPageState extends ConsumerState<CheckoutFlowPage> {
         decoration: BoxDecoration(
           color: isSelected ? color : AppColors.grey100,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? color : AppColors.grey200,
-            width: isSelected ? 2 : 1,
-          ),
+          border: Border.all(color: Colors.black, width: isSelected ? 2 : 1),
         ),
         child: Column(
           children: [

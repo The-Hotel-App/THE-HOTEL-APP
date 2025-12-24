@@ -225,9 +225,7 @@ class _CreateStaffPageState extends ConsumerState<CreateStaffPage> {
             decoration: BoxDecoration(
               color: isSelected ? AppColors.black : AppColors.grey100,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected ? AppColors.black : AppColors.grey300,
-              ),
+              border: Border.all(color: Colors.black),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

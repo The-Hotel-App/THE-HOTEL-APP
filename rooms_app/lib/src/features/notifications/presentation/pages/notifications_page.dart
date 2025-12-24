@@ -411,9 +411,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
           color: notification.isRead ? AppColors.white : AppColors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: notification.isRead
-                ? AppColors.grey200
-                : color.withValues(alpha: 0.3),
+            color: Colors.black,
             width: notification.isRead ? 1 : 2,
           ),
         ),

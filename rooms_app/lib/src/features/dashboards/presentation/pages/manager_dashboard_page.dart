@@ -247,7 +247,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.3), width: 2),
+          border: Border.all(color: Colors.black, width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -280,12 +280,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: hasBiometric
-                ? AppColors.success.withValues(alpha: 0.3)
-                : AppColors.grey600.withValues(alpha: 0.3),
-            width: 2,
-          ),
+          border: Border.all(color: Colors.black, width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

@@ -332,7 +332,7 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: Colors.black),
       ),
       child: Row(
         children: [
@@ -451,10 +451,7 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
       decoration: BoxDecoration(
         color: isSelected ? color.withValues(alpha: 0.1) : AppColors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isSelected ? color : color.withValues(alpha: 0.3),
-          width: isSelected ? 2 : 1,
-        ),
+        border: Border.all(color: Colors.black, width: isSelected ? 2 : 1),
       ),
       child: Row(
         children: [
@@ -948,10 +945,7 @@ class _AddTransactionDialogState extends ConsumerState<_AddTransactionDialog> {
         decoration: BoxDecoration(
           color: isSelected ? color.withValues(alpha: 0.15) : AppColors.grey100,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? color : AppColors.grey300,
-            width: isSelected ? 2 : 1,
-          ),
+          border: Border.all(color: Colors.black, width: isSelected ? 2 : 1),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
