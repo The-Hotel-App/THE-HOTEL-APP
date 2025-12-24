@@ -129,7 +129,7 @@ class RoomDetailsSheet extends ConsumerWidget {
         label = 'CHECK IN';
         onTap = () {
           Navigator.pop(context);
-          context.push(AppRoutes.checkin, extra: room);
+          context.push(AppRoutes.bookingSearch);
         };
         break;
       case RoomStatus.occupied:

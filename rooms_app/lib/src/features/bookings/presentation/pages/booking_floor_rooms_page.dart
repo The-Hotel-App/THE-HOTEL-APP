@@ -264,7 +264,7 @@ class BookingFloorRoomsPage extends StatelessWidget {
   }
 
   void _selectRoom(BuildContext context, ManagedRoom room) {
-    // Navigate to check-in flow with selected room
-    context.push(AppRoutes.checkin, extra: room.toRoom());
+    // Navigate to new booking page
+    context.push(AppRoutes.bookingSearch);
   }
 }

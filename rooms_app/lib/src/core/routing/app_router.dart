@@ -12,7 +12,7 @@ import 'package:rooms/src/features/auth/presentation/providers/auth_providers_ne
     as auth_new;
 import 'package:rooms/src/features/bookings/presentation/pages/bookings_page.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/new_booking_page.dart';
-import 'package:rooms/src/features/checkin/presentation/pages/checkin_flow_page.dart';
+
 import 'package:rooms/src/features/checkout/presentation/pages/checkout_flow_page.dart';
 import 'package:rooms/src/features/customers/presentation/pages/customers_page.dart';
 import 'package:rooms/src/features/dashboards/presentation/pages/kitchen_dashboard_page.dart';
@@ -42,7 +42,7 @@ class AppRoutes {
   static const String home = '/';
   static const String mainShell = '/main'; // New: unified bottom nav shell
   static const String rooms = '/rooms';
-  static const String checkin = '/checkin';
+
   static const String checkout = '/checkout';
   static const String bookings = '/bookings';
   static const String customers = '/customers';
@@ -100,7 +100,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == AppRoutes.signup ||
           state.matchedLocation == AppRoutes.createHotel ||
           state.matchedLocation == AppRoutes.bookingSearch ||
-          state.matchedLocation == AppRoutes.checkin;
+          state.matchedLocation == AppRoutes.bookingSearch;
 
       // If on a public route, allow access without any restrictions
       // This includes allowing logout to navigate to welcome even if auth is loading
@@ -321,31 +321,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           transitionDuration: const Duration(milliseconds: 200),
         ),
       ),
-      GoRoute(
-        path: AppRoutes.checkin,
-        pageBuilder: (context, state) {
-          final room = state.extra as Room;
-          return CustomTransitionPage(
-            key: state.pageKey,
-            child: CheckinFlowPage(room: room),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-                  const begin = Offset(1.0, 0.0);
-                  const end = Offset.zero;
-                  const curve = Curves.easeInOut;
-                  final tween = Tween(
-                    begin: begin,
-                    end: end,
-                  ).chain(CurveTween(curve: curve));
-                  return SlideTransition(
-                    position: animation.drive(tween),
-                    child: child,
-                  );
-                },
-            transitionDuration: const Duration(milliseconds: 200),
-          );
-        },
-      ),
+
       GoRoute(
         path: AppRoutes.checkout,
         pageBuilder: (context, state) {
