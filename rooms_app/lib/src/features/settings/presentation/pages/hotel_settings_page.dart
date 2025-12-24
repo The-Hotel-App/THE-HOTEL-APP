@@ -1,8 +1,131 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/services/supabase_service.dart';
+import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
+import 'package:rooms/src/features/hotel_setup/data/repositories/supabase_hotel_setup_repository.dart';
+import 'package:rooms/src/features/hotel_setup/domain/entities/hotel_new.dart';
 
-class HotelSettingsPage extends StatelessWidget {
+class HotelSettingsPage extends ConsumerStatefulWidget {
   const HotelSettingsPage({super.key});
+
+  @override
+  ConsumerState<HotelSettingsPage> createState() => _HotelSettingsPageState();
+}
+
+class _HotelSettingsPageState extends ConsumerState<HotelSettingsPage> {
+  Hotel? _hotel;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHotel();
+  }
+
+  Future<void> _loadHotel() async {
+    final currentHotel = ref.read(currentHotelProvider);
+    if (currentHotel == null) {
+      setState(() {
+        _error = 'No hotel selected';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      setState(() => _isLoading = true);
+      final repository = SupabaseHotelSetupRepository();
+      final hotel = await repository.getHotel(currentHotel.hotelId);
+      setState(() {
+        _hotel = hotel;
+        _isLoading = false;
+        _error = null;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _updateHotelField(String field, dynamic value) async {
+    if (_hotel == null) return;
+
+    try {
+      final client = SupabaseService.instance.client;
+      await client.from('hotels').update({field: value}).eq('id', _hotel!.id);
+      
+      // Refresh hotel data
+      await _loadHotel();
+      
+      // Invalidate providers to refresh everywhere
+      ref.invalidate(userHotelsProvider);
+      ref.invalidate(currentHotelProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Updated successfully'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showEditDialog({
+    required String title,
+    required String field,
+    required String currentValue,
+    int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    final controller = TextEditingController(text: currentValue);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Edit $title'),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            labelText: title,
+            border: const OutlineInputBorder(),
+          ),
+          maxLines: maxLines,
+          keyboardType: keyboardType,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _updateHotelField(field, controller.text.trim());
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.black),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,130 +135,202 @@ class HotelSettingsPage extends StatelessWidget {
         title: const Text('Hotel Settings'),
         backgroundColor: AppColors.black,
         foregroundColor: AppColors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadHotel,
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Header Card
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: AppColors.grey700.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.business,
-                    color: AppColors.grey700,
-                    size: 32,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Hotel Configuration',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Manage hotel details and preferences',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
+      body: _buildBody(),
+    );
+  }
 
-          // Settings Sections
-          _buildSectionTitle('Basic Information'),
-          const SizedBox(height: 8),
-          _buildSettingCard(
-            icon: Icons.hotel,
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: AppColors.error),
+            const SizedBox(height: 16),
+            Text('Error: $_error'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadHotel,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_hotel == null) {
+      return const Center(child: Text('Hotel not found'));
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Header Card
+        _buildHeaderCard(),
+        const SizedBox(height: 24),
+
+        // Basic Information
+        _buildSectionTitle('Basic Information'),
+        const SizedBox(height: 12),
+        _buildEditableCard(
+          icon: Icons.hotel,
+          title: 'Hotel Name',
+          value: _hotel!.name,
+          onTap: () => _showEditDialog(
             title: 'Hotel Name',
-            subtitle: 'Update your hotel name',
-            color: AppColors.black,
+            field: 'name',
+            currentValue: _hotel!.name,
           ),
-          const SizedBox(height: 8),
-          _buildSettingCard(
-            icon: Icons.location_on,
+        ),
+        const SizedBox(height: 8),
+        _buildEditableCard(
+          icon: Icons.location_on,
+          title: 'Address',
+          value: _hotel!.address,
+          onTap: () => _showEditDialog(
             title: 'Address',
-            subtitle: 'Update hotel address',
-            color: AppColors.black,
+            field: 'address',
+            currentValue: _hotel!.address,
+            maxLines: 2,
           ),
-          const SizedBox(height: 8),
-          _buildSettingCard(
-            icon: Icons.phone,
-            title: 'Contact Information',
-            subtitle: 'Phone and email details',
-            color: AppColors.black,
-          ),
-          const SizedBox(height: 20),
+        ),
+        const SizedBox(height: 24),
 
-          _buildSectionTitle('Room Configuration'),
-          const SizedBox(height: 8),
-          _buildSettingCard(
-            icon: Icons.meeting_room,
-            title: 'Room Types',
-            subtitle: 'Manage room categories',
-            color: AppColors.info,
+        // Contact Information
+        _buildSectionTitle('Contact Information'),
+        const SizedBox(height: 12),
+        _buildEditableCard(
+          icon: Icons.phone,
+          title: 'Phone',
+          value: _hotel!.phone ?? 'Not set',
+          onTap: () => _showEditDialog(
+            title: 'Phone',
+            field: 'phone',
+            currentValue: _hotel!.phone ?? '',
+            keyboardType: TextInputType.phone,
           ),
-          const SizedBox(height: 8),
-          _buildSettingCard(
-            icon: Icons.attach_money,
-            title: 'Pricing',
-            subtitle: 'Default room rates',
-            color: AppColors.info,
+        ),
+        const SizedBox(height: 8),
+        _buildEditableCard(
+          icon: Icons.email,
+          title: 'Email',
+          value: _hotel!.email ?? 'Not set',
+          onTap: () => _showEditDialog(
+            title: 'Email',
+            field: 'email',
+            currentValue: _hotel!.email ?? '',
+            keyboardType: TextInputType.emailAddress,
           ),
-          const SizedBox(height: 20),
+        ),
+        const SizedBox(height: 24),
 
-          _buildSectionTitle('Business Settings'),
-          const SizedBox(height: 8),
-          _buildSettingCard(
-            icon: Icons.access_time,
-            title: 'Check-in/Check-out Times',
-            subtitle: 'Set standard timings',
-            color: AppColors.success,
+        // Property Details
+        _buildSectionTitle('Property Details'),
+        const SizedBox(height: 12),
+        _buildInfoCard(
+          icon: Icons.layers,
+          title: 'Total Floors',
+          value: '${_hotel!.totalFloors}',
+        ),
+        const SizedBox(height: 8),
+        _buildInfoCard(
+          icon: Icons.bed,
+          title: 'Total Rooms',
+          value: '${_hotel!.totalRooms}',
+        ),
+        const SizedBox(height: 24),
+
+        // Quick Actions
+        _buildSectionTitle('Room Management'),
+        const SizedBox(height: 12),
+        _buildActionCard(
+          icon: Icons.category,
+          title: 'Room Types',
+          subtitle: 'Manage room categories and pricing',
+          color: AppColors.info,
+          onTap: () => context.push('/room-types'),
+        ),
+        const SizedBox(height: 8),
+        _buildActionCard(
+          icon: Icons.meeting_room,
+          title: 'Rooms',
+          subtitle: 'Add, edit, or remove rooms',
+          color: AppColors.info,
+          onTap: () => context.push('/rooms-management'),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildHeaderCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.black, AppColors.grey700],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
-          const SizedBox(height: 8),
-          _buildSettingCard(
-            icon: Icons.policy,
-            title: 'Policies',
-            subtitle: 'Cancellation and refund policies',
-            color: AppColors.success,
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: AppColors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.business, color: AppColors.white, size: 32),
           ),
-          const SizedBox(height: 8),
-          _buildSettingCard(
-            icon: Icons.receipt_long,
-            title: 'Tax Settings',
-            subtitle: 'Configure tax rates',
-            color: AppColors.success,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _hotel?.name ?? 'Hotel',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${_hotel?.totalRooms ?? 0} Rooms • ${_hotel?.totalFloors ?? 0} Floors',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.white.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -156,11 +351,102 @@ class HotelSettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSettingCard({
+  Widget _buildEditableCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: AppColors.warning.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: AppColors.warning, size: 22),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontSize: 13, color: AppColors.grey600),
+        ),
+        subtitle: Text(
+          value,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
+        trailing: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.grey100,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.edit, size: 18, color: AppColors.grey600),
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  Widget _buildInfoCard({
+    required IconData icon,
+    required String title,
+    required String value,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: AppColors.success.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: AppColors.success, size: 22),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontSize: 13, color: AppColors.grey600),
+        ),
+        subtitle: Text(
+          value,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionCard({
     required IconData icon,
     required String title,
     required String subtitle,
     required Color color,
+    required VoidCallback onTap,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -194,10 +480,8 @@ class HotelSettingsPage extends StatelessWidget {
           subtitle,
           style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
         ),
-        trailing: Icon(Icons.chevron_right, color: AppColors.grey600),
-        onTap: () {
-          // TODO: Navigate to specific setting
-        },
+        trailing: Icon(Icons.chevron_right, color: color),
+        onTap: onTap,
       ),
     );
   }

@@ -36,4 +36,10 @@ abstract class DayBookRepository {
   /// Updates the daybook closing balance accordingly.
   /// Only owners should be allowed to delete transactions.
   Future<void> deleteTransaction(Transaction transaction);
+
+  /// Update the opening balance for today's daybook
+  ///
+  /// Also updates the closing balance by the same difference.
+  /// Only owners should be allowed to update opening balance.
+  Future<void> updateOpeningBalance(String daybookId, double newOpeningBalance);
 }

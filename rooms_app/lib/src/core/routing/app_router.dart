@@ -19,6 +19,7 @@ import 'package:rooms/src/features/dashboards/presentation/pages/manager_dashboa
 import 'package:rooms/src/features/dashboards/presentation/pages/owner_dashboard_page.dart';
 import 'package:rooms/src/features/dashboards/presentation/pages/staff_dashboard_page.dart';
 import 'package:rooms/src/features/daybook/presentation/pages/daybook_page.dart';
+import 'package:rooms/src/features/hotel_setup/presentation/pages/add_hotel_page.dart';
 import 'package:rooms/src/features/hotel_setup/presentation/pages/hotel_setup_wizard_page.dart';
 import 'package:rooms/src/features/notifications/presentation/pages/notifications_page.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
@@ -58,6 +59,7 @@ class AppRoutes {
   static const String createStaff = '/create-staff';
   static const String roomTypes = '/room-types';
   static const String roomsManagement = '/rooms-management';
+  static const String addHotel = '/add-hotel';
 }
 
 // NOTE: We intentionally do NOT use refreshListenable tied to auth state.
@@ -617,6 +619,26 @@ final routerProvider = Provider<GoRouter>((ref) {
             );
           },
           transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.addHotel,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const AddHotelPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(0.0, 1.0);
+            const end = Offset.zero;
+            final tween = Tween(
+              begin: begin,
+              end: end,
+            ).chain(CurveTween(curve: Curves.easeInOut));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 300),
         ),
       ),
     ],

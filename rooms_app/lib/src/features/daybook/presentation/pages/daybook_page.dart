@@ -201,14 +201,14 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
-        _buildSummaryCard(summary),
+        _buildSummaryCard(summary, isOwner),
         const SizedBox(height: 24),
         _buildTransactionsList(context, summary.transactions, isOwner),
       ],
     );
   }
 
-  Widget _buildSummaryCard(DayBookSummary summary) {
+  Widget _buildSummaryCard(DayBookSummary summary, bool isOwner) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -241,10 +241,14 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
           Row(
             children: [
               Expanded(
-                child: _buildBalanceItem(
-                  'Opening',
-                  summary.openingBalance,
-                  AppColors.grey600,
+                child: GestureDetector(
+                  onTap: isOwner ? () => _showEditOpeningBalance(summary) : null,
+                  child: _buildBalanceItem(
+                    'Opening',
+                    summary.openingBalance,
+                    AppColors.grey600,
+                    isEditable: isOwner,
+                  ),
                 ),
               ),
               Container(width: 1, height: 50, color: AppColors.grey300),
@@ -284,12 +288,22 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
     );
   }
 
-  Widget _buildBalanceItem(String label, double amount, Color color) {
+  Widget _buildBalanceItem(String label, double amount, Color color, {bool isEditable = false}) {
     return Column(
       children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            ),
+            if (isEditable) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.edit, size: 12, color: AppColors.textSecondary),
+            ],
+          ],
         ),
         const SizedBox(height: 4),
         Text(
@@ -502,6 +516,98 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
       backgroundColor: Colors.transparent,
       builder: (context) => _AddTransactionDialog(ref: ref),
     );
+  }
+
+  void _showEditOpeningBalance(DayBookSummary summary) {
+    final controller = TextEditingController(
+      text: summary.openingBalance.toStringAsFixed(0),
+    );
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Opening Balance'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Current: ₹${summary.openingBalance.toStringAsFixed(0)}',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'New Opening Balance',
+                prefixText: '₹ ',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'The closing balance will be adjusted accordingly.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newBalance = double.tryParse(controller.text);
+              if (newBalance == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Please enter a valid number'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+              
+              Navigator.pop(context);
+              await _updateOpeningBalance(summary.id!, newBalance);
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _updateOpeningBalance(String daybookId, double newBalance) async {
+    try {
+      final repo = ref.read(dayBookRepositoryProvider);
+      await repo.updateOpeningBalance(daybookId, newBalance);
+      
+      ref.invalidate(todayDayBookProvider);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Opening balance updated to ₹${newBalance.toStringAsFixed(0)}'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   String _formatDate(DateTime date) {

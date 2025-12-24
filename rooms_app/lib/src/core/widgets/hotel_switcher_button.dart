@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
@@ -78,6 +79,10 @@ class HotelSwitcherButton extends ConsumerWidget {
             ref.invalidate(currentHotelProvider);
           }
         },
+        onAddNewHotel: () {
+          Navigator.pop(context);
+          context.push('/add-hotel');
+        },
       ),
     );
   }
@@ -88,11 +93,13 @@ class _HotelSwitcherSheet extends StatelessWidget {
   final List<UserHotel> hotels;
   final String? currentHotelId;
   final void Function(UserHotel hotel) onSelect;
+  final VoidCallback onAddNewHotel;
 
   const _HotelSwitcherSheet({
     required this.hotels,
     required this.currentHotelId,
     required this.onSelect,
+    required this.onAddNewHotel,
   });
 
   Color _getRoleColor(UserRole role) {
@@ -216,6 +223,41 @@ class _HotelSwitcherSheet extends StatelessWidget {
                         : const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.grey400),
                   );
                 },
+              ),
+            ),
+            
+            const Divider(height: 1),
+            
+            // Add New Hotel button
+            ListTile(
+              onTap: onAddNewHotel,
+              leading: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.add_business,
+                  color: AppColors.warning,
+                ),
+              ),
+              title: const Text(
+                'Add New Hotel',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.warning,
+                ),
+              ),
+              subtitle: const Text(
+                'Set up another hotel property',
+                style: TextStyle(fontSize: 12),
+              ),
+              trailing: const Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: AppColors.warning,
               ),
             ),
             

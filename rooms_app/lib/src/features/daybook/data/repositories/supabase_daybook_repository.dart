@@ -294,4 +294,45 @@ class SupabaseDayBookRepository implements DayBookRepository {
       rethrow;
     }
   }
+
+  @override
+  Future<void> updateOpeningBalance(String daybookId, double newOpeningBalance) async {
+    try {
+      AppLogger.info(
+        'Updating opening balance to ₹${newOpeningBalance.toStringAsFixed(0)}',
+        tag: 'DayBook',
+      );
+
+      // Get current balances
+      final daybook = await _client
+          .from('daybooks')
+          .select('opening_balance, closing_balance')
+          .eq('id', daybookId)
+          .single();
+
+      final currentOpening = (daybook['opening_balance'] as num).toDouble();
+      final currentClosing = (daybook['closing_balance'] as num).toDouble();
+      
+      // Calculate the difference and apply to closing balance
+      final difference = newOpeningBalance - currentOpening;
+      final newClosing = currentClosing + difference;
+
+      // Update both opening and closing balance
+      await _client
+          .from('daybooks')
+          .update({
+            'opening_balance': newOpeningBalance,
+            'closing_balance': newClosing,
+          })
+          .eq('id', daybookId);
+
+      AppLogger.success(
+        'Updated opening balance: $currentOpening -> $newOpeningBalance, closing: $currentClosing -> $newClosing',
+        tag: 'DayBook',
+      );
+    } catch (e) {
+      AppLogger.error('Error updating opening balance', tag: 'DayBook', error: e);
+      rethrow;
+    }
+  }
 }
