@@ -111,7 +111,7 @@ class BookingCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         // Show room numbers
                         Text(
-                          roomCount > 1 
+                          roomCount > 1
                               ? 'Rooms: ${booking.allRoomNumbers}'
                               : 'Room ${booking.allRoomNumbers}',
                           style: TextStyle(
@@ -296,7 +296,6 @@ class BookingCard extends StatelessWidget {
   }
 }
 
-
 /// Booking details bottom sheet - shows all rooms, guests, and payment info
 class BookingDetailsSheet extends StatelessWidget {
   final Booking booking;
@@ -360,24 +359,24 @@ class BookingDetailsSheet extends StatelessWidget {
               children: [
                 _buildHeader(statusColor),
                 const SizedBox(height: 24),
-                
+
                 // Rooms Section
                 _buildSectionTitle('Rooms', Icons.bed),
                 const SizedBox(height: 12),
                 _buildRoomsSection(statusColor),
                 const SizedBox(height: 24),
-                
+
                 // Guests Section
                 _buildSectionTitle('Guests', Icons.people),
                 const SizedBox(height: 12),
                 _buildGuestsSection(),
                 const SizedBox(height: 24),
-                
+
                 // Stay Details Section
                 _buildSectionTitle('Stay Details', Icons.calendar_today),
                 const SizedBox(height: 12),
                 _buildStayDetailsSection(),
-                
+
                 // Payment Section
                 if (canViewMoney) ...[
                   const SizedBox(height: 24),
@@ -385,13 +384,13 @@ class BookingDetailsSheet extends StatelessWidget {
                   const SizedBox(height: 12),
                   _buildPaymentSection(),
                 ],
-                
+
                 // Payment action buttons for pending payments
                 if (hasPendingPayment && canViewMoney) ...[
                   const SizedBox(height: 24),
                   _buildPaymentActions(context),
                 ],
-                
+
                 const SizedBox(height: 24),
               ],
             ),
@@ -419,9 +418,15 @@ class BookingDetailsSheet extends StatelessWidget {
   }
 
   Widget _buildRoomsSection(Color statusColor) {
-    final rooms = booking.rooms.isNotEmpty 
-        ? booking.rooms 
-        : [BookingRoom(roomId: booking.roomId, roomNumber: booking.roomNumber, roomPrice: booking.totalAmount)];
+    final rooms = booking.rooms.isNotEmpty
+        ? booking.rooms
+        : [
+            BookingRoom(
+              roomId: booking.roomId,
+              roomNumber: booking.roomNumber,
+              roomPrice: booking.totalAmount,
+            ),
+          ];
 
     return Container(
       decoration: BoxDecoration(
@@ -491,9 +496,17 @@ class BookingDetailsSheet extends StatelessWidget {
   }
 
   Widget _buildGuestsSection() {
-    final guests = booking.guests.isNotEmpty 
-        ? booking.guests 
-        : [BookingGuest(guestId: booking.customerId, name: booking.customerName, phone: booking.customerPhone, email: booking.customerEmail, isPrimary: true)];
+    final guests = booking.guests.isNotEmpty
+        ? booking.guests
+        : [
+            BookingGuest(
+              guestId: booking.customerId,
+              name: booking.customerName,
+              phone: booking.customerPhone,
+              email: booking.customerEmail,
+              isPrimary: true,
+            ),
+          ];
 
     return Container(
       decoration: BoxDecoration(
@@ -515,7 +528,9 @@ class BookingDetailsSheet extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: guest.isPrimary ? AppColors.info : AppColors.grey400,
+                  backgroundColor: guest.isPrimary
+                      ? AppColors.info
+                      : AppColors.grey400,
                   child: Text(
                     guest.name.isNotEmpty ? guest.name[0].toUpperCase() : '?',
                     style: const TextStyle(
@@ -542,7 +557,10 @@ class BookingDetailsSheet extends StatelessWidget {
                           if (guest.isPrimary) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.info.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(4),
@@ -562,7 +580,11 @@ class BookingDetailsSheet extends StatelessWidget {
                       if (guest.phone != null && guest.phone!.isNotEmpty)
                         Row(
                           children: [
-                            Icon(Icons.phone, size: 12, color: AppColors.textSecondary),
+                            Icon(
+                              Icons.phone,
+                              size: 12,
+                              color: AppColors.textSecondary,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               guest.phone!,
@@ -576,7 +598,11 @@ class BookingDetailsSheet extends StatelessWidget {
                       if (guest.idType != null && guest.idNumber != null)
                         Row(
                           children: [
-                            Icon(Icons.badge, size: 12, color: AppColors.textSecondary),
+                            Icon(
+                              Icons.badge,
+                              size: 12,
+                              color: AppColors.textSecondary,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               '${guest.idType}: ${guest.idNumber}',
@@ -607,13 +633,29 @@ class BookingDetailsSheet extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildDetailRow(Icons.login, 'Check In', _formatDateFull(booking.checkIn)),
+          _buildDetailRow(
+            Icons.login,
+            'Check In',
+            _formatDateFull(booking.checkIn),
+          ),
           const SizedBox(height: 12),
-          _buildDetailRow(Icons.logout, 'Check Out', _formatDateFull(booking.checkOut)),
+          _buildDetailRow(
+            Icons.logout,
+            'Check Out',
+            _formatDateFull(booking.checkOut),
+          ),
           const SizedBox(height: 12),
-          _buildDetailRow(Icons.nights_stay, 'Duration', '${booking.stayDuration} night(s)'),
+          _buildDetailRow(
+            Icons.nights_stay,
+            'Duration',
+            '${booking.stayDuration} night(s)',
+          ),
           const SizedBox(height: 12),
-          _buildDetailRow(Icons.people, 'Total Guests', '${booking.guestCount}'),
+          _buildDetailRow(
+            Icons.people,
+            'Total Guests',
+            '${booking.guestCount}',
+          ),
         ],
       ),
     );
@@ -621,7 +663,7 @@ class BookingDetailsSheet extends StatelessWidget {
 
   Widget _buildPaymentSection() {
     final paymentColor = _getPaymentColor(booking.paymentStatus);
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -636,7 +678,10 @@ class BookingDetailsSheet extends StatelessWidget {
               const Text('Total Amount', style: TextStyle(fontSize: 14)),
               Text(
                 '₹${booking.totalAmount.toStringAsFixed(0)}',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -647,7 +692,11 @@ class BookingDetailsSheet extends StatelessWidget {
               const Text('Paid', style: TextStyle(fontSize: 14)),
               Text(
                 '₹${booking.paidAmount.toStringAsFixed(0)}',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.success),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.success,
+                ),
               ),
             ],
           ),
@@ -659,7 +708,11 @@ class BookingDetailsSheet extends StatelessWidget {
                 const Text('Pending', style: TextStyle(fontSize: 14)),
                 Text(
                   '₹${booking.pendingAmount.toStringAsFixed(0)}',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.error),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.error,
+                  ),
                 ),
               ],
             ),
@@ -779,7 +832,7 @@ class BookingDetailsSheet extends StatelessWidget {
 
   Widget _buildHeader(Color statusColor) {
     final roomCount = booking.rooms.isNotEmpty ? booking.rooms.length : 1;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -838,7 +891,10 @@ class BookingDetailsSheet extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: statusColor,
                         borderRadius: BorderRadius.circular(4),
@@ -855,7 +911,10 @@ class BookingDetailsSheet extends StatelessWidget {
                     if (!booking.isFullyPaid) ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.warning.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(4),
@@ -887,18 +946,12 @@ class BookingDetailsSheet extends StatelessWidget {
         const SizedBox(width: 12),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 14,
-            color: AppColors.textSecondary,
-          ),
+          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
         ),
         const Spacer(),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
       ],
     );
@@ -931,7 +984,20 @@ class BookingDetailsSheet extends StatelessWidget {
   }
 
   String _formatDateFull(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }

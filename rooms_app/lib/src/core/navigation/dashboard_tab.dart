@@ -28,7 +28,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   Widget build(BuildContext context) {
     final hotel = ref.watch(currentHotelProvider);
     final userAsync = ref.watch(currentUserProvider);
-    
+
     // Show loading while hotel/user is loading to prevent staff view flash
     if (hotel == null) {
       return Scaffold(
@@ -50,7 +50,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-    
+
     final user = userAsync.valueOrNull;
     final role = hotel.role;
     final roomsAsync = ref.watch(roomsProvider);
@@ -68,16 +68,11 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
             ),
             const SizedBox(width: 12),
             Flexible(
-              child: Text(
-                hotel.hotelName,
-                overflow: TextOverflow.ellipsis,
-              ),
+              child: Text(hotel.hotelName, overflow: TextOverflow.ellipsis),
             ),
           ],
         ),
-        actions: [
-          const HotelSwitcherButton(),
-        ],
+        actions: [const HotelSwitcherButton()],
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
@@ -137,11 +132,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
           CircleAvatar(
             radius: 30,
             backgroundColor: AppColors.grey100,
-            child: Icon(
-              _getRoleIcon(role),
-              color: AppColors.grey800,
-              size: 32,
-            ),
+            child: Icon(_getRoleIcon(role), color: AppColors.grey800, size: 32),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -264,7 +255,11 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   }
 
   Widget _buildStatCard(
-      String label, String value, IconData icon, Color color) {
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -293,10 +288,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
           const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -407,10 +399,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
           Icon(Icons.error_outline, color: AppColors.error),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: AppColors.error),
-            ),
+            child: Text(message, style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),

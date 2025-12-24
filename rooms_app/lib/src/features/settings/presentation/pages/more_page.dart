@@ -157,11 +157,7 @@ class MorePage extends ConsumerWidget {
           CircleAvatar(
             radius: 28,
             backgroundColor: AppColors.grey100,
-            child: Icon(
-              _getRoleIcon(role),
-              color: AppColors.grey800,
-              size: 28,
-            ),
+            child: Icon(_getRoleIcon(role), color: AppColors.grey800, size: 28),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -279,10 +275,7 @@ class MorePage extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.chevron_right,
-                  color: AppColors.grey500,
-                ),
+                Icon(Icons.chevron_right, color: AppColors.grey500),
               ],
             ),
           ),
@@ -299,20 +292,20 @@ class MorePage extends ConsumerWidget {
       primaryButtonText: 'Logout',
       onPrimaryPressed: () async {
         Navigator.pop(context); // Close dialog
-        
+
         // IMPORTANT: Navigate to welcome FIRST before any state changes
         // This prevents the MainShell from re-rendering with different hotel
         if (context.mounted) {
           context.go(AppRoutes.welcome);
         }
-        
+
         // Now clear state after navigation has started
         // Use Future.delayed to ensure navigation is in progress
         await Future.delayed(const Duration(milliseconds: 100));
-        
+
         // Clear hotel selection
         ref.read(selectedHotelIdProvider.notifier).state = null;
-        
+
         // Perform logout
         await ref.read(authRepositoryProvider).logout();
       },

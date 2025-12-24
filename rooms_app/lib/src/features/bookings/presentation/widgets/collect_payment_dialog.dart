@@ -12,10 +12,7 @@ import 'package:rooms/src/features/daybook/presentation/providers/daybook_provid
 class CollectPaymentDialog extends ConsumerStatefulWidget {
   final Booking booking;
 
-  const CollectPaymentDialog({
-    super.key,
-    required this.booking,
-  });
+  const CollectPaymentDialog({super.key, required this.booking});
 
   /// Show the collect payment dialog - returns the collected amount or null if cancelled
   static Future<double?> show(BuildContext context, Booking booking) {
@@ -28,7 +25,8 @@ class CollectPaymentDialog extends ConsumerStatefulWidget {
   }
 
   @override
-  ConsumerState<CollectPaymentDialog> createState() => _CollectPaymentDialogState();
+  ConsumerState<CollectPaymentDialog> createState() =>
+      _CollectPaymentDialogState();
 }
 
 class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
@@ -132,8 +130,15 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
                 ),
                 child: Column(
                   children: [
-                    _buildSummaryRow('Total Amount', '₹${widget.booking.totalAmount.toStringAsFixed(0)}'),
-                    _buildSummaryRow('Already Paid', '₹${widget.booking.paidAmount.toStringAsFixed(0)}', color: AppColors.success),
+                    _buildSummaryRow(
+                      'Total Amount',
+                      '₹${widget.booking.totalAmount.toStringAsFixed(0)}',
+                    ),
+                    _buildSummaryRow(
+                      'Already Paid',
+                      '₹${widget.booking.paidAmount.toStringAsFixed(0)}',
+                      color: AppColors.success,
+                    ),
                     const Divider(height: 16),
                     _buildSummaryRow(
                       'Pending',
@@ -148,15 +153,14 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
               // Amount input
               const Text(
                 'Amount to Collect',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 autofocus: true,
                 decoration: InputDecoration(
                   prefixText: '₹ ',
@@ -164,7 +168,10 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                 ),
                 onChanged: (_) => setState(() {}),
               ),
@@ -176,7 +183,8 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
                 children: [
                   _buildQuickAmountButton('Full', pendingAmount),
                   _buildQuickAmountButton('Half', pendingAmount / 2),
-                  if (pendingAmount > 1000) _buildQuickAmountButton('₹1000', 1000),
+                  if (pendingAmount > 1000)
+                    _buildQuickAmountButton('₹1000', 1000),
                   if (pendingAmount > 500) _buildQuickAmountButton('₹500', 500),
                 ],
               ),
@@ -184,10 +192,7 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
               // Payment mode
               const Text(
                 'Payment Mode',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 12),
               _buildPaymentModeSelector(),
@@ -197,7 +202,9 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _isProcessing ? null : () => Navigator.pop(context, null),
+                      onPressed: _isProcessing
+                          ? null
+                          : () => Navigator.pop(context, null),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         side: const BorderSide(color: AppColors.grey400),
@@ -212,7 +219,9 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
                   Expanded(
                     flex: 2,
                     child: ElevatedButton(
-                      onPressed: _isProcessing || amount <= 0 ? null : _collectPayment,
+                      onPressed: _isProcessing || amount <= 0
+                          ? null
+                          : _collectPayment,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.success,
                         foregroundColor: AppColors.white,
@@ -249,7 +258,12 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value, {Color? color, bool isBold = false}) {
+  Widget _buildSummaryRow(
+    String label,
+    String value, {
+    Color? color,
+    bool isBold = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -288,10 +302,7 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: AppColors.grey300),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w500),
-        ),
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
       ),
     );
   }
@@ -327,7 +338,9 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
                   mode.displayName,
                   style: TextStyle(
                     color: isSelected ? AppColors.white : AppColors.black,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
               ],
@@ -381,7 +394,8 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
           type: TransactionType.income,
           category: TransactionCategory.roomPayment,
           amount: amount,
-          description: 'Room ${widget.booking.roomNumber} - ${widget.booking.customerName} (${_selectedMode.displayName})',
+          description:
+              'Room ${widget.booking.roomNumber} - ${widget.booking.customerName} (${_selectedMode.displayName})',
           createdAt: DateTime.now(),
           createdBy: user?.id ?? '',
           bookingId: widget.booking.id,
