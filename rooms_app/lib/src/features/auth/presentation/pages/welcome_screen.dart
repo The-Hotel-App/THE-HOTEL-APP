@@ -272,6 +272,28 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                     ),
             ),
           ),
+          const SizedBox(height: 24),
+          
+          // Sign Up link
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                "Don't have an account? ",
+                style: TextStyle(color: AppColors.grey400),
+              ),
+              TextButton(
+                onPressed: () => context.push(AppRoutes.signup),
+                child: Text(
+                  'Sign Up',
+                  style: TextStyle(
+                    color: AppColors.info,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

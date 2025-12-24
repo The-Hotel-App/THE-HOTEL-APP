@@ -17,10 +17,11 @@ class HotelSwitcherButton extends ConsumerWidget {
 
     return hotelsAsync.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
       data: (hotels) {
-        // Only show if user has multiple hotels
-        if (hotels.length <= 1) return const SizedBox.shrink();
+        // Always show the hotel switcher button (even with 1 hotel)
+        // so users can see their hotel and add new ones
+        if (hotels.isEmpty) return const SizedBox.shrink();
 
         return InkWell(
           onTap: () => _showHotelSwitcher(context, ref, hotels, currentHotel),
@@ -81,7 +82,7 @@ class HotelSwitcherButton extends ConsumerWidget {
         },
         onAddNewHotel: () {
           Navigator.pop(context);
-          context.push('/add-hotel');
+          context.push('/create-hotel');
         },
       ),
     );

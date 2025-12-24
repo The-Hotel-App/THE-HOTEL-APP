@@ -205,7 +205,7 @@ class HotelSelectionPage extends ConsumerWidget {
             return FloatingActionButton(
               backgroundColor: AppColors.black,
               foregroundColor: AppColors.white,
-              onPressed: () => context.push(AppRoutes.setup),
+              onPressed: () => context.push(AppRoutes.createHotel),
               tooltip: 'Create New Hotel',
               child: const Icon(Icons.add),
             );
