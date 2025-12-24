@@ -436,7 +436,7 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
                     decoration: BoxDecoration(
                       color: AppColors.grey900,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.black),
+                      border: Border.all(color: AppColors.grey600),
                     ),
                     child: const Center(
                       child: Text(
@@ -453,7 +453,7 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
                       decoration: BoxDecoration(
                         color: AppColors.grey900,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.black),
+                        border: Border.all(color: AppColors.grey600),
                       ),
                       child: ListTile(
                         leading: Container(
@@ -557,7 +557,7 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
       decoration: BoxDecoration(
         color: AppColors.grey900,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black),
+        border: Border.all(color: AppColors.grey600),
       ),
       child: Row(
         children: [
@@ -613,7 +613,7 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
       decoration: BoxDecoration(
         color: AppColors.grey900,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black),
+        border: Border.all(color: AppColors.grey600),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -668,15 +668,15 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.black),
+                          borderSide: BorderSide(color: AppColors.grey600),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.black),
+                          borderSide: BorderSide(color: AppColors.grey600),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.black),
+                          borderSide: BorderSide(color: AppColors.info),
                         ),
                         filled: true,
                         fillColor: AppColors.grey800,
@@ -712,7 +712,7 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
       decoration: BoxDecoration(
         color: AppColors.success.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -780,23 +780,23 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
       prefixIcon: Icon(prefixIcon, color: AppColors.grey400),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black),
+        borderSide: BorderSide(color: AppColors.grey600),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black),
+        borderSide: BorderSide(color: AppColors.grey600),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black, width: 2),
+        borderSide: BorderSide(color: AppColors.info, width: 2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black),
+        borderSide: BorderSide(color: AppColors.error),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black, width: 2),
+        borderSide: BorderSide(color: AppColors.error, width: 2),
       ),
       filled: true,
       fillColor: AppColors.grey900,

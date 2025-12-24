@@ -112,7 +112,7 @@ class HomePage extends ConsumerWidget {
             decoration: BoxDecoration(
               color: roleColor.withValues(alpha: 0.15),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.black, width: 3),
+              border: Border.all(color: roleColor, width: 3),
             ),
             child: Icon(_getRoleIcon(user?.role), color: roleColor, size: 32),
           ),
@@ -290,7 +290,7 @@ class HomePage extends ConsumerWidget {
           decoration: BoxDecoration(
             color: AppColors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.black, width: 2),
+            border: Border.all(color: color.withValues(alpha: 0.3), width: 2),
             boxShadow: [
               BoxShadow(
                 color: color.withValues(alpha: 0.1),

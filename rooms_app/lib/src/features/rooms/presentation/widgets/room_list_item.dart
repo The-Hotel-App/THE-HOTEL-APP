@@ -21,7 +21,7 @@ class RoomGridTile extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: statusColor.withValues(alpha: 0.15),
-            border: Border.all(color: Colors.black, width: 2),
+            border: Border.all(color: statusColor, width: 2),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Center(
@@ -62,7 +62,7 @@ class RoomListItem extends StatelessWidget {
               height: 56,
               decoration: BoxDecoration(
                 color: statusColor.withValues(alpha: 0.15),
-                border: Border.all(color: Colors.black, width: 2),
+                border: Border.all(color: statusColor, width: 2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(

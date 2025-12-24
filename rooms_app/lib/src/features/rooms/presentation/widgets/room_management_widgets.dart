@@ -131,7 +131,7 @@ class RoomTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.info.withValues(alpha: 0.1) : null,
-          border: Border(bottom: BorderSide(color: Colors.black)),
+          border: Border(bottom: BorderSide(color: AppColors.grey200)),
         ),
         child: Row(
           children: [

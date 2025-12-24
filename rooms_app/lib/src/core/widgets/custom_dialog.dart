@@ -266,7 +266,7 @@ class CustomDialog extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.textSecondary,
             padding: const EdgeInsets.symmetric(vertical: 14),
-            side: BorderSide(color: Colors.black),
+            side: BorderSide(color: AppColors.grey300),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),

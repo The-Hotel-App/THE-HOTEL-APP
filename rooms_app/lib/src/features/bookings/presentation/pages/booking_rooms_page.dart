@@ -42,7 +42,7 @@ class _BookingRoomsPageState extends ConsumerState<BookingRoomsPage> {
 
       final bookingState = ref.read(newBookingProvider);
       final roomsRepo = ref.read(roomsRepositoryProvider);
-
+      
       // Get available rooms
       final allRooms = await roomsRepo.getAvailableRooms(
         hotelId: _hotelId!,
@@ -191,19 +191,14 @@ class _BookingRoomsPageState extends ConsumerState<BookingRoomsPage> {
                       'Up to ${type.maxOccupancy} guests • ₹${type.basePrice.toStringAsFixed(0)}/night',
                       style: TextStyle(
                         fontSize: 13,
-                        color: hasRooms
-                            ? AppColors.textSecondary
-                            : AppColors.grey400,
+                        color: hasRooms ? AppColors.textSecondary : AppColors.grey400,
                       ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: hasRooms
                       ? AppColors.success.withValues(alpha: 0.15)
@@ -245,7 +240,7 @@ class _BookingRoomsPageState extends ConsumerState<BookingRoomsPage> {
     try {
       final bookingState = ref.read(newBookingProvider);
       final roomsRepo = ref.read(roomsRepositoryProvider);
-
+      
       final rooms = await roomsRepo.getAvailableRooms(
         hotelId: _hotelId!,
         checkIn: bookingState.checkIn,
@@ -261,10 +256,7 @@ class _BookingRoomsPageState extends ConsumerState<BookingRoomsPage> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -279,24 +271,20 @@ class _BookingRoomsPageState extends ConsumerState<BookingRoomsPage> {
     for (final room in rooms) {
       roomsByFloor.putIfAbsent(room.floor.toString(), () => []).add(room);
     }
-
+    
     // Sort rooms within each floor by room number
     for (final floor in roomsByFloor.keys) {
       roomsByFloor[floor]!.sort((a, b) {
         // Try to parse as numbers first for proper numeric sorting
-        final aNum = int.tryParse(
-          a.roomNumber.replaceAll(RegExp(r'[^0-9]'), ''),
-        );
-        final bNum = int.tryParse(
-          b.roomNumber.replaceAll(RegExp(r'[^0-9]'), ''),
-        );
+        final aNum = int.tryParse(a.roomNumber.replaceAll(RegExp(r'[^0-9]'), ''));
+        final bNum = int.tryParse(b.roomNumber.replaceAll(RegExp(r'[^0-9]'), ''));
         if (aNum != null && bNum != null) {
           return aNum.compareTo(bNum);
         }
         return a.roomNumber.compareTo(b.roomNumber);
       });
     }
-
+    
     final floors = roomsByFloor.keys.toList();
     floors.sort((a, b) => int.parse(a).compareTo(int.parse(b)));
 
@@ -376,7 +364,7 @@ class _BookingRoomsPageState extends ConsumerState<BookingRoomsPage> {
                     itemBuilder: (context, index) {
                       final floor = floors[index];
                       final floorRooms = roomsByFloor[floor]!;
-
+                      
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -399,16 +387,12 @@ class _BookingRoomsPageState extends ConsumerState<BookingRoomsPage> {
                               return InkWell(
                                 onTap: () {
                                   if (isSelected) {
-                                    ref
-                                        .read(newBookingProvider.notifier)
-                                        .removeRoom(room.id);
+                                    ref.read(newBookingProvider.notifier).removeRoom(room.id);
                                     selectedIds.remove(room.id);
                                   } else {
-                                    ref
-                                        .read(newBookingProvider.notifier)
-                                        .addRoom(
-                                          SelectedRoom.fromManagedRoom(room),
-                                        );
+                                    ref.read(newBookingProvider.notifier).addRoom(
+                                      SelectedRoom.fromManagedRoom(room),
+                                    );
                                     selectedIds.add(room.id);
                                   }
                                   setSheetState(() {});
@@ -427,7 +411,7 @@ class _BookingRoomsPageState extends ConsumerState<BookingRoomsPage> {
                                     borderRadius: BorderRadius.circular(12),
                                     border: isSelected
                                         ? null
-                                        : Border.all(color: Colors.black),
+                                        : Border.all(color: AppColors.grey300),
                                   ),
                                   child: Column(
                                     children: [
@@ -477,10 +461,7 @@ class _BookingRoomsPageState extends ConsumerState<BookingRoomsPage> {
                       ),
                       child: const Text(
                         'Done',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),

@@ -34,7 +34,7 @@ class FloorRangeInput extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.black),
+        border: Border.all(color: AppColors.grey300),
       ),
       child: Row(
         children: [

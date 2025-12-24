@@ -640,7 +640,7 @@ class _GuestFormState extends ConsumerState<_GuestForm>
                 label: const Text('Scan ID'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.black,
-                  side: const BorderSide(color: Colors.black),
+                  side: const BorderSide(color: AppColors.grey400),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -655,7 +655,7 @@ class _GuestFormState extends ConsumerState<_GuestForm>
                 label: const Text('Upload'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.black,
-                  side: const BorderSide(color: Colors.black),
+                  side: const BorderSide(color: AppColors.grey400),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -745,7 +745,7 @@ class _GuestFormState extends ConsumerState<_GuestForm>
       decoration: BoxDecoration(
         color: AppColors.success.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [

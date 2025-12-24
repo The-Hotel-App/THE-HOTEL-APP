@@ -20,7 +20,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-
+  
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -34,11 +34,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
   }
 
   String? _validateConfirmPassword(String? value) {
-    return SignupValidators.validateConfirmPassword(
-      value,
-      _passwordController.text,
-    );
+    return SignupValidators.validateConfirmPassword(value, _passwordController.text);
   }
+
 
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
@@ -122,7 +120,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                 Icon(Icons.hotel, size: 100, color: AppColors.warning),
           ),
           const SizedBox(height: 24),
-
+          
           // Title
           Text(
             'Create Account',
@@ -136,9 +134,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
           Text(
             'Sign up to start managing your hotel',
             textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: AppColors.grey400),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: AppColors.grey400,
+            ),
           ),
           const SizedBox(height: 32),
 
@@ -198,9 +196,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                   color: AppColors.grey400,
                 ),
                 onPressed: () {
-                  setState(
-                    () => _obscureConfirmPassword = !_obscureConfirmPassword,
-                  );
+                  setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
                 },
               ),
             ),
@@ -279,23 +275,23 @@ class _SignupPageState extends ConsumerState<SignupPage> {
       suffixIcon: suffixIcon,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black),
+        borderSide: BorderSide(color: AppColors.grey600),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black),
+        borderSide: BorderSide(color: AppColors.grey600),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black, width: 2),
+        borderSide: BorderSide(color: AppColors.info, width: 2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black),
+        borderSide: BorderSide(color: AppColors.error),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.black, width: 2),
+        borderSide: BorderSide(color: AppColors.error, width: 2),
       ),
       filled: true,
       fillColor: AppColors.grey900,

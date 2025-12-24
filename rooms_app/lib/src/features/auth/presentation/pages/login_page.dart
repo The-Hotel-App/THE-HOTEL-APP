@@ -792,7 +792,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   foregroundColor: AppColors.black,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
-                    side: const BorderSide(color: Colors.black),
+                    side: const BorderSide(color: AppColors.grey300),
                   ),
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -816,7 +816,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   foregroundColor: AppColors.black,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
-                    side: const BorderSide(color: Colors.black),
+                    side: const BorderSide(color: AppColors.grey300),
                   ),
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -874,7 +874,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   decoration: BoxDecoration(
                     color: AppColors.grey100,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.black),
+                    border: Border.all(color: AppColors.grey300),
                   ),
                   child: Text(
                     cred['label']!,

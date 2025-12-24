@@ -32,8 +32,8 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
     final newPaymentStatus = newPaidAmount >= _booking.totalAmount
         ? PaymentStatus.paid
         : newPaidAmount > 0
-        ? PaymentStatus.partial
-        : PaymentStatus.pending;
+            ? PaymentStatus.partial
+            : PaymentStatus.pending;
 
     setState(() {
       _booking = _booking.copyWith(
@@ -68,8 +68,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor(_booking.status);
-    final hasPendingPayment =
-        !_booking.isFullyPaid && _booking.pendingAmount > 0;
+    final hasPendingPayment = !_booking.isFullyPaid && _booking.pendingAmount > 0;
 
     return Scaffold(
       backgroundColor: AppColors.grey100,
@@ -82,7 +81,10 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
         ),
         title: const Text('Booking Details'),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _refresh),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refresh,
+          ),
         ],
       ),
       body: RefreshIndicator(
@@ -188,11 +190,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                       ? Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(
-                              Icons.bed,
-                              color: Colors.white,
-                              size: 28,
-                            ),
+                            const Icon(Icons.bed, color: Colors.white, size: 28),
                             Text(
                               '×$roomCount',
                               style: const TextStyle(
@@ -245,10 +243,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -264,10 +259,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -296,7 +288,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
               roomId: _booking.roomId,
               roomNumber: _booking.roomNumber,
               roomPrice: _booking.totalAmount,
-            ),
+            )
           ];
 
     return Column(
@@ -314,7 +306,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black),
+        border: Border.all(color: AppColors.grey200),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -368,10 +360,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: roomStatusColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(6),
@@ -403,7 +392,10 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
               ),
               Text(
                 'total',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
@@ -411,6 +403,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
       ),
     );
   }
+
 
   Widget _buildGuestsSection() {
     final guests = _booking.guests.isNotEmpty
@@ -422,7 +415,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
               phone: _booking.customerPhone,
               email: _booking.customerEmail,
               isPrimary: true,
-            ),
+            )
           ];
 
     // If only one guest, show as a card
@@ -453,7 +446,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black),
+        border: Border.all(color: AppColors.grey200),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -470,9 +463,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
             children: [
               CircleAvatar(
                 radius: 22,
-                backgroundColor: guest.isPrimary
-                    ? AppColors.info
-                    : AppColors.grey400,
+                backgroundColor: guest.isPrimary ? AppColors.info : AppColors.grey400,
                 child: Text(
                   guest.name.isNotEmpty ? guest.name[0].toUpperCase() : '?',
                   style: const TextStyle(
@@ -502,10 +493,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                         if (guest.isPrimary) ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: AppColors.info,
                               borderRadius: BorderRadius.circular(4),
@@ -526,8 +514,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                       const SizedBox(height: 2),
                       Text(
                         [
-                          if (guest.gender != null)
-                            _formatGender(guest.gender!),
+                          if (guest.gender != null) _formatGender(guest.gender!),
                           if (guest.age != null) '${guest.age} yrs',
                         ].join(' • '),
                         style: TextStyle(
@@ -551,10 +538,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
           if (guest.email != null && guest.email!.isNotEmpty)
             _buildCompactInfoRow(Icons.email, guest.email!),
           if (guest.idType != null && guest.idNumber != null)
-            _buildCompactInfoRow(
-              Icons.badge,
-              '${_formatIdType(guest.idType!)}: ${guest.idNumber}',
-            ),
+            _buildCompactInfoRow(Icons.badge, '${_formatIdType(guest.idType!)}: ${guest.idNumber}'),
         ],
       ),
     );
@@ -586,7 +570,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black),
+        border: Border.all(color: AppColors.grey200),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -603,9 +587,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
             children: [
               CircleAvatar(
                 radius: 28,
-                backgroundColor: guest.isPrimary
-                    ? AppColors.info
-                    : AppColors.grey400,
+                backgroundColor: guest.isPrimary ? AppColors.info : AppColors.grey400,
                 child: Text(
                   guest.name.isNotEmpty ? guest.name[0].toUpperCase() : '?',
                   style: const TextStyle(
@@ -634,10 +616,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                         if (guest.isPrimary) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: AppColors.info,
                               borderRadius: BorderRadius.circular(6),
@@ -658,8 +637,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                       const SizedBox(height: 4),
                       Text(
                         [
-                          if (guest.gender != null)
-                            _formatGender(guest.gender!),
+                          if (guest.gender != null) _formatGender(guest.gender!),
                           if (guest.age != null) '${guest.age} years',
                         ].join(' • '),
                         style: TextStyle(
@@ -734,7 +712,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black),
+        border: Border.all(color: AppColors.grey200),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -755,7 +733,11 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                   AppColors.success,
                 ),
               ),
-              Container(width: 1, height: 60, color: AppColors.grey200),
+              Container(
+                width: 1,
+                height: 60,
+                color: AppColors.grey200,
+              ),
               Expanded(
                 child: _buildStayDetailItem(
                   Icons.logout,
@@ -779,7 +761,11 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                   AppColors.info,
                 ),
               ),
-              Container(width: 1, height: 60, color: AppColors.grey200),
+              Container(
+                width: 1,
+                height: 60,
+                color: AppColors.grey200,
+              ),
               Expanded(
                 child: _buildStayDetailItem(
                   Icons.people,
@@ -795,24 +781,25 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
     );
   }
 
-  Widget _buildStayDetailItem(
-    IconData icon,
-    String label,
-    String value,
-    Color color,
-  ) {
+  Widget _buildStayDetailItem(IconData icon, String label, String value, Color color) {
     return Column(
       children: [
         Icon(icon, color: color, size: 28),
         const SizedBox(height: 8),
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.textSecondary,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
           textAlign: TextAlign.center,
         ),
       ],
@@ -827,7 +814,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black),
+        border: Border.all(color: AppColors.grey200),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -871,11 +858,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
           // Payment Breakdown
           _buildPaymentRow('Total Amount', _booking.totalAmount, isBold: true),
           const SizedBox(height: 12),
-          _buildPaymentRow(
-            'Amount Paid',
-            _booking.paidAmount,
-            color: AppColors.success,
-          ),
+          _buildPaymentRow('Amount Paid', _booking.paidAmount, color: AppColors.success),
           if (!_booking.isFullyPaid) ...[
             const SizedBox(height: 12),
             Container(
@@ -883,18 +866,14 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
               decoration: BoxDecoration(
                 color: AppColors.error.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.black),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        Icons.warning_amber,
-                        color: AppColors.error,
-                        size: 20,
-                      ),
+                      Icon(Icons.warning_amber, color: AppColors.error, size: 20),
                       const SizedBox(width: 8),
                       const Text(
                         'Pending Due',
@@ -922,12 +901,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
     );
   }
 
-  Widget _buildPaymentRow(
-    String label,
-    double amount, {
-    bool isBold = false,
-    Color? color,
-  }) {
+  Widget _buildPaymentRow(String label, double amount, {bool isBold = false, Color? color}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -944,9 +918,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
           style: TextStyle(
             fontSize: isBold ? 20 : 16,
             fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-            color:
-                color ??
-                (isBold ? AppColors.textPrimary : AppColors.textSecondary),
+            color: color ?? (isBold ? AppColors.textPrimary : AppColors.textSecondary),
           ),
         ),
       ],
@@ -959,10 +931,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
       height: 56,
       child: ElevatedButton.icon(
         onPressed: () async {
-          final collectedAmount = await CollectPaymentDialog.show(
-            context,
-            _booking,
-          );
+          final collectedAmount = await CollectPaymentDialog.show(context, _booking);
           if (collectedAmount != null && collectedAmount > 0) {
             // Update UI immediately with the collected amount
             _updatePayment(collectedAmount);
@@ -1071,20 +1040,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
   }
 
   String _formatDateFull(DateTime date) {
-    final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }

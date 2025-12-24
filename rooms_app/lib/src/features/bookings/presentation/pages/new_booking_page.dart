@@ -289,7 +289,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
           color: isEnabled ? AppColors.white : AppColors.grey100,
           borderRadius: BorderRadius.circular(16),
           border: isCompleted
-              ? Border.all(color: Colors.black, width: 2)
+              ? Border.all(color: AppColors.success, width: 2)
               : null,
         ),
         child: Row(

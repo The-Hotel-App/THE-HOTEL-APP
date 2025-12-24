@@ -76,7 +76,7 @@ class BookingCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black, width: 2),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3), width: 2),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -436,7 +436,7 @@ class BookingDetailsSheet extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               border: index < rooms.length - 1
-                  ? Border(bottom: BorderSide(color: Colors.black))
+                  ? Border(bottom: BorderSide(color: AppColors.grey200))
                   : null,
             ),
             child: Row(
@@ -508,7 +508,7 @@ class BookingDetailsSheet extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               border: index < guests.length - 1
-                  ? Border(bottom: BorderSide(color: Colors.black))
+                  ? Border(bottom: BorderSide(color: AppColors.grey200))
                   : null,
             ),
             child: Row(
@@ -691,7 +691,7 @@ class BookingDetailsSheet extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.warning.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -749,7 +749,7 @@ class BookingDetailsSheet extends StatelessWidget {
                   label: const Text('Write Off'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.error,
-                    side: BorderSide(color: Colors.black),
+                    side: BorderSide(color: AppColors.error),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -785,7 +785,7 @@ class BookingDetailsSheet extends StatelessWidget {
       decoration: BoxDecoration(
         color: statusColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black, width: 2),
+        border: Border.all(color: statusColor, width: 2),
       ),
       child: Row(
         children: [

@@ -235,7 +235,7 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black, width: 1),
+        border: Border.all(color: AppColors.grey300, width: 1),
         boxShadow: [
           BoxShadow(
             color: AppColors.grey400.withValues(alpha: 0.15),
@@ -440,7 +440,7 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.black, width: 2),
+          border: Border.all(color: color.withValues(alpha: 0.3), width: 2),
           boxShadow: [
             BoxShadow(
               color: color.withValues(alpha: 0.1),
@@ -480,7 +480,12 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.black, width: 2),
+          border: Border.all(
+            color: hasBiometric
+                ? AppColors.success.withValues(alpha: 0.3)
+                : AppColors.grey500.withValues(alpha: 0.3),
+            width: 2,
+          ),
           boxShadow: [
             BoxShadow(
               color: hasBiometric
@@ -511,7 +516,7 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
                       decoration: BoxDecoration(
                         color: AppColors.success,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.black, width: 2),
+                        border: Border.all(color: AppColors.white, width: 2),
                       ),
                       child: const Icon(
                         Icons.check,
