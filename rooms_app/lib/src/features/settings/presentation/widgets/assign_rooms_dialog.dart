@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/widgets/custom_dialog.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/rooms/data/repositories/room_types_repository.dart';
-import 'package:rooms/src/features/rooms/data/repositories/rooms_repository.dart' hide roomsProvider;
+import 'package:rooms/src/features/rooms/data/repositories/rooms_repository.dart'
+    hide roomsProvider;
 import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
 
 /// Color palette for room types - cycles through these colors
@@ -59,16 +61,16 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
 
     try {
       setState(() => _isLoading = true);
-      
+
       // Load rooms and room types in parallel
       final roomsRepo = ref.read(roomsRepositoryProvider);
       final roomTypesRepo = ref.read(roomTypesRepositoryProvider);
-      
+
       final results = await Future.wait([
         roomsRepo.getRooms(hotel.hotelId),
         roomTypesRepo.getRoomTypes(hotel.hotelId),
       ]);
-      
+
       final rooms = results[0] as List<ManagedRoom>;
       final roomTypes = results[1] as List<RoomType>;
 
@@ -140,7 +142,9 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
         Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Room assignments updated for "${widget.roomType.name}"'),
+            content: Text(
+              'Room assignments updated for "${widget.roomType.name}"',
+            ),
             backgroundColor: AppColors.success,
           ),
         );
@@ -160,8 +164,8 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
 
   void _onRoomTap(ManagedRoom room) {
     final isSelected = _selectedRoomIds.contains(room.id);
-    final isAssignedToOtherType = room.roomTypeId != null &&
-        room.roomTypeId != widget.roomType.id;
+    final isAssignedToOtherType =
+        room.roomTypeId != null && room.roomTypeId != widget.roomType.id;
 
     if (isSelected) {
       // Deselecting - no warning needed
@@ -180,31 +184,24 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
   }
 
   void _showReassignWarning(ManagedRoom room) {
-    showDialog(
+    CustomDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Change Room Type?'),
-        content: Text(
-          'Room ${room.roomNumber} is currently assigned to "${room.roomTypeName}".\n\n'
-          'Do you want to reassign it to "${widget.roomType.name}"?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() {
-                _selectedRoomIds.add(room.id);
-              });
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning),
-            child: const Text('Reassign'),
-          ),
-        ],
+      title: 'Change Room Type?',
+      icon: Icons.swap_horiz,
+      type: CustomDialogType.warning,
+      content: Text(
+        'Room ${room.roomNumber} is currently assigned to "${room.roomTypeName}".\n\n'
+        'Do you want to reassign it to "${widget.roomType.name}"?',
       ),
+      primaryButtonText: 'Reassign',
+      onPrimaryPressed: () {
+        Navigator.pop(context);
+        setState(() {
+          _selectedRoomIds.add(room.id);
+        });
+      },
+      secondaryButtonText: 'Cancel',
+      onSecondaryPressed: () => Navigator.pop(context),
     );
   }
 
@@ -266,10 +263,7 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
             const SizedBox(height: 16),
             Text('Error: $_error'),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadData,
-              child: const Text('Retry'),
-            ),
+            ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
           ],
         ),
       );
@@ -370,8 +364,9 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
         .toSet();
 
     // Filter to room types actually in use, plus the current one
-    final typesToShow = _allRoomTypes.where((t) =>
-        usedTypeIds.contains(t.id) || t.id == widget.roomType.id).toList();
+    final typesToShow = _allRoomTypes
+        .where((t) => usedTypeIds.contains(t.id) || t.id == widget.roomType.id)
+        .toList();
 
     if (typesToShow.isEmpty) {
       return const SizedBox.shrink();
@@ -416,7 +411,11 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
     );
   }
 
-  Widget _buildLegendItem(String label, Color color, {bool isCurrentType = false}) {
+  Widget _buildLegendItem(
+    String label,
+    Color color, {
+    bool isCurrentType = false,
+  }) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -467,7 +466,10 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.black,
                   borderRadius: BorderRadius.circular(8),
@@ -502,8 +504,8 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
   Widget _buildRoomTile(ManagedRoom room) {
     final isSelected = _selectedRoomIds.contains(room.id);
     final isAssignedToCurrentType = room.roomTypeId == widget.roomType.id;
-    final isAssignedToOtherType = room.roomTypeId != null &&
-        room.roomTypeId != widget.roomType.id;
+    final isAssignedToOtherType =
+        room.roomTypeId != null && room.roomTypeId != widget.roomType.id;
 
     Color tileColor;
     Color borderColor;
@@ -511,13 +513,15 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
 
     if (isSelected) {
       // Selected for this room type - use current room type's color
-      final currentTypeColor = _roomTypeColorMap[widget.roomType.id] ?? AppColors.warning;
+      final currentTypeColor =
+          _roomTypeColorMap[widget.roomType.id] ?? AppColors.warning;
       tileColor = currentTypeColor.withValues(alpha: 0.3);
       borderColor = currentTypeColor;
       textColor = currentTypeColor;
     } else if (isAssignedToOtherType && room.roomTypeId != null) {
       // Assigned to another room type - use that type's color
-      final otherTypeColor = _roomTypeColorMap[room.roomTypeId!] ?? AppColors.grey400;
+      final otherTypeColor =
+          _roomTypeColorMap[room.roomTypeId!] ?? AppColors.grey400;
       tileColor = otherTypeColor.withValues(alpha: 0.15);
       borderColor = otherTypeColor.withValues(alpha: 0.5);
       textColor = otherTypeColor;
@@ -557,7 +561,8 @@ class _AssignRoomsDialogState extends ConsumerState<AssignRoomsDialog> {
             if (isSelected)
               Icon(
                 Icons.check_circle,
-                color: _roomTypeColorMap[widget.roomType.id] ?? AppColors.warning,
+                color:
+                    _roomTypeColorMap[widget.roomType.id] ?? AppColors.warning,
                 size: 16,
               )
             else if (isAssignedToOtherType && room.roomTypeName != null)

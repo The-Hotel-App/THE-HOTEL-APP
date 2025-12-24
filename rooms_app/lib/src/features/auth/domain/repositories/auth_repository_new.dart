@@ -65,4 +65,15 @@ abstract class AuthRepository {
 
   /// Get hotels owned by the current user (where user is the owner)
   Future<List<Map<String, dynamic>>> getOwnerHotels(String userId);
+
+  /// Login using stored credentials (for biometric login)
+  /// Retrieves credentials from secure storage and authenticates
+  Future<User> loginWithStoredCredentials();
+
+  /// Verify password for fallback authentication
+  /// Returns true if password is correct for the given email
+  Future<bool> verifyPassword({
+    required String email,
+    required String password,
+  });
 }

@@ -7,7 +7,7 @@ void main() {
       expect(RoomStatus.free.displayName, 'Free');
       expect(RoomStatus.occupied.displayName, 'Occupied');
       expect(RoomStatus.cleaning.displayName, 'Cleaning');
-      expect(RoomStatus.maintenance.displayName, 'Maintenance');
+      expect(RoomStatus.maintenance.displayName, 'Emergency');
       expect(RoomStatus.outOfService.displayName, 'Out of Service');
     });
   });

@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
+import 'package:rooms/src/core/widgets/custom_dialog.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/hotel_setup/data/repositories/supabase_hotel_setup_repository.dart';
 import 'package:rooms/src/features/hotel_setup/domain/entities/hotel_new.dart';
+import 'package:rooms/src/features/settings/presentation/widgets/biometric_settings_section.dart';
 
 class HotelSettingsPage extends ConsumerStatefulWidget {
   const HotelSettingsPage({super.key});
@@ -58,10 +60,10 @@ class _HotelSettingsPageState extends ConsumerState<HotelSettingsPage> {
     try {
       final client = SupabaseService.instance.client;
       await client.from('hotels').update({field: value}).eq('id', _hotel!.id);
-      
+
       // Refresh hotel data
       await _loadHotel();
-      
+
       // Invalidate providers to refresh everywhere
       ref.invalidate(userHotelsProvider);
       ref.invalidate(currentHotelProvider);
@@ -94,36 +96,27 @@ class _HotelSettingsPageState extends ConsumerState<HotelSettingsPage> {
     TextInputType keyboardType = TextInputType.text,
   }) {
     final controller = TextEditingController(text: currentValue);
-    
-    showDialog(
+
+    CustomDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Edit $title'),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: title,
-            border: const OutlineInputBorder(),
-          ),
-          maxLines: maxLines,
-          keyboardType: keyboardType,
-          autofocus: true,
+      title: 'Edit $title',
+      content: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: title,
+          border: const OutlineInputBorder(),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _updateHotelField(field, controller.text.trim());
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.black),
-            child: const Text('Save'),
-          ),
-        ],
+        maxLines: maxLines,
+        keyboardType: keyboardType,
+        autofocus: true,
       ),
+      primaryButtonText: 'Save',
+      onPrimaryPressed: () {
+        Navigator.pop(context);
+        _updateHotelField(field, controller.text.trim());
+      },
+      secondaryButtonText: 'Cancel',
+      onSecondaryPressed: () => Navigator.pop(context),
     );
   }
 
@@ -165,10 +158,7 @@ class _HotelSettingsPageState extends ConsumerState<HotelSettingsPage> {
             const SizedBox(height: 16),
             Text('Error: $_error'),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadHotel,
-              child: const Text('Retry'),
-            ),
+            ElevatedButton(onPressed: _loadHotel, child: const Text('Retry')),
           ],
         ),
       );
@@ -274,6 +264,12 @@ class _HotelSettingsPageState extends ConsumerState<HotelSettingsPage> {
           color: AppColors.info,
           onTap: () => context.push('/rooms-management'),
         ),
+        const SizedBox(height: 24),
+
+        // Security Settings (Requirement 6.1)
+        _buildSectionTitle('Security'),
+        const SizedBox(height: 12),
+        const BiometricSettingsSection(),
         const SizedBox(height: 24),
       ],
     );

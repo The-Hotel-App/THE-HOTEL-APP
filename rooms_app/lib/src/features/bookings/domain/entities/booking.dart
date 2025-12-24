@@ -105,6 +105,18 @@ class Booking {
   final List<BookingRoom> rooms;
   final List<BookingGuest> guests;
 
+  /// ID of the user who performed the check-in (biometric verified)
+  final String? checkedInBy;
+
+  /// Whether the check-in was verified using biometrics
+  final bool checkedInBiometricVerified;
+
+  /// ID of the user who performed the check-out (biometric verified)
+  final String? checkedOutBy;
+
+  /// Whether the check-out was verified using biometrics
+  final bool checkedOutBiometricVerified;
+
   const Booking({
     required this.id,
     required this.hotelId,
@@ -126,6 +138,10 @@ class Booking {
     required this.createdBy,
     this.rooms = const [],
     this.guests = const [],
+    this.checkedInBy,
+    this.checkedInBiometricVerified = false,
+    this.checkedOutBy,
+    this.checkedOutBiometricVerified = false,
   });
 
   Booking copyWith({
@@ -149,6 +165,10 @@ class Booking {
     String? createdBy,
     List<BookingRoom>? rooms,
     List<BookingGuest>? guests,
+    String? checkedInBy,
+    bool? checkedInBiometricVerified,
+    String? checkedOutBy,
+    bool? checkedOutBiometricVerified,
   }) {
     return Booking(
       id: id ?? this.id,
@@ -171,13 +191,19 @@ class Booking {
       createdBy: createdBy ?? this.createdBy,
       rooms: rooms ?? this.rooms,
       guests: guests ?? this.guests,
+      checkedInBy: checkedInBy ?? this.checkedInBy,
+      checkedInBiometricVerified:
+          checkedInBiometricVerified ?? this.checkedInBiometricVerified,
+      checkedOutBy: checkedOutBy ?? this.checkedOutBy,
+      checkedOutBiometricVerified:
+          checkedOutBiometricVerified ?? this.checkedOutBiometricVerified,
     );
   }
 
   double get pendingAmount => totalAmount - paidAmount;
   bool get isFullyPaid => paidAmount >= totalAmount;
   int get stayDuration => checkOut.difference(checkIn).inDays;
-  
+
   /// Get all room numbers as a comma-separated string
   String get allRoomNumbers {
     if (rooms.isNotEmpty) {
@@ -185,7 +211,7 @@ class Booking {
     }
     return roomNumber;
   }
-  
+
   /// Check if booking has multiple rooms
   bool get hasMultipleRooms => rooms.length > 1;
 }

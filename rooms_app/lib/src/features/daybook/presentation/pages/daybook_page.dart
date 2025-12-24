@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
+import 'package:rooms/src/core/widgets/custom_dialog.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/daybook/domain/entities/transaction.dart';
 import 'package:rooms/src/features/daybook/presentation/providers/daybook_providers.dart';
@@ -35,32 +36,23 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
     });
   }
 
-  Future<void> _deleteSelectedTransactions(List<Transaction> allTransactions) async {
+  Future<void> _deleteSelectedTransactions(
+    List<Transaction> allTransactions,
+  ) async {
     final selectedTransactions = allTransactions
         .where((t) => _selectedIds.contains(t.id))
         .toList();
 
     if (selectedTransactions.isEmpty) return;
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await CustomDialog.showConfirmation(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Transactions'),
-        content: Text(
+      title: 'Delete Transactions',
+      message:
           'Are you sure you want to delete ${selectedTransactions.length} transaction${selectedTransactions.length > 1 ? 's' : ''}?\n\nThis action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      isDestructive: true,
     );
 
     if (confirmed != true) return;
@@ -69,7 +61,7 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
 
     try {
       final repo = ref.read(dayBookRepositoryProvider);
-      
+
       for (final transaction in selectedTransactions) {
         await repo.deleteTransaction(transaction);
       }
@@ -196,7 +188,11 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
     );
   }
 
-  Widget _buildContent(BuildContext context, DayBookSummary summary, bool isOwner) {
+  Widget _buildContent(
+    BuildContext context,
+    DayBookSummary summary,
+    bool isOwner,
+  ) {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
@@ -242,7 +238,9 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: isOwner ? () => _showEditOpeningBalance(summary) : null,
+                  onTap: isOwner
+                      ? () => _showEditOpeningBalance(summary)
+                      : null,
                   child: _buildBalanceItem(
                     'Opening',
                     summary.openingBalance,
@@ -288,7 +286,12 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
     );
   }
 
-  Widget _buildBalanceItem(String label, double amount, Color color, {bool isEditable = false}) {
+  Widget _buildBalanceItem(
+    String label,
+    double amount,
+    Color color, {
+    bool isEditable = false,
+  }) {
     return Column(
       children: [
         Row(
@@ -393,7 +396,10 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
                 _selectedIds.isEmpty
                     ? 'Transactions'
                     : '${_selectedIds.length} selected',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             // Show delete button when items are selected (only for owners)
@@ -417,7 +423,8 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
                         const SizedBox(width: 12),
                         IconButton(
                           icon: Icon(Icons.delete, color: AppColors.error),
-                          onPressed: () => _deleteSelectedTransactions(transactions),
+                          onPressed: () =>
+                              _deleteSelectedTransactions(transactions),
                           tooltip: 'Delete selected',
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
@@ -522,78 +529,76 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
     final controller = TextEditingController(
       text: summary.openingBalance.toStringAsFixed(0),
     );
-    
-    showDialog(
+
+    CustomDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Opening Balance'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Current: ₹${summary.openingBalance.toStringAsFixed(0)}',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: 'New Opening Balance',
-                prefixText: '₹ ',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+      title: 'Edit Opening Balance',
+      icon: Icons.account_balance_wallet,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Current: ₹${summary.openingBalance.toStringAsFixed(0)}',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: controller,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: 'New Opening Balance',
+              prefixText: '₹ ',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'The closing balance will be adjusted accordingly.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
           ),
-          TextButton(
-            onPressed: () async {
-              final newBalance = double.tryParse(controller.text);
-              if (newBalance == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Please enter a valid number'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-                return;
-              }
-              
-              Navigator.pop(context);
-              await _updateOpeningBalance(summary.id!, newBalance);
-            },
-            child: const Text('Update'),
+          const SizedBox(height: 8),
+          Text(
+            'The closing balance will be adjusted accordingly.',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
           ),
         ],
       ),
+      primaryButtonText: 'Update',
+      onPrimaryPressed: () async {
+        final newBalance = double.tryParse(controller.text);
+        if (newBalance == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Please enter a valid number'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          return;
+        }
+
+        Navigator.pop(context);
+        await _updateOpeningBalance(summary.id!, newBalance);
+      },
+      secondaryButtonText: 'Cancel',
+      onSecondaryPressed: () => Navigator.pop(context),
     );
   }
 
-  Future<void> _updateOpeningBalance(String daybookId, double newBalance) async {
+  Future<void> _updateOpeningBalance(
+    String daybookId,
+    double newBalance,
+  ) async {
     try {
       final repo = ref.read(dayBookRepositoryProvider);
       await repo.updateOpeningBalance(daybookId, newBalance);
-      
+
       ref.invalidate(todayDayBookProvider);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Opening balance updated to ₹${newBalance.toStringAsFixed(0)}'),
+            content: Text(
+              'Opening balance updated to ₹${newBalance.toStringAsFixed(0)}',
+            ),
             backgroundColor: AppColors.success,
           ),
         );
@@ -612,13 +617,22 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
 
   String _formatDate(DateTime date) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }
-
 
 class _AddTransactionDialog extends ConsumerStatefulWidget {
   final WidgetRef ref;
@@ -732,7 +746,10 @@ class _AddTransactionDialogState extends ConsumerState<_AddTransactionDialog> {
                   children: [
                     const Text(
                       'Add Transaction',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     const Text(
@@ -796,8 +813,9 @@ class _AddTransactionDialogState extends ConsumerState<_AddTransactionDialog> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _amountController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: InputDecoration(
                         prefixText: '₹ ',
                         hintText: '0.00',
@@ -859,8 +877,11 @@ class _AddTransactionDialogState extends ConsumerState<_AddTransactionDialog> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.error_outline,
-                                color: AppColors.error, size: 20),
+                            Icon(
+                              Icons.error_outline,
+                              color: AppColors.error,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(

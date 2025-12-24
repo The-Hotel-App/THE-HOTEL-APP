@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/widgets/custom_dialog.dart';
 import 'package:rooms/src/features/rooms/data/repositories/room_types_repository.dart';
 import 'package:rooms/src/features/rooms/data/repositories/rooms_repository.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
@@ -270,8 +271,8 @@ class _AddRoomDialogState extends State<AddRoomDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Add Room'),
+    return CustomDialog(
+      title: 'Add Room',
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -316,23 +317,11 @@ class _AddRoomDialogState extends State<AddRoomDialog> {
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: _isSaving ? null : _handleAdd,
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.black),
-          child: _isSaving
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Add'),
-        ),
-      ],
+      primaryButtonText: 'Add',
+      isPrimaryLoading: _isSaving,
+      onPrimaryPressed: _handleAdd,
+      secondaryButtonText: 'Cancel',
+      onSecondaryPressed: () => Navigator.pop(context),
     );
   }
 
@@ -403,60 +392,41 @@ class _EditRoomDialogState extends State<EditRoomDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: AppColors.white,
-      title: Text(
-        'Edit Room ${widget.room.roomNumber}',
-        style: const TextStyle(color: AppColors.black),
-      ),
+    return CustomDialog(
+      title: 'Edit Room ${widget.room.roomNumber}',
       content: DropdownButtonFormField<String>(
         initialValue: _selectedTypeId,
-        decoration: const InputDecoration(
-          labelText: 'Room Type',
-          labelStyle: TextStyle(color: AppColors.grey600),
-        ),
-        style: const TextStyle(color: AppColors.black),
+        decoration: const InputDecoration(labelText: 'Room Type'),
         items: widget.roomTypes
             .map(
               (type) => DropdownMenuItem(
                 value: type.id,
                 child: Text(
                   '${type.name} (₹${type.basePrice.toStringAsFixed(0)})',
-                  style: const TextStyle(color: AppColors.black),
                 ),
               ),
             )
             .toList(),
         onChanged: (v) => setState(() => _selectedTypeId = v),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel', style: TextStyle(color: AppColors.black)),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            try {
-              await widget.onSave(_selectedTypeId);
-              if (context.mounted) Navigator.pop(context);
-            } catch (e) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error: $e'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-              }
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.black,
-            foregroundColor: AppColors.white,
-          ),
-          child: const Text('Update'),
-        ),
-      ],
+      primaryButtonText: 'Update',
+      onPrimaryPressed: () async {
+        try {
+          await widget.onSave(_selectedTypeId);
+          if (context.mounted) Navigator.pop(context);
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: $e'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+        }
+      },
+      secondaryButtonText: 'Cancel',
+      onSecondaryPressed: () => Navigator.pop(context),
     );
   }
 }
@@ -503,8 +473,8 @@ class _BulkAssignDialogState extends State<BulkAssignDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Assign Type to ${widget.roomCount} Rooms'),
+    return CustomDialog(
+      title: 'Assign Type to ${widget.roomCount} Rooms',
       content: DropdownButtonFormField<String>(
         initialValue: _selectedTypeId,
         decoration: const InputDecoration(labelText: 'Room Type'),
@@ -520,36 +490,29 @@ class _BulkAssignDialogState extends State<BulkAssignDialog> {
             .toList(),
         onChanged: (v) => setState(() => _selectedTypeId = v),
       ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-            widget.onCancel();
-          },
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: _selectedTypeId == null
-              ? null
-              : () async {
-                  try {
-                    await widget.onAssign(_selectedTypeId!);
-                    if (context.mounted) Navigator.pop(context);
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error: $e'),
-                          backgroundColor: AppColors.error,
-                        ),
-                      );
-                    }
-                  }
-                },
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.black),
-          child: const Text('Assign'),
-        ),
-      ],
+      primaryButtonText: 'Assign',
+      isPrimaryDisabled: _selectedTypeId == null,
+      onPrimaryPressed: () async {
+        if (_selectedTypeId == null) return;
+        try {
+          await widget.onAssign(_selectedTypeId!);
+          if (context.mounted) Navigator.pop(context);
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: $e'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+        }
+      },
+      secondaryButtonText: 'Cancel',
+      onSecondaryPressed: () {
+        Navigator.pop(context);
+        widget.onCancel();
+      },
     );
   }
 }

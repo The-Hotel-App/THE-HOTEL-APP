@@ -10,12 +10,10 @@ import 'package:rooms/src/features/auth/presentation/pages/signup_page.dart';
 import 'package:rooms/src/features/auth/presentation/pages/welcome_screen.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart'
     as auth_new;
-import 'package:rooms/src/features/bookings/presentation/pages/booking_search_page.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/bookings_page.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/new_booking_page.dart';
 import 'package:rooms/src/features/checkin/presentation/pages/checkin_flow_page.dart';
 import 'package:rooms/src/features/checkout/presentation/pages/checkout_flow_page.dart';
-import 'package:rooms/src/features/customers/domain/entities/customer.dart';
 import 'package:rooms/src/features/customers/presentation/pages/customers_page.dart';
 import 'package:rooms/src/features/dashboards/presentation/pages/kitchen_dashboard_page.dart';
 import 'package:rooms/src/features/dashboards/presentation/pages/manager_dashboard_page.dart';

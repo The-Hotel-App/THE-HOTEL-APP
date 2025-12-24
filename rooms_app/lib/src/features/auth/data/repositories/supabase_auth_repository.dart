@@ -1,4 +1,5 @@
 import 'package:rooms/src/core/logging/app_logger.dart';
+import 'package:rooms/src/core/services/biometric_service.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart' as app;
 import 'package:rooms/src/features/auth/domain/repositories/auth_repository_new.dart';
@@ -7,9 +8,13 @@ import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 /// Supabase implementation of AuthRepository
 class SupabaseAuthRepository implements AuthRepository {
   final SupabaseService _supabaseService;
+  final BiometricService _biometricService;
 
-  SupabaseAuthRepository({SupabaseService? supabaseService})
-    : _supabaseService = supabaseService ?? SupabaseService.instance;
+  SupabaseAuthRepository({
+    SupabaseService? supabaseService,
+    BiometricService? biometricService,
+  }) : _supabaseService = supabaseService ?? SupabaseService.instance,
+       _biometricService = biometricService ?? BiometricService();
 
   sb.SupabaseClient get _client => _supabaseService.client;
 
@@ -509,6 +514,76 @@ class SupabaseAuthRepository implements AuthRepository {
     } catch (e) {
       AppLogger.error('Error getting owner hotels', tag: 'Auth', error: e);
       return [];
+    }
+  }
+
+  /// Login using stored credentials (for biometric login)
+  /// Retrieves credentials from secure storage and authenticates
+  @override
+  Future<app.User> loginWithStoredCredentials() async {
+    try {
+      AppLogger.auth('Attempting biometric login with stored credentials');
+
+      // Get stored credentials from secure storage
+      final credentials = await _biometricService.getStoredCredentials();
+
+      if (credentials == null) {
+        throw Exception('No stored credentials found for biometric login');
+      }
+
+      // Use the regular login method with stored credentials
+      return await login(
+        email: credentials.email,
+        password: credentials.password,
+      );
+    } catch (e) {
+      AppLogger.error(
+        'Biometric login with stored credentials failed',
+        tag: 'Auth',
+        error: e,
+      );
+      rethrow;
+    }
+  }
+
+  /// Verify password for fallback authentication
+  /// Returns true if password is correct for the given email
+  @override
+  Future<bool> verifyPassword({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      AppLogger.debug('Verifying password for: $email', tag: 'Auth');
+
+      // Save current session to restore after verification
+      final currentSession = _client.auth.currentSession;
+
+      // Attempt to sign in with the provided credentials
+      final response = await _client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      final isValid = response.user != null;
+
+      // If we had a previous session, restore it
+      // (verification shouldn't change the logged-in user)
+      if (currentSession != null && currentSession.refreshToken != null) {
+        await _client.auth.setSession(currentSession.refreshToken!);
+      }
+
+      AppLogger.debug('Password verification result: $isValid', tag: 'Auth');
+      return isValid;
+    } on sb.AuthException catch (e) {
+      AppLogger.warning(
+        'Password verification failed: ${e.message}',
+        tag: 'Auth',
+      );
+      return false;
+    } catch (e) {
+      AppLogger.error('Error verifying password', tag: 'Auth', error: e);
+      return false;
     }
   }
 }

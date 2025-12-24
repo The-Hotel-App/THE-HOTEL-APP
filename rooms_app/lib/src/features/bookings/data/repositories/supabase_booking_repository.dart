@@ -60,7 +60,7 @@ class SupabaseBookingRepository implements BookingRepository {
 
     // Fetch all rooms for this booking
     final roomsData = await _fetchBookingRooms(bookingId);
-    
+
     // Fetch all guests for this booking
     final guestsData = await _fetchBookingGuests(bookingId);
 
@@ -85,6 +85,12 @@ class SupabaseBookingRepository implements BookingRepository {
       createdBy: json['created_by'] as String? ?? '',
       rooms: roomsData,
       guests: guestsData,
+      checkedInBy: json['checked_in_by'] as String?,
+      checkedInBiometricVerified:
+          json['checked_in_biometric_verified'] as bool? ?? false,
+      checkedOutBy: json['checked_out_by'] as String?,
+      checkedOutBiometricVerified:
+          json['checked_out_biometric_verified'] as bool? ?? false,
     );
   }
 
@@ -93,7 +99,9 @@ class SupabaseBookingRepository implements BookingRepository {
     try {
       final response = await _client
           .from('booking_rooms')
-          .select('room_id, room_price, rooms(room_number, status, room_types(name))')
+          .select(
+            'room_id, room_price, rooms(room_number, status, room_types(name))',
+          )
           .eq('booking_id', bookingId);
 
       return (response as List).map((json) {
@@ -108,7 +116,11 @@ class SupabaseBookingRepository implements BookingRepository {
         );
       }).toList();
     } catch (e) {
-      AppLogger.error('Error fetching booking rooms', tag: 'Bookings', error: e);
+      AppLogger.error(
+        'Error fetching booking rooms',
+        tag: 'Bookings',
+        error: e,
+      );
       return [];
     }
   }
@@ -118,7 +130,9 @@ class SupabaseBookingRepository implements BookingRepository {
     try {
       final response = await _client
           .from('booking_guests')
-          .select('guest_id, is_primary, guests(name, phone, email, id_type, id_number, gender, age)')
+          .select(
+            'guest_id, is_primary, guests(name, phone, email, id_type, id_number, gender, age)',
+          )
           .eq('booking_id', bookingId);
 
       return (response as List).map((json) {
@@ -136,7 +150,11 @@ class SupabaseBookingRepository implements BookingRepository {
         );
       }).toList();
     } catch (e) {
-      AppLogger.error('Error fetching booking guests', tag: 'Bookings', error: e);
+      AppLogger.error(
+        'Error fetching booking guests',
+        tag: 'Bookings',
+        error: e,
+      );
       return [];
     }
   }
@@ -307,6 +325,11 @@ class SupabaseBookingRepository implements BookingRepository {
             'status': _statusToString(booking.status),
             'booking_source': booking.notes,
             'created_by': booking.createdBy,
+            'checked_in_by': booking.checkedInBy,
+            'checked_in_biometric_verified': booking.checkedInBiometricVerified,
+            'checked_out_by': booking.checkedOutBy,
+            'checked_out_biometric_verified':
+                booking.checkedOutBiometricVerified,
           })
           .select('*, guests(name, phone, email), rooms(room_number)')
           .single();

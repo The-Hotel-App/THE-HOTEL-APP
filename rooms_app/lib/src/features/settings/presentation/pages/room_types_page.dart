@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/widgets/custom_dialog.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/rooms/data/repositories/room_types_repository.dart';
 import 'package:rooms/src/features/settings/presentation/widgets/assign_rooms_dialog.dart';
@@ -188,7 +189,10 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
                 children: [
                   Icon(Icons.bed, size: 18, color: AppColors.warning),
                   SizedBox(width: 8),
-                  Text('Assign Rooms', style: TextStyle(color: AppColors.warning)),
+                  Text(
+                    'Assign Rooms',
+                    style: TextStyle(color: AppColors.warning),
+                  ),
                 ],
               ),
             ),
@@ -236,8 +240,8 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(isEditing ? 'Edit Room Type' : 'Add Room Type'),
+        builder: (context, setDialogState) => CustomDialog(
+          title: isEditing ? 'Edit Room Type' : 'Add Room Type',
           content: Form(
             key: formKey,
             child: SingleChildScrollView(
@@ -285,132 +289,101 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
               ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: isSaving
-                  ? null
-                  : () async {
-                      if (!formKey.currentState!.validate()) return;
+          primaryButtonText: isEditing ? 'Update' : 'Add',
+          isPrimaryLoading: isSaving,
+          onPrimaryPressed: () async {
+            if (!formKey.currentState!.validate()) return;
 
-                      setDialogState(() => isSaving = true);
+            setDialogState(() => isSaving = true);
 
-                      try {
-                        final hotel = ref.read(currentHotelProvider);
-                        final repository = ref.read(
-                          roomTypesRepositoryProvider,
-                        );
+            try {
+              final hotel = ref.read(currentHotelProvider);
+              final repository = ref.read(roomTypesRepositoryProvider);
 
-                        if (isEditing) {
-                          await repository.updateRoomType(
-                            id: roomType.id,
-                            name: nameController.text.trim(),
-                            basePrice:
-                                double.tryParse(priceController.text) ?? 0,
-                            maxOccupancy:
-                                int.tryParse(occupancyController.text) ?? 2,
-                            description: descriptionController.text.trim(),
-                          );
-                        } else {
-                          await repository.createRoomType(
-                            hotelId: hotel!.hotelId,
-                            name: nameController.text.trim(),
-                            basePrice:
-                                double.tryParse(priceController.text) ?? 0,
-                            maxOccupancy:
-                                int.tryParse(occupancyController.text) ?? 2,
-                            description: descriptionController.text.trim(),
-                          );
-                        }
+              if (isEditing) {
+                await repository.updateRoomType(
+                  id: roomType.id,
+                  name: nameController.text.trim(),
+                  basePrice: double.tryParse(priceController.text) ?? 0,
+                  maxOccupancy: int.tryParse(occupancyController.text) ?? 2,
+                  description: descriptionController.text.trim(),
+                );
+              } else {
+                await repository.createRoomType(
+                  hotelId: hotel!.hotelId,
+                  name: nameController.text.trim(),
+                  basePrice: double.tryParse(priceController.text) ?? 0,
+                  maxOccupancy: int.tryParse(occupancyController.text) ?? 2,
+                  description: descriptionController.text.trim(),
+                );
+              }
 
-                        if (context.mounted) Navigator.pop(context);
-                        await _loadRoomTypes();
+              if (context.mounted) Navigator.pop(context);
+              await _loadRoomTypes();
 
-                        if (mounted) {
-                          ScaffoldMessenger.of(this.context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                isEditing
-                                    ? 'Room type updated!'
-                                    : 'Room type added!',
-                              ),
-                              backgroundColor: AppColors.success,
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        setDialogState(() => isSaving = false);
-                        if (mounted) {
-                          ScaffoldMessenger.of(this.context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error: $e'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                        }
-                      }
-                    },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.black),
-              child: isSaving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(isEditing ? 'Update' : 'Add'),
-            ),
-          ],
+              if (mounted) {
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      isEditing ? 'Room type updated!' : 'Room type added!',
+                    ),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
+            } catch (e) {
+              setDialogState(() => isSaving = false);
+              if (mounted) {
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: $e'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
+            }
+          },
+          secondaryButtonText: 'Cancel',
+          onSecondaryPressed: () => Navigator.pop(context),
         ),
       ),
     );
   }
 
   void _showDeleteConfirmation(RoomType roomType) {
-    showDialog(
+    CustomDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete?'),
-        content: Text('Delete "${roomType.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              try {
-                final repository = ref.read(roomTypesRepositoryProvider);
-                await repository.deleteRoomType(roomType.id);
-                await _loadRoomTypes();
-
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Room type deleted'),
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: $e'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      title: 'Delete?',
+      icon: Icons.delete_outline,
+      type: CustomDialogType.destructive,
+      content: Text('Delete "${roomType.name}"?'),
+      primaryButtonText: 'Delete',
+      onPrimaryPressed: () async {
+        Navigator.pop(context);
+        try {
+          final repository = ref.read(roomTypesRepositoryProvider);
+          await repository.deleteRoomType(roomType.id);
+          await _loadRoomTypes();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Room type deleted'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: $e'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+        }
+      },
+      secondaryButtonText: 'Cancel',
+      onSecondaryPressed: () => Navigator.pop(context),
     );
   }
 

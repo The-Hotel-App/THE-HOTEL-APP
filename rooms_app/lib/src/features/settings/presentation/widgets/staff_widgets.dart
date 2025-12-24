@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/widgets/custom_dialog.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/settings/data/repositories/staff_repository.dart';
 
@@ -277,22 +278,18 @@ class RemoveStaffDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Remove Staff?'),
+    return CustomDialog(
+      title: 'Remove Staff?',
+      icon: Icons.person_remove,
+      type: CustomDialogType.destructive,
       content: Text(
         'Remove $memberName from this hotel?\n\n'
         'This will permanently delete their account if they only work at this hotel.',
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Remove', style: TextStyle(color: AppColors.error)),
-        ),
-      ],
+      primaryButtonText: 'Remove',
+      onPrimaryPressed: () => Navigator.pop(context, true),
+      secondaryButtonText: 'Cancel',
+      onSecondaryPressed: () => Navigator.pop(context, false),
     );
   }
 }

@@ -561,7 +561,7 @@ class _GuestFormState extends ConsumerState<_GuestForm>
 
   Widget _buildIdTypeSelector() {
     return DropdownButtonFormField<IdType>(
-      value: _selectedIdType,
+      initialValue: _selectedIdType,
       decoration: InputDecoration(
         labelText: 'ID Type',
         prefixIcon: const Icon(Icons.credit_card, color: AppColors.grey600),

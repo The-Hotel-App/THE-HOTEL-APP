@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/core/widgets/app_dialog.dart';
+import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
+import 'package:rooms/src/features/auth/presentation/widgets/biometric_verification_dialog.dart';
 import 'package:rooms/src/features/bookings/data/repositories/supabase_booking_repository.dart';
 import 'package:rooms/src/features/bookings/presentation/providers/booking_providers.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
@@ -139,22 +142,37 @@ class RoomDetailsSheet extends ConsumerWidget {
       case RoomStatus.cleaning:
         label = 'CLEANING DONE';
         onTap = () async {
-          await _updateRoomStatus(ref, room.id, RoomStatus.free);
-          if (context.mounted) Navigator.pop(context);
+          await _updateRoomStatusWithVerification(
+            context,
+            ref,
+            room.id,
+            RoomStatus.free,
+            'Verify to mark room as cleaned',
+          );
         };
         break;
       case RoomStatus.maintenance:
         label = 'EMERGENCY FIXED';
         onTap = () async {
-          await _updateRoomStatus(ref, room.id, RoomStatus.free);
-          if (context.mounted) Navigator.pop(context);
+          await _updateRoomStatusWithVerification(
+            context,
+            ref,
+            room.id,
+            RoomStatus.free,
+            'Verify to mark emergency as fixed',
+          );
         };
         break;
       case RoomStatus.outOfService:
         label = 'RESTORE ROOM';
         onTap = () async {
-          await _updateRoomStatus(ref, room.id, RoomStatus.free);
-          if (context.mounted) Navigator.pop(context);
+          await _updateRoomStatusWithVerification(
+            context,
+            ref,
+            room.id,
+            RoomStatus.free,
+            'Verify to restore room to service',
+          );
         };
         break;
     }
@@ -236,8 +254,13 @@ class RoomDetailsSheet extends ConsumerWidget {
               if (room.status == RoomStatus.occupied) {
                 _showCheckoutConfirmation(context, ref, data.status);
               } else {
-                await _updateRoomStatus(ref, room.id, data.status);
-                if (context.mounted) Navigator.pop(context);
+                await _updateRoomStatusWithVerification(
+                  context,
+                  ref,
+                  room.id,
+                  data.status,
+                  'Verify to change room status to ${data.label}',
+                );
               }
             },
       borderRadius: BorderRadius.circular(12),
@@ -297,18 +320,75 @@ class RoomDetailsSheet extends ConsumerWidget {
       onPrimaryPressed: () async {
         Navigator.pop(context); // Close dialog
 
+        // Require biometric verification for checkout + status change
+        final hotel = ref.read(currentHotelProvider);
+        if (hotel == null) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Error: No hotel selected'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+
+        final result = await BiometricVerificationDialog.show(
+          context: context,
+          reason: 'Verify to check out guest and change room status',
+          hotelId: hotel.hotelId,
+          actionType: 'room_status_change',
+          referenceId: room.id,
+        );
+
+        if (!result.success) {
+          AppLogger.warning(
+            'Verification failed for checkout + status change: ${result.errorMessage}',
+            tag: 'RoomDetailsSheet',
+          );
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result.errorMessage ?? 'Verification failed'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+
         try {
+          // Get verified user ID
+          final currentUserId =
+              SupabaseService.instance.client.auth.currentUser?.id;
+
           // Checkout any active booking for this room
           final bookingRepo =
               ref.read(bookingRepositoryProvider) as SupabaseBookingRepository;
           await bookingRepo.checkoutActiveBookingForRoom(room.id);
 
-          // Update room status
-          await _updateRoomStatus(ref, room.id, newStatus);
+          // Update room status with verified user
+          final repo = ref.read(roomRepositoryProvider);
+          await repo.updateRoomStatus(
+            room.id,
+            newStatus,
+            updatedBy: currentUserId,
+          );
           ref.invalidate(bookingsProvider);
+
+          AppLogger.success(
+            'Room ${room.roomNumber} checked out and status changed to ${newStatus.name}',
+            tag: 'RoomDetailsSheet',
+          );
 
           if (context.mounted) Navigator.pop(context); // Close sheet
         } catch (e) {
+          AppLogger.error(
+            'Error during checkout + status change',
+            tag: 'RoomDetailsSheet',
+            error: e,
+          );
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
@@ -320,17 +400,84 @@ class RoomDetailsSheet extends ConsumerWidget {
     );
   }
 
-  Future<void> _updateRoomStatus(
+  /// Update room status with biometric verification
+  /// Requirements: 3.1, 3.6
+  Future<void> _updateRoomStatusWithVerification(
+    BuildContext context,
     WidgetRef ref,
     String roomId,
     RoomStatus status,
+    String reason,
   ) async {
-    final repo = ref.read(roomRepositoryProvider);
-    // Get current user ID for notification attribution
-    final currentUserId = SupabaseService.instance.client.auth.currentUser?.id;
-    await repo.updateRoomStatus(roomId, status, updatedBy: currentUserId);
-    // Invalidate providers to refresh data
-    ref.invalidate(roomsProvider);
+    final hotel = ref.read(currentHotelProvider);
+    if (hotel == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: No hotel selected'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show biometric verification dialog
+    final result = await BiometricVerificationDialog.show(
+      context: context,
+      reason: reason,
+      hotelId: hotel.hotelId,
+      actionType: 'room_status_change',
+      referenceId: roomId,
+    );
+
+    if (!result.success) {
+      AppLogger.warning(
+        'Verification failed for room status change: ${result.errorMessage}',
+        tag: 'RoomDetailsSheet',
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage ?? 'Verification failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Verification successful - update room status
+    try {
+      final repo = ref.read(roomRepositoryProvider);
+      final currentUserId =
+          SupabaseService.instance.client.auth.currentUser?.id;
+      await repo.updateRoomStatus(roomId, status, updatedBy: currentUserId);
+
+      // Invalidate providers to refresh data
+      ref.invalidate(roomsProvider);
+
+      AppLogger.success(
+        'Room status updated to ${status.name} by verified user',
+        tag: 'RoomDetailsSheet',
+      );
+
+      if (context.mounted) Navigator.pop(context);
+    } catch (e) {
+      AppLogger.error(
+        'Error updating room status',
+        tag: 'RoomDetailsSheet',
+        error: e,
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating room status: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 

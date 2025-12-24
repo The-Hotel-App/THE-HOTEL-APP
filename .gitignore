@@ -61,6 +61,7 @@ Desktop.ini
 # VS Code
 .vscode/
 *.code-workspace
+.kiro/
 
 # JetBrains (IntelliJ, Android Studio, etc.)
 .idea/
@@ -165,3 +166,4 @@ __pycache__/
 *.temp
 *.bak
 *.cache
+

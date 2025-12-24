@@ -5,6 +5,7 @@ import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
+import 'package:rooms/src/core/widgets/custom_dialog.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/auth/presentation/utils/signup_validators.dart';
 import 'package:rooms/src/features/hotel_setup/data/repositories/supabase_hotel_setup_repository.dart';
@@ -43,7 +44,7 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
   int _totalFloors = 1;
   final Map<int, int> _roomsPerFloor = {1: 10};
   final List<LocalRoomType> _roomTypes = [];
-  
+
   bool _isLoading = false;
 
   @override
@@ -54,7 +55,6 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
     _emailController.dispose();
     super.dispose();
   }
-
 
   void _updateFloors(int newValue) {
     setState(() {
@@ -82,12 +82,8 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.grey900,
-        title: Text(
-          isEditing ? 'Edit Room Type' : 'Add Room Type',
-          style: const TextStyle(color: AppColors.white),
-        ),
+      builder: (context) => CustomDialog(
+        title: isEditing ? 'Edit Room Type' : 'Add Room Type',
         content: Form(
           key: formKey,
           child: SingleChildScrollView(
@@ -96,44 +92,18 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
               children: [
                 TextFormField(
                   controller: nameController,
-                  style: const TextStyle(color: AppColors.white),
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Name *',
-                    labelStyle: const TextStyle(color: AppColors.grey400),
                     hintText: 'Deluxe, Suite, Standard...',
-                    hintStyle: TextStyle(color: AppColors.grey600),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: AppColors.grey600),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: AppColors.info),
-                    ),
-                    filled: true,
-                    fillColor: AppColors.grey800,
                   ),
                   validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: priceController,
-                  style: const TextStyle(color: AppColors.white),
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Price/Night (₹) *',
-                    labelStyle: const TextStyle(color: AppColors.grey400),
                     hintText: '1500',
-                    hintStyle: TextStyle(color: AppColors.grey600),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: AppColors.grey600),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: AppColors.info),
-                    ),
-                    filled: true,
-                    fillColor: AppColors.grey800,
                   ),
                   keyboardType: TextInputType.number,
                   validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
@@ -141,22 +111,9 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: occupancyController,
-                  style: const TextStyle(color: AppColors.white),
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Max Guests *',
-                    labelStyle: const TextStyle(color: AppColors.grey400),
                     hintText: '2',
-                    hintStyle: TextStyle(color: AppColors.grey600),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: AppColors.grey600),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: AppColors.info),
-                    ),
-                    filled: true,
-                    fillColor: AppColors.grey800,
                   ),
                   keyboardType: TextInputType.number,
                   validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
@@ -164,22 +121,9 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: descriptionController,
-                  style: const TextStyle(color: AppColors.white),
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Description',
-                    labelStyle: const TextStyle(color: AppColors.grey400),
                     hintText: 'Optional',
-                    hintStyle: TextStyle(color: AppColors.grey600),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: AppColors.grey600),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: AppColors.info),
-                    ),
-                    filled: true,
-                    fillColor: AppColors.grey800,
                   ),
                   maxLines: 2,
                 ),
@@ -187,70 +131,49 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
             ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: AppColors.grey400)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (!formKey.currentState!.validate()) return;
+        primaryButtonText: isEditing ? 'Update' : 'Add',
+        onPrimaryPressed: () {
+          if (!formKey.currentState!.validate()) return;
 
-              final newRoomType = LocalRoomType(
-                name: nameController.text.trim(),
-                basePrice: double.tryParse(priceController.text) ?? 0,
-                maxOccupancy: int.tryParse(occupancyController.text) ?? 2,
-                description: descriptionController.text.trim().isEmpty
-                    ? null
-                    : descriptionController.text.trim(),
-              );
+          final newRoomType = LocalRoomType(
+            name: nameController.text.trim(),
+            basePrice: double.tryParse(priceController.text) ?? 0,
+            maxOccupancy: int.tryParse(occupancyController.text) ?? 2,
+            description: descriptionController.text.trim().isEmpty
+                ? null
+                : descriptionController.text.trim(),
+          );
 
-              setState(() {
-                if (isEditing && index != null) {
-                  _roomTypes[index] = newRoomType;
-                } else {
-                  _roomTypes.add(newRoomType);
-                }
-              });
+          setState(() {
+            if (isEditing && index != null) {
+              _roomTypes[index] = newRoomType;
+            } else {
+              _roomTypes.add(newRoomType);
+            }
+          });
 
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.info,
-              foregroundColor: AppColors.white,
-            ),
-            child: Text(isEditing ? 'Update' : 'Add'),
-          ),
-        ],
+          Navigator.pop(context);
+        },
+        secondaryButtonText: 'Cancel',
+        onSecondaryPressed: () => Navigator.pop(context),
       ),
     );
   }
 
   void _deleteRoomType(int index) {
-    showDialog(
+    CustomDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.grey900,
-        title: const Text('Delete Room Type?', style: TextStyle(color: AppColors.white)),
-        content: Text(
-          'Delete "${_roomTypes[index].name}"?',
-          style: TextStyle(color: AppColors.grey300),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: AppColors.grey400)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() => _roomTypes.removeAt(index));
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      title: 'Delete Room Type?',
+      icon: Icons.delete_outline,
+      type: CustomDialogType.destructive,
+      content: Text('Delete "${_roomTypes[index].name}"?'),
+      primaryButtonText: 'Delete',
+      onPrimaryPressed: () {
+        setState(() => _roomTypes.removeAt(index));
+        Navigator.pop(context);
+      },
+      secondaryButtonText: 'Cancel',
+      onSecondaryPressed: () => Navigator.pop(context),
     );
   }
 
@@ -268,25 +191,31 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
       // Build floor configs
       final floorConfigs = <FloorConfig>[];
       int currentRoomStart = 1;
-      
+
       for (int floor = 1; floor <= _totalFloors; floor++) {
         final roomCount = _roomsPerFloor[floor] ?? 10;
-        floorConfigs.add(FloorConfig(
-          floor: floor,
-          startRoom: currentRoomStart,
-          endRoom: currentRoomStart + roomCount - 1,
-        ));
+        floorConfigs.add(
+          FloorConfig(
+            floor: floor,
+            startRoom: currentRoomStart,
+            endRoom: currentRoomStart + roomCount - 1,
+          ),
+        );
         currentRoomStart += roomCount;
       }
 
       final repository = SupabaseHotelSetupRepository();
-      
+
       // Create the hotel
       final hotel = await repository.createHotel(
         name: _nameController.text.trim(),
         address: _addressController.text.trim(),
-        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
+        email: _emailController.text.trim().isEmpty
+            ? null
+            : _emailController.text.trim(),
         totalFloors: _totalFloors,
         floorConfigs: floorConfigs,
         ownerId: user.id,
@@ -299,14 +228,18 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
       if (_roomTypes.isNotEmpty) {
         await repository.createRoomTypes(
           hotelId: hotel.id,
-          roomTypes: _roomTypes.map((rt) => RoomType(
-            id: '', // Will be generated by database
-            hotelId: hotel.id,
-            name: rt.name,
-            basePrice: rt.basePrice,
-            maxOccupancy: rt.maxOccupancy,
-            description: rt.description,
-          )).toList(),
+          roomTypes: _roomTypes
+              .map(
+                (rt) => RoomType(
+                  id: '', // Will be generated by database
+                  hotelId: hotel.id,
+                  name: rt.name,
+                  basePrice: rt.basePrice,
+                  maxOccupancy: rt.maxOccupancy,
+                  description: rt.description,
+                ),
+              )
+              .toList(),
         );
       }
 
@@ -478,8 +411,15 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
                     ),
                     TextButton.icon(
                       onPressed: () => _showAddEditRoomTypeDialog(),
-                      icon: const Icon(Icons.add, size: 18, color: AppColors.warning),
-                      label: const Text('Add', style: TextStyle(color: AppColors.warning)),
+                      icon: const Icon(
+                        Icons.add,
+                        size: 18,
+                        color: AppColors.warning,
+                      ),
+                      label: const Text(
+                        'Add',
+                        style: TextStyle(color: AppColors.warning),
+                      ),
                     ),
                   ],
                 ),
@@ -523,9 +463,19 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
                             color: AppColors.warning.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.bedroom_parent, color: AppColors.warning, size: 20),
+                          child: const Icon(
+                            Icons.bedroom_parent,
+                            color: AppColors.warning,
+                            size: 20,
+                          ),
                         ),
-                        title: Text(rt.name, style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.white)),
+                        title: Text(
+                          rt.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.white,
+                          ),
+                        ),
                         subtitle: Text(
                           '₹${rt.basePrice.toStringAsFixed(0)}/night • Max ${rt.maxOccupancy} guests',
                           style: TextStyle(color: AppColors.grey400),
@@ -534,11 +484,20 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.edit, size: 18, color: AppColors.grey400),
-                              onPressed: () => _showAddEditRoomTypeDialog(rt, index),
+                              icon: const Icon(
+                                Icons.edit,
+                                size: 18,
+                                color: AppColors.grey400,
+                              ),
+                              onPressed: () =>
+                                  _showAddEditRoomTypeDialog(rt, index),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete, size: 18, color: AppColors.error),
+                              icon: const Icon(
+                                Icons.delete,
+                                size: 18,
+                                color: AppColors.error,
+                              ),
                               onPressed: () => _deleteRoomType(index),
                             ),
                           ],
@@ -611,7 +570,9 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
             ),
           ),
           IconButton(
-            onPressed: _totalFloors > 1 ? () => _updateFloors(_totalFloors - 1) : null,
+            onPressed: _totalFloors > 1
+                ? () => _updateFloors(_totalFloors - 1)
+                : null,
             icon: Icon(
               Icons.remove_circle_outline,
               color: _totalFloors > 1 ? AppColors.warning : AppColors.grey600,
@@ -633,7 +594,9 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
             ),
           ),
           IconButton(
-            onPressed: _totalFloors < 20 ? () => _updateFloors(_totalFloors + 1) : null,
+            onPressed: _totalFloors < 20
+                ? () => _updateFloors(_totalFloors + 1)
+                : null,
             icon: Icon(
               Icons.add_circle_outline,
               color: _totalFloors < 20 ? AppColors.warning : AppColors.grey600,
@@ -726,7 +689,9 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
                       textAlign: TextAlign.center,
                       onChanged: (value) {
                         final rooms = int.tryParse(value) ?? 10;
-                        setState(() => _roomsPerFloor[floor] = rooms.clamp(1, 100));
+                        setState(
+                          () => _roomsPerFloor[floor] = rooms.clamp(1, 100),
+                        );
                       },
                     ),
                   ),
@@ -741,7 +706,7 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
 
   Widget _buildSummary() {
     final totalRooms = _roomsPerFloor.values.fold(0, (a, b) => a + b);
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -756,10 +721,7 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Total Rooms',
-                style: TextStyle(color: AppColors.grey400),
-              ),
+              Text('Total Rooms', style: TextStyle(color: AppColors.grey400)),
               Text(
                 '$totalRooms',
                 style: const TextStyle(
@@ -774,10 +736,7 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Room Types',
-                style: TextStyle(color: AppColors.grey400),
-              ),
+              Text('Room Types', style: TextStyle(color: AppColors.grey400)),
               Text(
                 '${_roomTypes.length}',
                 style: const TextStyle(
@@ -792,10 +751,7 @@ class _CreateHotelPageState extends ConsumerState<CreateHotelPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Floors',
-                style: TextStyle(color: AppColors.grey400),
-              ),
+              Text('Floors', style: TextStyle(color: AppColors.grey400)),
               Text(
                 '$_totalFloors',
                 style: const TextStyle(

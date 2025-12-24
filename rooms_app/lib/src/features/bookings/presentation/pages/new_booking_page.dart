@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/widgets/custom_dialog.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/booking_guests_page.dart';
-import 'package:rooms/src/features/bookings/presentation/pages/booking_rooms_page.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/booking_payment_page.dart';
+import 'package:rooms/src/features/bookings/presentation/pages/booking_rooms_page.dart';
 import 'package:rooms/src/features/bookings/presentation/providers/new_booking_providers.dart';
 
 /// New Booking Page - Hub for the booking flow
@@ -75,7 +76,8 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
               subtitle: _getPaymentSubtitle(bookingState),
               icon: Icons.payment,
               isCompleted: false,
-              isEnabled: bookingState.allGuestsFilled && bookingState.hasRoomsSelected,
+              isEnabled:
+                  bookingState.allGuestsFilled && bookingState.hasRoomsSelected,
               onTap: () => _navigateToPayment(),
             ),
           ],
@@ -106,7 +108,9 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                 padding: EdgeInsets.symmetric(horizontal: 12),
                 child: Icon(Icons.arrow_forward, color: AppColors.grey400),
               ),
-              Expanded(child: _buildDateCard('Check Out', state.checkOut, false)),
+              Expanded(
+                child: _buildDateCard('Check Out', state.checkOut, false),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -137,14 +141,17 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
         final picked = await showDatePicker(
           context: context,
           initialDate: date,
-          firstDate: isCheckIn ? DateTime.now() : ref.read(newBookingProvider).checkIn,
+          firstDate: isCheckIn
+              ? DateTime.now()
+              : ref.read(newBookingProvider).checkIn,
           lastDate: DateTime.now().add(const Duration(days: 365)),
         );
         if (picked != null) {
           final notifier = ref.read(newBookingProvider.notifier);
           if (isCheckIn) {
             var checkOut = ref.read(newBookingProvider).checkOut;
-            if (checkOut.isBefore(picked) || checkOut.isAtSameMomentAs(picked)) {
+            if (checkOut.isBefore(picked) ||
+                checkOut.isAtSameMomentAs(picked)) {
               checkOut = picked.add(const Duration(days: 1));
             }
             notifier.setDates(picked, checkOut);
@@ -197,7 +204,10 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
               const Spacer(),
               Text(
                 '${state.guestCount}',
-                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -210,7 +220,9 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                   height: 56,
                   child: ElevatedButton(
                     onPressed: state.guestCount > 1
-                        ? () => ref.read(newBookingProvider.notifier).setGuestCount(state.guestCount - 1)
+                        ? () => ref
+                              .read(newBookingProvider.notifier)
+                              .setGuestCount(state.guestCount - 1)
                         : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.grey200,
@@ -232,7 +244,9 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                 child: SizedBox(
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: () => ref.read(newBookingProvider.notifier).setGuestCount(state.guestCount + 1),
+                    onPressed: () => ref
+                        .read(newBookingProvider.notifier)
+                        .setGuestCount(state.guestCount + 1),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.black,
                       foregroundColor: AppColors.white,
@@ -307,7 +321,9 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 13,
-                      color: isEnabled ? AppColors.textSecondary : AppColors.grey400,
+                      color: isEnabled
+                          ? AppColors.textSecondary
+                          : AppColors.grey400,
                     ),
                   ),
                 ],
@@ -352,50 +368,38 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
   }
 
   void _navigateToPersonalInfo() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const BookingGuestsPage(),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const BookingGuestsPage()));
   }
 
   void _navigateToRoomInfo() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const BookingRoomsPage(),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const BookingRoomsPage()));
   }
 
   void _navigateToPayment() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const BookingPaymentPage(),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const BookingPaymentPage()));
   }
 
   void _showExitConfirmation() {
-    showDialog(
+    CustomDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cancel Booking?'),
-        content: const Text('Your progress will be lost.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Continue'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.pop();
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Exit'),
-          ),
-        ],
-      ),
+      title: 'Cancel Booking?',
+      icon: Icons.warning_amber_rounded,
+      type: CustomDialogType.warning,
+      content: const Text('Your progress will be lost.'),
+      primaryButtonText: 'Exit',
+      primaryButtonColor: AppColors.error,
+      onPrimaryPressed: () {
+        Navigator.pop(context);
+        context.pop();
+      },
+      secondaryButtonText: 'Continue',
+      onSecondaryPressed: () => Navigator.pop(context),
     );
   }
 }

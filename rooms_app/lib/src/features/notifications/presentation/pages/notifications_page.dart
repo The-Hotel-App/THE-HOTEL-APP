@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
-import 'package:rooms/src/core/widgets/app_dialog.dart';
+import 'package:rooms/src/core/widgets/custom_dialog.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/notifications/domain/entities/app_notification.dart';
 import 'package:rooms/src/features/notifications/presentation/providers/notification_providers.dart';
@@ -308,9 +308,11 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   }
 
   void _showClearConfirmation(String userId) {
-    AppDialog.show(
+    CustomDialog.show(
       context: context,
       title: 'Clear Notification History?',
+      icon: Icons.delete_sweep,
+      type: CustomDialogType.warning,
       content: const Text(
         'This will hide all notifications from view. You can restore them later if needed.',
       ),
@@ -320,6 +322,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
         _clearHistory(userId);
       },
       secondaryButtonText: 'Cancel',
+      onSecondaryPressed: () => Navigator.pop(context),
     );
   }
 
@@ -391,34 +394,30 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
 
     // TODO: Navigate to relevant screen based on notification type
     // For now, just show the data in a dialog
-    showDialog(
+    CustomDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(notification.title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(notification.body),
-            const SizedBox(height: 16),
+      title: notification.title,
+      icon: _getNotificationIcon(notification.type),
+      iconColor: _getNotificationColor(notification.type),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(notification.body),
+          const SizedBox(height: 16),
+          Text(
+            'Hotel: ${notification.hotelName ?? 'Unknown'}',
+            style: TextStyle(color: AppColors.grey600, fontSize: 12),
+          ),
+          if (notification.roomNumber != null)
             Text(
-              'Hotel: ${notification.hotelName ?? 'Unknown'}',
+              'Room: ${notification.roomNumber}',
               style: TextStyle(color: AppColors.grey600, fontSize: 12),
             ),
-            if (notification.roomNumber != null)
-              Text(
-                'Room: ${notification.roomNumber}',
-                style: TextStyle(color: AppColors.grey600, fontSize: 12),
-              ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
         ],
       ),
+      primaryButtonText: 'Close',
+      onPrimaryPressed: () => Navigator.pop(context),
     );
   }
 

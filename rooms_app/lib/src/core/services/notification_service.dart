@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
+import 'package:rooms/src/core/widgets/custom_dialog.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -192,24 +193,14 @@ class NotificationService {
     if (settings.authorizationStatus == AuthorizationStatus.denied &&
         context.mounted) {
       // Show dialog explaining why notifications are important
-      final shouldOpenSettings = await showDialog<bool>(
+      final shouldOpenSettings = await CustomDialog.showConfirmation(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Enable Notifications'),
-          content: const Text(
+        title: 'Enable Notifications',
+        message:
             'To receive booking alerts and room status updates, please enable notifications in your device settings.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Later'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Open Settings'),
-            ),
-          ],
-        ),
+        confirmText: 'Open Settings',
+        cancelText: 'Later',
+        icon: Icons.notifications_active,
       );
 
       if (shouldOpenSettings == true) {

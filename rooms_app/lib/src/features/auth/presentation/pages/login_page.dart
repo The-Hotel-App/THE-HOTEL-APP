@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/constants/app_constants.dart';
 import 'package:rooms/src/core/logging/app_logger.dart';
@@ -9,6 +10,8 @@ import 'package:rooms/src/core/services/notification_service.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
+import 'package:rooms/src/features/auth/presentation/providers/biometric_providers.dart';
+import 'package:rooms/src/features/auth/presentation/widgets/biometric_enrollment_dialog.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -22,6 +25,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isBiometricLoading = false;
   bool _obscurePassword = true;
   List<Map<String, String>> _testEmails = [];
   bool _isLoadingEmails = true;
@@ -85,6 +89,71 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  /// Check if biometric enrollment should be prompted and show dialog
+  /// Requirements: 1.1 - Prompt after first successful email/password login
+  /// Only shows if device supports biometrics and user hasn't enrolled
+  Future<void> _checkAndPromptBiometricEnrollment(
+    String email,
+    String password,
+  ) async {
+    try {
+      // Check if device supports biometrics
+      final biometricService = ref.read(biometricServiceProvider);
+      final isDeviceSupported = await biometricService.isDeviceSupported();
+      final areBiometricsEnrolled = await biometricService
+          .areBiometricsEnrolled();
+
+      if (!isDeviceSupported || !areBiometricsEnrolled) {
+        AppLogger.debug(
+          'Device does not support biometrics or no biometrics enrolled',
+          tag: 'BiometricEnrollment',
+        );
+        return;
+      }
+
+      // Check if user has already enrolled biometrics
+      final user = await ref.read(currentUserProvider.future);
+      if (user == null || user.hasBiometric) {
+        AppLogger.debug(
+          'User already has biometrics enrolled or user is null',
+          tag: 'BiometricEnrollment',
+        );
+        return;
+      }
+
+      // Show enrollment dialog
+      if (!mounted) return;
+
+      AppLogger.info(
+        'Prompting user for biometric enrollment',
+        tag: 'BiometricEnrollment',
+      );
+
+      final result = await BiometricEnrollmentDialog.show(
+        context: context,
+        email: email,
+        password: password,
+      );
+
+      AppLogger.info(
+        'Biometric enrollment result: $result',
+        tag: 'BiometricEnrollment',
+      );
+
+      // Refresh user state after enrollment
+      if (result == BiometricEnrollmentResult.enrolled) {
+        ref.invalidate(currentUserProvider);
+      }
+    } catch (e) {
+      AppLogger.error(
+        'Error checking biometric enrollment',
+        tag: 'BiometricEnrollment',
+        error: e,
+      );
+      // Don't block login flow if enrollment check fails
+    }
+  }
+
   Future<void> _handleLogin() async {
     AppLogger.auth('Login attempt started');
 
@@ -107,6 +176,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       await authRepo.login(email: email, password: password);
 
       AppLogger.success('Login successful!', tag: 'Auth');
+
+      if (!mounted) return;
+
+      // Check if we should prompt for biometric enrollment
+      // Requirements: 1.1 - Prompt after first successful email/password login
+      await _checkAndPromptBiometricEnrollment(email, password);
 
       if (!mounted) return;
 
@@ -178,6 +253,122 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           SnackBar(
             content: Text('Login failed: ${e.toString()}'),
             backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Handle biometric login
+  /// Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
+  Future<void> _handleBiometricLogin() async {
+    AppLogger.auth('Biometric login attempt started');
+
+    setState(() => _isBiometricLoading = true);
+
+    try {
+      final biometricService = ref.read(biometricServiceProvider);
+
+      // Trigger biometric authentication
+      final authenticated = await biometricService.authenticate(
+        reason: 'Authenticate to sign in to ROOMS.io',
+        biometricOnly: true,
+      );
+
+      if (!authenticated) {
+        AppLogger.warning('Biometric authentication failed', tag: 'Auth');
+        if (mounted) {
+          setState(() => _isBiometricLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Biometric authentication failed. Please try again or use email/password.',
+              ),
+              backgroundColor: AppColors.error,
+              action: SnackBarAction(
+                label: 'Retry',
+                textColor: AppColors.white,
+                onPressed: _handleBiometricLogin,
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Biometric succeeded - login with stored credentials
+      final authRepo = ref.read(authRepositoryProvider);
+      await authRepo.loginWithStoredCredentials();
+
+      AppLogger.success('Biometric login successful!', tag: 'Auth');
+
+      if (!mounted) return;
+
+      // Get user's hotels before any navigation
+      final hotels = await ref.read(userHotelsProvider.future);
+
+      AppLogger.info('User has ${hotels.length} hotel(s)', tag: 'Auth');
+
+      if (!mounted) return;
+
+      if (hotels.isEmpty) {
+        AppLogger.warning(
+          'User has no hotels, router will redirect to setup',
+          tag: 'Auth',
+        );
+        setState(() => _isBiometricLoading = false);
+        ref.invalidate(currentUserProvider);
+        return;
+      }
+
+      if (hotels.length == 1) {
+        AppLogger.success(
+          'Auto-selecting single hotel: ${hotels.first.hotelName}',
+          tag: 'Auth',
+        );
+        ref.read(selectedHotelIdProvider.notifier).state = hotels.first.hotelId;
+
+        // Register FCM token for push notifications
+        final notificationService = ref.read(notificationServiceProvider);
+        await notificationService.registerTokenForUser();
+
+        final dashboardRoute = _getDashboardRoute(hotels.first.role);
+        AppLogger.navigation('Navigating to dashboard: $dashboardRoute');
+
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        if (mounted) {
+          context.go(dashboardRoute);
+          if (mounted) setState(() => _isBiometricLoading = false);
+        }
+        return;
+      }
+
+      // Multiple hotels - show selector
+      AppLogger.info('Multiple hotels, showing selector', tag: 'Auth');
+      setState(() => _isBiometricLoading = false);
+      if (mounted) {
+        await _showHotelSelector(hotels);
+      }
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Biometric login failed',
+        tag: 'Auth',
+        error: e,
+        stackTrace: stackTrace,
+      );
+
+      if (mounted) {
+        setState(() => _isBiometricLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Biometric login failed: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: AppColors.white,
+              onPressed: _handleBiometricLogin,
+            ),
           ),
         );
       }
@@ -427,7 +618,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     SizedBox(
                       height: 56,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleLogin,
+                        onPressed: _isLoading || _isBiometricLoading
+                            ? null
+                            : _handleLogin,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.black,
                           foregroundColor: AppColors.white,
@@ -456,6 +649,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               ),
                       ),
                     ),
+
+                    // Biometric Login Button
+                    _buildBiometricLoginButton(),
                   ],
                 ),
               ),
@@ -463,6 +659,108 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Build biometric login button
+  /// Shows fingerprint/face icon based on available biometrics
+  /// Only visible when user has enrolled biometrics and stored credentials
+  /// Requirements: 2.1, 2.5
+  Widget _buildBiometricLoginButton() {
+    // Watch the canUseBiometricLogin provider to determine visibility
+    final canUseBiometricAsync = ref.watch(canUseBiometricLoginProvider);
+    final availableBiometricsAsync = ref.watch(availableBiometricsProvider);
+
+    return canUseBiometricAsync.when(
+      data: (canUseBiometric) {
+        if (!canUseBiometric) {
+          return const SizedBox.shrink();
+        }
+
+        // Get the appropriate icon based on available biometrics
+        final biometricIcon = availableBiometricsAsync.when(
+          data: (biometrics) {
+            if (biometrics.contains(BiometricType.face)) {
+              return Icons.face;
+            } else if (biometrics.contains(BiometricType.fingerprint)) {
+              return Icons.fingerprint;
+            }
+            return Icons.fingerprint;
+          },
+          loading: () => Icons.fingerprint,
+          error: (_, _) => Icons.fingerprint,
+        );
+
+        final biometricLabel = availableBiometricsAsync.when(
+          data: (biometrics) {
+            if (biometrics.contains(BiometricType.face)) {
+              return 'Sign in with Face ID';
+            }
+            return 'Sign in with Fingerprint';
+          },
+          loading: () => 'Sign in with Biometrics',
+          error: (_, _) => 'Sign in with Biometrics',
+        );
+
+        return Column(
+          children: [
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'or',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                const Expanded(child: Divider()),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 56,
+              child: OutlinedButton.icon(
+                onPressed: _isLoading || _isBiometricLoading
+                    ? null
+                    : _handleBiometricLogin,
+                icon: _isBiometricLoading
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.black,
+                          ),
+                        ),
+                      )
+                    : Icon(biometricIcon, size: 24),
+                label: Text(
+                  _isBiometricLoading ? 'Authenticating...' : biometricLabel,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.black,
+                  side: const BorderSide(color: AppColors.black, width: 2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
