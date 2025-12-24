@@ -205,7 +205,12 @@ class _CreateStaffPageState extends ConsumerState<CreateStaffPage> {
   }
 
   Widget _buildRoleSelector() {
-    final roles = [UserRole.manager, UserRole.staff, UserRole.kitchenManager];
+    final roles = [
+      UserRole.owner,
+      UserRole.manager,
+      UserRole.staff,
+      UserRole.kitchenManager,
+    ];
 
     return Wrap(
       spacing: 8,
@@ -317,20 +322,20 @@ class _CreateStaffPageState extends ConsumerState<CreateStaffPage> {
       );
 
       if (mounted) {
-      // Invalidate providers to refresh with owner's data
-      ref.invalidate(currentUserProvider);
-      ref.invalidate(userHotelsProvider);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${_selectedRole.displayName} account created successfully!',
+        // Invalidate providers to refresh with owner's data
+        ref.invalidate(currentUserProvider);
+        ref.invalidate(userHotelsProvider);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${_selectedRole.displayName} account created successfully!',
+            ),
+            backgroundColor: AppColors.success,
           ),
-          backgroundColor: AppColors.success,
-        ),
-      );
-      context.pop();
-    }
+        );
+        context.pop();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
