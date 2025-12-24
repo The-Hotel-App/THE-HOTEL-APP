@@ -226,71 +226,97 @@ class CustomDialog extends StatelessWidget {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Primary button
-        if (primaryButtonText != null)
-          ElevatedButton(
-            onPressed: isPrimaryLoading || isPrimaryDisabled
-                ? null
-                : onPrimaryPressed ?? () => Navigator.of(context).pop(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: buttonColor,
-              foregroundColor: AppColors.white,
-              disabledBackgroundColor: buttonColor.withValues(alpha: 0.5),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+    // Build primary button widget
+    Widget? primaryButton;
+    if (primaryButtonText != null) {
+      primaryButton = Expanded(
+        child: ElevatedButton(
+          onPressed: isPrimaryLoading || isPrimaryDisabled
+              ? null
+              : onPrimaryPressed ?? () => Navigator.of(context).pop(),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: buttonColor,
+            foregroundColor: AppColors.white,
+            disabledBackgroundColor: buttonColor.withValues(alpha: 0.5),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: isPrimaryLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.white,
-                      ),
-                    ),
-                  )
-                : Text(primaryButtonText!),
           ),
+          child: isPrimaryLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                  ),
+                )
+              : Text(primaryButtonText!),
+        ),
+      );
+    }
 
-        // Secondary button
-        if (hasSecondary) ...[
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: onSecondaryPressed ?? () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.textSecondary,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+    // Build secondary button widget
+    Widget? secondaryButton;
+    if (hasSecondary) {
+      secondaryButton = Expanded(
+        child: OutlinedButton(
+          onPressed: onSecondaryPressed ?? () => Navigator.of(context).pop(),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.textSecondary,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            side: BorderSide(color: AppColors.grey300),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(secondaryButtonText!),
           ),
-        ],
+          child: Text(secondaryButtonText!),
+        ),
+      );
+    }
 
-        // Tertiary button (if needed)
-        if (hasTertiary) ...[
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: onTertiaryPressed ?? () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.grey500,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+    // Build tertiary button widget
+    Widget? tertiaryButton;
+    if (hasTertiary) {
+      tertiaryButton = Expanded(
+        child: TextButton(
+          onPressed: onTertiaryPressed ?? () => Navigator.of(context).pop(),
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.grey500,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(tertiaryButtonText!),
           ),
-        ],
-      ],
-    );
+          child: Text(tertiaryButtonText!),
+        ),
+      );
+    }
+
+    // Arrange buttons horizontally (left-right fashion)
+    // Order: Tertiary (if any) | Secondary (if any) | Primary
+    final buttons = <Widget>[];
+
+    if (tertiaryButton != null) {
+      buttons.add(tertiaryButton);
+      if (secondaryButton != null || primaryButton != null) {
+        buttons.add(const SizedBox(width: 12));
+      }
+    }
+
+    if (secondaryButton != null) {
+      buttons.add(secondaryButton);
+      if (primaryButton != null) {
+        buttons.add(const SizedBox(width: 12));
+      }
+    }
+
+    if (primaryButton != null) {
+      buttons.add(primaryButton);
+    }
+
+    return Row(children: buttons);
   }
 
   // ============== STATIC CONVENIENCE METHODS ==============

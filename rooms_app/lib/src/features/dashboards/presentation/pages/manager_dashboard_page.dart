@@ -5,6 +5,7 @@ import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
+import 'package:rooms/src/features/auth/presentation/providers/biometric_providers.dart';
 
 /// Manager Dashboard - Access to rooms, bookings, customers (current only), no money details
 class ManagerDashboardPage extends ConsumerStatefulWidget {
@@ -226,6 +227,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
           color: AppColors.grey600,
           onTap: () => context.push(AppRoutes.changePassword),
         ),
+        _buildBiometricCard(context),
       ],
     );
   }
@@ -254,6 +256,48 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
             const SizedBox(height: 8),
             Text(
               label,
+              style: TextStyle(
+                color: AppColors.black,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBiometricCard(BuildContext context) {
+    final hasBiometric = ref.watch(userBiometricStatusProvider);
+
+    return InkWell(
+      onTap: () => context.push(AppRoutes.biometricSettings),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: hasBiometric
+                ? AppColors.success.withValues(alpha: 0.3)
+                : AppColors.grey600.withValues(alpha: 0.3),
+            width: 2,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.fingerprint,
+              color: hasBiometric ? AppColors.success : AppColors.grey600,
+              size: 32,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              hasBiometric ? 'Biometric On' : 'Biometric Login',
               style: TextStyle(
                 color: AppColors.black,
                 fontWeight: FontWeight.w600,

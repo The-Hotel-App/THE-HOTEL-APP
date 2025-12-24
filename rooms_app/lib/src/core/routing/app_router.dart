@@ -12,7 +12,6 @@ import 'package:rooms/src/features/auth/presentation/providers/auth_providers_ne
     as auth_new;
 import 'package:rooms/src/features/bookings/presentation/pages/bookings_page.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/new_booking_page.dart';
-
 import 'package:rooms/src/features/checkout/presentation/pages/checkout_flow_page.dart';
 import 'package:rooms/src/features/customers/presentation/pages/customers_page.dart';
 import 'package:rooms/src/features/dashboards/presentation/pages/kitchen_dashboard_page.dart';
@@ -25,6 +24,7 @@ import 'package:rooms/src/features/notifications/presentation/pages/notification
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 import 'package:rooms/src/features/rooms/presentation/pages/rooms_management_page.dart';
 import 'package:rooms/src/features/rooms/presentation/pages/rooms_page.dart';
+import 'package:rooms/src/features/settings/presentation/pages/biometric_settings_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/change_password_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/create_staff_page.dart';
 import 'package:rooms/src/features/settings/presentation/pages/hotel_settings_page.dart';
@@ -50,6 +50,7 @@ class AppRoutes {
   static const String staff = '/staff';
   static const String hotelSettings = '/hotel-settings';
   static const String notifications = '/notifications';
+  static const String biometricSettings = '/biometric-settings';
   // Legacy routes for role-based dashboards (kept for compatibility)
   static const String bookingSearch = '/booking-search';
   static const String ownerDashboard = '/owner-dashboard';
@@ -603,6 +604,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const RoomsManagementPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            final tween = Tween(
+              begin: begin,
+              end: end,
+            ).chain(CurveTween(curve: Curves.easeInOut));
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.biometricSettings,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const BiometricSettingsPage(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(1.0, 0.0);
             const end = Offset.zero;

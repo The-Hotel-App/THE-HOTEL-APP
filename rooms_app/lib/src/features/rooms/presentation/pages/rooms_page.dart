@@ -9,7 +9,6 @@ import 'package:rooms/src/features/rooms/presentation/widgets/room_details_sheet
 import 'package:rooms/src/features/rooms/presentation/widgets/room_list_item.dart';
 import 'package:rooms/src/features/rooms/presentation/widgets/room_stats_bar.dart';
 
-
 /// Main rooms page displaying floors and rooms grid
 class RoomsPage extends ConsumerStatefulWidget {
   /// When true, hides back button for use as embedded tab content
@@ -53,11 +52,11 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
                   },
                 )
               : widget.embedded
-                  ? null // No back button when embedded as tab
-                  : IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () => context.pop(),
-                    ),
+              ? null // No back button when embedded as tab
+              : IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => context.pop(),
+                ),
           title: Row(
             children: [
               Image.asset(
@@ -148,17 +147,26 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
 
     var floorRooms = allRooms.where((r) => r.floor == selectedFloor).toList();
 
-    // Always sort by room number
-    floorRooms.sort((a, b) => a.roomNumber.compareTo(b.roomNumber));
+    // Sort by room number numerically
+    floorRooms.sort((a, b) {
+      final aNum = int.tryParse(a.roomNumber) ?? 0;
+      final bNum = int.tryParse(b.roomNumber) ?? 0;
+      return aNum.compareTo(bNum);
+    });
 
     if (floorRooms.isEmpty) {
       return _buildEmptyState();
     }
 
-    // Split rooms into left and right columns (airplane style)
-    final midPoint = (floorRooms.length / 2).ceil();
-    final leftRooms = floorRooms.sublist(0, midPoint);
-    final rightRooms = floorRooms.sublist(midPoint);
+    // Create pairs for row-by-row display (1,2), (3,4), etc.
+    final List<List<Room>> roomRows = [];
+    for (var i = 0; i < floorRooms.length; i += 2) {
+      if (i + 1 < floorRooms.length) {
+        roomRows.add([floorRooms[i], floorRooms[i + 1]]);
+      } else {
+        roomRows.add([floorRooms[i]]);
+      }
+    }
 
     return RefreshIndicator(
       onRefresh: _refreshRooms,
@@ -169,43 +177,38 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
             // Stats Bar
             RoomStatsBar(rooms: floorRooms),
             const SizedBox(height: 16),
-            // Airplane-style 2-column layout
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Left column
-                Expanded(
-                  child: Column(
-                    children: leftRooms.map((room) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+            // Row-by-row layout
+            ...roomRows.map(
+              (row) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    // Left room
+                    Expanded(
                       child: SizedBox(
                         height: 64,
                         child: RoomGridTile(
-                          room: room,
-                          onTap: () => _showRoomDetails(room),
+                          room: row[0],
+                          onTap: () => _showRoomDetails(row[0]),
                         ),
                       ),
-                    )).toList(),
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Right room (or empty space)
+                    Expanded(
+                      child: row.length > 1
+                          ? SizedBox(
+                              height: 64,
+                              child: RoomGridTile(
+                                room: row[1],
+                                onTap: () => _showRoomDetails(row[1]),
+                              ),
+                            )
+                          : const SizedBox(height: 64),
+                    ),
+                  ],
                 ),
-                // Center gap
-                const SizedBox(width: 48),
-                // Right column
-                Expanded(
-                  child: Column(
-                    children: rightRooms.map((room) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: SizedBox(
-                        height: 64,
-                        child: RoomGridTile(
-                          room: room,
-                          onTap: () => _showRoomDetails(room),
-                        ),
-                      ),
-                    )).toList(),
-                  ),
-                ),
-              ],
+              ),
             ),
             const SizedBox(height: 24),
           ],

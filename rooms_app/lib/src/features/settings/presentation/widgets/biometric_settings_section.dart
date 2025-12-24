@@ -237,6 +237,110 @@ class _BiometricSettingsSectionState
     );
   }
 
+  /// Handle reset fingerprint - verify with old fingerprint first, then re-setup
+  Future<void> _handleResetBiometric() async {
+    final biometricType = _getBiometricTypeText();
+
+    // Show confirmation dialog
+    final confirmed = await CustomDialog.showConfirmation(
+      context: context,
+      title: 'Reset $biometricType',
+      message:
+          'To reset your $biometricType, you need to verify with your '
+          'current fingerprint first, then enter your password to set up again.',
+      confirmText: 'Continue',
+      cancelText: 'Cancel',
+      icon: Icons.refresh,
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Step 1: Verify with current biometric
+      final biometricService = ref.read(biometricServiceProvider);
+      final authenticated = await biometricService.authenticate(
+        reason: 'Verify your identity to reset $biometricType',
+        biometricOnly: true,
+      );
+
+      if (!authenticated) {
+        _showErrorSnackBar('Verification failed. Please try again.');
+        return;
+      }
+
+      // Step 2: Clear old credentials
+      await biometricService.clearCredentials();
+
+      AppLogger.info(
+        'Old credentials cleared for reset',
+        tag: 'BiometricSettings',
+      );
+
+      // Step 3: Get new password
+      setState(() => _isLoading = false);
+
+      final newPassword = await _showPasswordDialog();
+      if (newPassword == null) {
+        // User cancelled - we need to re-enable biometric with old flow
+        _showErrorSnackBar('Reset cancelled. Please set up biometric again.');
+
+        // Update user profile to have no biometric since we cleared credentials
+        final user = await ref.read(currentUserProvider.future);
+        if (user != null) {
+          final authRepo = ref.read(authRepositoryProvider);
+          await authRepo.updateBiometricStatus(
+            userId: user.id,
+            hasBiometric: false,
+          );
+          ref.invalidate(currentUserProvider);
+        }
+        return;
+      }
+
+      // Step 4: Re-enroll with new credentials
+      final user = await ref.read(currentUserProvider.future);
+      if (user == null) {
+        _showErrorSnackBar('User not found');
+        return;
+      }
+
+      if (!mounted) return;
+
+      final result = await BiometricEnrollmentDialog.show(
+        context: context,
+        email: user.email,
+        password: newPassword,
+      );
+
+      if (result == BiometricEnrollmentResult.enrolled) {
+        _showSuccessSnackBar('$biometricType reset successfully');
+        ref.invalidate(currentUserProvider);
+      } else {
+        _showErrorSnackBar('Failed to reset $biometricType');
+        // Update user profile since we cleared credentials
+        final authRepo = ref.read(authRepositoryProvider);
+        await authRepo.updateBiometricStatus(
+          userId: user.id,
+          hasBiometric: false,
+        );
+        ref.invalidate(currentUserProvider);
+      }
+    } catch (e) {
+      AppLogger.error(
+        'Error resetting biometric',
+        tag: 'BiometricSettings',
+        error: e,
+      );
+      _showErrorSnackBar('Failed to reset $biometricType');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserProvider);
@@ -373,6 +477,36 @@ class _BiometricSettingsSectionState
                   ),
                 ],
               ),
+            ),
+          ],
+          // Reset fingerprint option (when biometric is enabled)
+          // TODO: Allow user to reset and re-add fingerprint
+          if (hasBiometric) ...[
+            const Divider(height: 1),
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 4,
+              ),
+              leading: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.info.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.refresh, color: AppColors.info, size: 22),
+              ),
+              title: const Text(
+                'Reset Fingerprint',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+              ),
+              subtitle: Text(
+                'Verify with current fingerprint to re-setup',
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              ),
+              trailing: Icon(Icons.chevron_right, color: AppColors.grey500),
+              onTap: _isLoading ? null : _handleResetBiometric,
             ),
           ],
         ],

@@ -5,6 +5,7 @@ import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
+import 'package:rooms/src/features/auth/presentation/providers/biometric_providers.dart';
 
 /// Kitchen Manager Dashboard - Food orders only, no access to rooms/bookings/customers
 class KitchenDashboardPage extends ConsumerStatefulWidget {
@@ -201,22 +202,69 @@ class _KitchenDashboardPageState extends ConsumerState<KitchenDashboardPage> {
   }
 
   Widget _buildAccountGrid(BuildContext context) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: () => context.push(AppRoutes.changePassword),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.grey300),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.lock, color: AppColors.grey600, size: 32),
+                const SizedBox(width: 16),
+                Text(
+                  'Change Password',
+                  style: TextStyle(
+                    color: AppColors.black,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.chevron_right, color: AppColors.grey500),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildBiometricCard(context),
+      ],
+    );
+  }
+
+  Widget _buildBiometricCard(BuildContext context) {
+    final hasBiometric = ref.watch(userBiometricStatusProvider);
+
     return InkWell(
-      onTap: () => context.push(AppRoutes.changePassword),
+      onTap: () => context.push(AppRoutes.biometricSettings),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.grey300),
+          border: Border.all(
+            color: hasBiometric
+                ? AppColors.success.withValues(alpha: 0.3)
+                : AppColors.grey300,
+          ),
         ),
         child: Row(
           children: [
-            Icon(Icons.lock, color: AppColors.grey600, size: 32),
+            Icon(
+              Icons.fingerprint,
+              color: hasBiometric ? AppColors.success : AppColors.grey600,
+              size: 32,
+            ),
             const SizedBox(width: 16),
             Text(
-              'Change Password',
+              hasBiometric ? 'Biometric On' : 'Biometric Login',
               style: TextStyle(
                 color: AppColors.black,
                 fontWeight: FontWeight.w600,
@@ -224,7 +272,24 @@ class _KitchenDashboardPageState extends ConsumerState<KitchenDashboardPage> {
               ),
             ),
             const Spacer(),
-            Icon(Icons.chevron_right, color: AppColors.grey500),
+            if (hasBiometric)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'Enabled',
+                  style: TextStyle(
+                    color: AppColors.success,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              )
+            else
+              Icon(Icons.chevron_right, color: AppColors.grey500),
           ],
         ),
       ),

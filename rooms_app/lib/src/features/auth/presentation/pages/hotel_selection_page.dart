@@ -5,13 +5,22 @@ import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/services/notification_service.dart';
+import 'package:rooms/src/core/widgets/custom_dialog.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
+import 'package:rooms/src/features/auth/presentation/providers/biometric_providers.dart';
 
 /// Hotel Selection Page - Shows all hotels user has access to
 /// Displayed after login when user has multiple hotels
-class HotelSelectionPage extends ConsumerWidget {
+class HotelSelectionPage extends ConsumerStatefulWidget {
   const HotelSelectionPage({super.key});
+
+  @override
+  ConsumerState<HotelSelectionPage> createState() => _HotelSelectionPageState();
+}
+
+class _HotelSelectionPageState extends ConsumerState<HotelSelectionPage> {
+  bool _isBiometricLoading = false;
 
   String _getDashboardRoute(UserRole role) {
     switch (role) {
@@ -52,10 +61,262 @@ class HotelSelectionPage extends ConsumerWidget {
     }
   }
 
+  Future<void> _handleBiometricToggle() async {
+    final hasBiometric = ref.read(userBiometricStatusProvider);
+
+    if (hasBiometric) {
+      // Disable biometric - require fingerprint verification first
+      setState(() => _isBiometricLoading = true);
+
+      try {
+        final biometricService = ref.read(biometricServiceProvider);
+
+        // Verify fingerprint first
+        final authenticated = await biometricService.authenticate(
+          reason: 'Verify your identity to disable fingerprint login',
+          biometricOnly: false,
+        );
+
+        if (!authenticated) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Verification failed'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+          return;
+        }
+
+        // Fingerprint verified - proceed to disable
+        await biometricService.clearCredentials();
+
+        final user = await ref.read(currentUserProvider.future);
+        if (user != null) {
+          final authRepo = ref.read(authRepositoryProvider);
+          await authRepo.updateBiometricStatus(
+            userId: user.id,
+            hasBiometric: false,
+          );
+        }
+
+        // Refresh the user provider to update the toggle
+        ref.invalidate(currentUserProvider);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Fingerprint login disabled'),
+              backgroundColor: AppColors.black,
+            ),
+          );
+        }
+      } catch (e) {
+        AppLogger.error(
+          'Error disabling biometric',
+          tag: 'HotelSelection',
+          error: e,
+        );
+      } finally {
+        if (mounted) setState(() => _isBiometricLoading = false);
+      }
+    } else {
+      // Enable biometric - prompt for password inline
+      final password = await _showPasswordDialog();
+      if (password == null) return;
+
+      setState(() => _isBiometricLoading = true);
+
+      try {
+        final biometricService = ref.read(biometricServiceProvider);
+
+        // Check device support
+        final isSupported = await biometricService.isDeviceSupported();
+        final isEnrolled = await biometricService.areBiometricsEnrolled();
+
+        if (!isSupported || !isEnrolled) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Fingerprint not available on this device'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+          return;
+        }
+
+        // Authenticate with fingerprint
+        final authenticated = await biometricService.authenticate(
+          reason: 'Verify your fingerprint to enable quick login',
+          biometricOnly: false,
+        );
+
+        if (!authenticated) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Fingerprint verification failed'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+          return;
+        }
+
+        // Store credentials
+        final user = await ref.read(currentUserProvider.future);
+        if (user != null) {
+          await biometricService.storeCredentials(
+            email: user.email,
+            password: password,
+          );
+
+          final authRepo = ref.read(authRepositoryProvider);
+          await authRepo.updateBiometricStatus(
+            userId: user.id,
+            hasBiometric: true,
+          );
+
+          // Refresh the user provider to update the toggle
+          ref.invalidate(currentUserProvider);
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Fingerprint login enabled'),
+                backgroundColor: AppColors.black,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        AppLogger.error(
+          'Error enabling biometric',
+          tag: 'HotelSelection',
+          error: e,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to enable fingerprint: ${e.toString()}'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isBiometricLoading = false);
+      }
+    }
+  }
+
+  Future<String?> _showPasswordDialog() async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enter Password'),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          decoration: const InputDecoration(
+            labelText: 'Password',
+            hintText: 'Enter your password',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleLogout() async {
+    final confirmed = await CustomDialog.showConfirmation(
+      context: context,
+      title: 'Logout',
+      message: 'Are you sure you want to logout?',
+      confirmText: 'Logout',
+      cancelText: 'Cancel',
+      isDestructive: true,
+      icon: Icons.logout,
+    );
+
+    if (confirmed != true) return;
+
+    // Navigate first to avoid flash
+    if (mounted) {
+      context.go(AppRoutes.welcome);
+    }
+
+    // Then logout in background
+    final authRepo = ref.read(authRepositoryProvider);
+    await authRepo.logout();
+  }
+
+  Widget _buildFingerprintCard(bool hasBiometric) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.fingerprint, color: AppColors.black, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Fingerprint Login',
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+          if (_isBiometricLoading)
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            Switch(
+              value: hasBiometric,
+              onChanged: (_) => _handleBiometricToggle(),
+              activeThumbColor: AppColors.black,
+              activeTrackColor: AppColors.grey400,
+              inactiveThumbColor: AppColors.grey400,
+              inactiveTrackColor: AppColors.grey200,
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final hotelsAsync = ref.watch(userHotelsProvider);
     final currentUser = ref.watch(currentUserProvider).valueOrNull;
+    final hasBiometric = ref.watch(userBiometricStatusProvider);
 
     return Scaffold(
       backgroundColor: AppColors.grey100,
@@ -66,13 +327,7 @@ class HotelSelectionPage extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              final authRepo = ref.read(authRepositoryProvider);
-              await authRepo.logout();
-              if (context.mounted) {
-                context.go(AppRoutes.welcome);
-              }
-            },
+            onPressed: _handleLogout,
             tooltip: 'Logout',
           ),
         ],
@@ -155,6 +410,10 @@ class HotelSelectionPage extends ConsumerWidget {
                     ],
                   ),
                 ),
+                const SizedBox(height: 16),
+
+                // Fingerprint setup card - prominent and visible
+                _buildFingerprintCard(hasBiometric),
                 const SizedBox(height: 24),
 
                 // Section title

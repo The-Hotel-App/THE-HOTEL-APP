@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers.dart';
+import 'package:rooms/src/features/auth/presentation/providers/biometric_providers.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
 
@@ -315,6 +316,33 @@ class _CheckoutFlowPageState extends ConsumerState<CheckoutFlowPage> {
   }
 
   Future<void> _handleCheckout() async {
+    final currentUser = ref.read(currentUserProvider).valueOrNull;
+
+    // Require fingerprint verification for managers
+    if (currentUser?.role.name == 'manager') {
+      final biometricService = ref.read(biometricServiceProvider);
+      final hasBiometric = ref.read(userBiometricStatusProvider);
+
+      if (hasBiometric) {
+        final authenticated = await biometricService.authenticate(
+          reason: 'Verify your identity to complete checkout',
+          biometricOnly: false,
+        );
+
+        if (!authenticated) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Verification failed'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+          return;
+        }
+      }
+    }
+    if (!mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -327,7 +355,6 @@ class _CheckoutFlowPageState extends ConsumerState<CheckoutFlowPage> {
 
     final newStatus = _setToCleaning ? RoomStatus.cleaning : RoomStatus.free;
     final roomRepo = ref.read(roomRepositoryProvider);
-    final currentUser = ref.read(currentUserProvider).valueOrNull;
     await roomRepo.updateRoomStatus(
       widget.room.id,
       newStatus,
