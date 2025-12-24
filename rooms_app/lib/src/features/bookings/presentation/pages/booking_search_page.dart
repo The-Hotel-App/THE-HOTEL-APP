@@ -231,9 +231,7 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
             ),
           ),
           IconButton(
-            onPressed: _guestCount < 10
-                ? () => setState(() => _guestCount++)
-                : null,
+            onPressed: () => setState(() => _guestCount++),
             icon: const Icon(Icons.add_circle_outline),
             color: AppColors.black,
           ),
@@ -255,7 +253,7 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
           children: [
             Expanded(
               child: Text(
-                'Any Room Type',
+                'All Rooms',
                 style: TextStyle(color: AppColors.grey500),
               ),
             ),
@@ -279,12 +277,12 @@ class _BookingSearchPageState extends ConsumerState<BookingSearchPage> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _selectedRoomTypeId,
-          hint: const Text('Any Room Type'),
+          hint: const Text('All Rooms'),
           isExpanded: true,
           items: [
             const DropdownMenuItem<String>(
               value: null,
-              child: Text('Any Room Type'),
+              child: Text('All Rooms'),
             ),
             ..._roomTypes.map(
               (type) => DropdownMenuItem<String>(

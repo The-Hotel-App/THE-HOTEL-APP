@@ -10,6 +10,8 @@ import 'package:rooms/src/features/checkin/presentation/providers/checkin_provid
 import 'package:rooms/src/features/checkin/presentation/widgets/step_confirmation.dart';
 import 'package:rooms/src/features/checkin/presentation/widgets/step_customer_info.dart';
 import 'package:rooms/src/features/checkin/presentation/widgets/step_payment.dart';
+import 'package:rooms/src/features/daybook/domain/entities/transaction.dart';
+import 'package:rooms/src/features/daybook/presentation/providers/daybook_providers.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
 import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
 
@@ -202,7 +204,37 @@ class _CheckinFlowPageState extends ConsumerState<CheckinFlowPage> {
         createdBy: user?.id ?? '',
       );
 
-      await bookingRepo.createBooking(booking);
+      final createdBooking = await bookingRepo.createBooking(booking);
+
+      // Record payment in daybook if there's an advance payment
+      if (checkinState.paidAmount > 0) {
+        try {
+          // Get or create today's daybook to get the daybook ID
+          final daybookRepo = ref.read(dayBookRepositoryProvider);
+          final todaySummary = await daybookRepo.getTodaySummary(hotel.hotelId);
+          
+          final transaction = Transaction(
+            id: '',
+            hotelId: hotel.hotelId,
+            daybookId: todaySummary.id,
+            type: TransactionType.income,
+            category: TransactionCategory.roomPayment,
+            amount: checkinState.paidAmount,
+            description: 'Room ${widget.room.roomNumber} - ${checkinState.customer!.name}',
+            createdAt: DateTime.now(),
+            createdBy: user?.id ?? '',
+            bookingId: createdBooking.id,
+          );
+          
+          await daybookRepo.addTransaction(transaction);
+          
+          // Invalidate daybook provider to refresh
+          ref.invalidate(todayDayBookProvider);
+        } catch (e) {
+          // Log error but don't fail the check-in
+          debugPrint('Failed to record payment in daybook: $e');
+        }
+      }
 
       // Update room status to occupied
       final roomRepo = ref.read(roomRepositoryProvider);

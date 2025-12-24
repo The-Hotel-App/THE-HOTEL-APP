@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/rooms/data/repositories/room_types_repository.dart';
+import 'package:rooms/src/features/settings/presentation/widgets/assign_rooms_dialog.dart';
 
 /// Room Types Management Page - Owner only
 class RoomTypesPage extends ConsumerStatefulWidget {
@@ -172,13 +173,25 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
         ),
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
-            if (value == 'edit') {
+            if (value == 'assign') {
+              _showAssignRoomsDialog(roomType);
+            } else if (value == 'edit') {
               _showAddEditDialog(roomType);
             } else if (value == 'delete') {
               _showDeleteConfirmation(roomType);
             }
           },
           itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'assign',
+              child: Row(
+                children: [
+                  Icon(Icons.bed, size: 18, color: AppColors.warning),
+                  SizedBox(width: 8),
+                  Text('Assign Rooms', style: TextStyle(color: AppColors.warning)),
+                ],
+              ),
+            ),
             const PopupMenuItem(
               value: 'edit',
               child: Row(
@@ -397,6 +410,15 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
             child: const Text('Delete'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showAssignRoomsDialog(RoomType roomType) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AssignRoomsDialog(roomType: roomType),
+        fullscreenDialog: true,
       ),
     );
   }

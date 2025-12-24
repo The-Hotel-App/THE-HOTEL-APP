@@ -295,6 +295,21 @@ class RoomsRepository {
     }
   }
 
+  /// Clear room type assignment (set to null)
+  Future<void> clearRoomType(String roomId) async {
+    try {
+      AppLogger.debug('Clearing room type for room: $roomId', tag: 'Rooms');
+      await _client
+          .from('rooms')
+          .update({'room_type_id': null})
+          .eq('id', roomId);
+      AppLogger.success('Room type cleared', tag: 'Rooms');
+    } catch (e) {
+      AppLogger.error('Error clearing room type', tag: 'Rooms', error: e);
+      rethrow;
+    }
+  }
+
   /// Delete a room
   Future<void> deleteRoom(String id) async {
     try {
