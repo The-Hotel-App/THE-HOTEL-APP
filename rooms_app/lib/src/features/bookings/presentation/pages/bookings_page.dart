@@ -6,6 +6,7 @@ import 'package:rooms/src/features/auth/presentation/providers/auth_providers.da
 import 'package:rooms/src/features/bookings/domain/entities/booking.dart';
 import 'package:rooms/src/features/bookings/presentation/providers/booking_providers.dart';
 import 'package:rooms/src/features/bookings/presentation/widgets/booking_widgets.dart';
+import 'package:rooms/src/features/bookings/presentation/widgets/collect_payment_dialog.dart';
 
 class BookingsPage extends ConsumerStatefulWidget {
   /// When true, hides back button for use as embedded tab content
@@ -121,11 +122,7 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
             (b) => BookingCard(
               booking: b,
               canViewMoney: canViewMoney,
-              onTap: () => BookingDetailsSheet.show(
-                context,
-                booking: b,
-                canViewMoney: canViewMoney,
-              ),
+              onTap: () => _showBookingDetails(context, b, canViewMoney),
             ),
           ),
           const SizedBox(height: 16),
@@ -141,11 +138,7 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
             (b) => BookingCard(
               booking: b,
               canViewMoney: canViewMoney,
-              onTap: () => BookingDetailsSheet.show(
-                context,
-                booking: b,
-                canViewMoney: canViewMoney,
-              ),
+              onTap: () => _showBookingDetails(context, b, canViewMoney),
             ),
           ),
           const SizedBox(height: 16),
@@ -161,15 +154,25 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
             (b) => BookingCard(
               booking: b,
               canViewMoney: canViewMoney,
-              onTap: () => BookingDetailsSheet.show(
-                context,
-                booking: b,
-                canViewMoney: canViewMoney,
-              ),
+              onTap: () => _showBookingDetails(context, b, canViewMoney),
             ),
           ),
         ],
       ],
+    );
+  }
+
+  void _showBookingDetails(BuildContext context, Booking booking, bool canViewMoney) {
+    BookingDetailsSheet.show(
+      context,
+      booking: booking,
+      canViewMoney: canViewMoney,
+      onCollectPayment: () async {
+        final result = await CollectPaymentDialog.show(context, booking);
+        if (result == true) {
+          _refresh();
+        }
+      },
     );
   }
 }

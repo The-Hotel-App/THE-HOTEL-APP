@@ -9,6 +9,7 @@ class Customer {
   final IdType idType;
   final String idNumber;
   final String? address;
+  final int? age;
   final DateTime createdAt;
   final DateTime? lastVisit;
   final int totalVisits;
@@ -23,6 +24,7 @@ class Customer {
     required this.idType,
     required this.idNumber,
     this.address,
+    this.age,
     required this.createdAt,
     this.lastVisit,
     this.totalVisits = 1,
@@ -38,6 +40,7 @@ class Customer {
     IdType? idType,
     String? idNumber,
     String? address,
+    int? age,
     DateTime? createdAt,
     DateTime? lastVisit,
     int? totalVisits,
@@ -52,6 +55,7 @@ class Customer {
       idType: idType ?? this.idType,
       idNumber: idNumber ?? this.idNumber,
       address: address ?? this.address,
+      age: age ?? this.age,
       createdAt: createdAt ?? this.createdAt,
       lastVisit: lastVisit ?? this.lastVisit,
       totalVisits: totalVisits ?? this.totalVisits,

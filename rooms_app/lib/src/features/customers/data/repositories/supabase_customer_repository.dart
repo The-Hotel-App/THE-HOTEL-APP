@@ -95,6 +95,7 @@ class SupabaseCustomerRepository implements CustomerRepository {
             'gender': customer.gender.name,
             'id_type': customer.idType.name,
             'id_number': customer.idNumber,
+            'age': customer.age,
           })
           .select()
           .single();
@@ -120,6 +121,7 @@ class SupabaseCustomerRepository implements CustomerRepository {
             'gender': customer.gender.name,
             'id_type': customer.idType.name,
             'id_number': customer.idNumber,
+            'age': customer.age,
           })
           .eq('id', customer.id);
 
@@ -177,6 +179,7 @@ class SupabaseCustomerRepository implements CustomerRepository {
       gender: _parseGender(json['gender'] as String?),
       idType: _parseIdType(json['id_type'] as String?),
       idNumber: json['id_number'] as String? ?? '',
+      age: json['age'] as int?,
       createdAt: DateTime.parse(json['created_at'] as String),
       totalVisits: 1, // Will need to count from bookings later
     );

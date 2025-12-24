@@ -11,8 +11,10 @@ import 'package:rooms/src/features/auth/presentation/providers/auth_providers_ne
     as auth_new;
 import 'package:rooms/src/features/bookings/presentation/pages/booking_search_page.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/bookings_page.dart';
+import 'package:rooms/src/features/bookings/presentation/pages/new_booking_page.dart';
 import 'package:rooms/src/features/checkin/presentation/pages/checkin_flow_page.dart';
 import 'package:rooms/src/features/checkout/presentation/pages/checkout_flow_page.dart';
+import 'package:rooms/src/features/customers/domain/entities/customer.dart';
 import 'package:rooms/src/features/customers/presentation/pages/customers_page.dart';
 import 'package:rooms/src/features/dashboards/presentation/pages/kitchen_dashboard_page.dart';
 import 'package:rooms/src/features/dashboards/presentation/pages/manager_dashboard_page.dart';
@@ -481,7 +483,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.bookingSearch,
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
-          child: const BookingSearchPage(),
+          child: const NewBookingPage(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(1.0, 0.0);
             const end = Offset.zero;

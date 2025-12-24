@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/features/bookings/domain/entities/booking.dart';
+import 'package:rooms/src/features/bookings/presentation/widgets/collect_payment_dialog.dart';
 
 /// Section header widget for booking groups
 class BookingSectionHeader extends StatelessWidget {
@@ -255,33 +256,44 @@ class BookingCard extends StatelessWidget {
 class BookingDetailsSheet extends StatelessWidget {
   final Booking booking;
   final bool canViewMoney;
+  final VoidCallback? onCollectPayment;
+  final VoidCallback? onWriteOff;
 
   const BookingDetailsSheet({
     super.key,
     required this.booking,
     required this.canViewMoney,
+    this.onCollectPayment,
+    this.onWriteOff,
   });
 
   static void show(
     BuildContext context, {
     required Booking booking,
     required bool canViewMoney,
+    VoidCallback? onCollectPayment,
+    VoidCallback? onWriteOff,
   }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) =>
-          BookingDetailsSheet(booking: booking, canViewMoney: canViewMoney),
+      builder: (context) => BookingDetailsSheet(
+        booking: booking,
+        canViewMoney: canViewMoney,
+        onCollectPayment: onCollectPayment,
+        onWriteOff: onWriteOff,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor(booking.status);
+    final hasPendingPayment = !booking.isFullyPaid && booking.pendingAmount > 0;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.65,
+      height: MediaQuery.of(context).size.height * 0.7,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -323,29 +335,126 @@ class BookingDetailsSheet extends StatelessWidget {
                   'Guests',
                   '${booking.guestCount}',
                 ),
-                if (canViewMoney) ...[
-                  const Divider(height: 32),
+                // Payment details section
+                const Divider(height: 32),
+                _buildDetailRow(
+                  Icons.currency_rupee,
+                  'Total',
+                  '₹${booking.totalAmount.toStringAsFixed(0)}',
+                ),
+                _buildDetailRow(
+                  Icons.check_circle,
+                  'Paid',
+                  '₹${booking.paidAmount.toStringAsFixed(0)}',
+                ),
+                if (!booking.isFullyPaid)
                   _buildDetailRow(
-                    Icons.currency_rupee,
-                    'Total',
-                    '₹${booking.totalAmount.toStringAsFixed(0)}',
+                    Icons.warning,
+                    'Pending',
+                    '₹${booking.pendingAmount.toStringAsFixed(0)}',
+                    valueColor: AppColors.error,
                   ),
-                  _buildDetailRow(
-                    Icons.check_circle,
-                    'Paid',
-                    '₹${booking.paidAmount.toStringAsFixed(0)}',
-                  ),
-                  if (!booking.isFullyPaid)
-                    _buildDetailRow(
-                      Icons.warning,
-                      'Pending',
-                      '₹${booking.pendingAmount.toStringAsFixed(0)}',
-                    ),
+                // Payment action buttons for pending payments - always show if there's pending payment
+                if (hasPendingPayment) ...[
+                  const SizedBox(height: 24),
+                  _buildPaymentActions(context),
                 ],
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentActions(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.payment, color: AppColors.warning, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Pending: ₹${booking.pendingAmount.toStringAsFixed(0)}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.warning,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    if (onCollectPayment != null) {
+                      onCollectPayment!();
+                    } else {
+                      _showCollectPaymentDialog(context);
+                    }
+                  },
+                  icon: const Icon(Icons.add_card, size: 18),
+                  label: const Text('Collect'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    foregroundColor: AppColors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    if (onWriteOff != null) {
+                      onWriteOff!();
+                    } else {
+                      _showWriteOffDialog(context);
+                    }
+                  },
+                  icon: const Icon(Icons.cancel_outlined, size: 18),
+                  label: const Text('Write Off'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: BorderSide(color: AppColors.error),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCollectPaymentDialog(BuildContext context) {
+    CollectPaymentDialog.show(context, booking);
+  }
+
+  void _showWriteOffDialog(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Write off feature - coming soon'),
+        backgroundColor: AppColors.info,
       ),
     );
   }
@@ -390,12 +499,34 @@ class BookingDetailsSheet extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(
-                  booking.status.displayName,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      booking.status.displayName,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (!booking.isFullyPaid) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Partial',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppColors.warning,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -405,7 +536,7 @@ class BookingDetailsSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  Widget _buildDetailRow(IconData icon, String label, String value, {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -425,9 +556,10 @@ class BookingDetailsSheet extends StatelessWidget {
                 ),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
+                    color: valueColor,
                   ),
                 ),
               ],
