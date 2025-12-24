@@ -4,9 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers.dart';
 import 'package:rooms/src/features/bookings/domain/entities/booking.dart';
+import 'package:rooms/src/features/bookings/presentation/pages/booking_details_page.dart';
 import 'package:rooms/src/features/bookings/presentation/providers/booking_providers.dart';
 import 'package:rooms/src/features/bookings/presentation/widgets/booking_widgets.dart';
-import 'package:rooms/src/features/bookings/presentation/widgets/collect_payment_dialog.dart';
 
 class BookingsPage extends ConsumerStatefulWidget {
   /// When true, hides back button for use as embedded tab content
@@ -163,16 +163,10 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
   }
 
   void _showBookingDetails(BuildContext context, Booking booking, bool canViewMoney) {
-    BookingDetailsSheet.show(
-      context,
-      booking: booking,
-      canViewMoney: canViewMoney,
-      onCollectPayment: () async {
-        final result = await CollectPaymentDialog.show(context, booking);
-        if (result == true) {
-          _refresh();
-        }
-      },
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => BookingDetailsPage(booking: booking),
+      ),
     );
   }
 }

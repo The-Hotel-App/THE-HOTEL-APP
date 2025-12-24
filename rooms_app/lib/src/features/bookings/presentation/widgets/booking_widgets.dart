@@ -52,7 +52,7 @@ class BookingSectionHeader extends StatelessWidget {
   }
 }
 
-/// Booking card widget
+/// Booking card widget - shows multiple rooms
 class BookingCard extends StatelessWidget {
   final Booking booking;
   final bool canViewMoney;
@@ -69,6 +69,7 @@ class BookingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor(booking.status);
     final paymentColor = _getPaymentColor(booking.paymentStatus);
+    final roomCount = booking.rooms.isNotEmpty ? booking.rooms.length : 1;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -93,24 +94,8 @@ class BookingCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: statusColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        booking.roomNumber,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                  ),
+                  // Room indicator - shows count if multiple rooms
+                  _buildRoomIndicator(statusColor, roomCount),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
@@ -121,6 +106,18 @@ class BookingCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        // Show room numbers
+                        Text(
+                          roomCount > 1 
+                              ? 'Rooms: ${booking.allRoomNumbers}'
+                              : 'Room ${booking.allRoomNumbers}',
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -221,6 +218,53 @@ class BookingCard extends StatelessWidget {
     );
   }
 
+  Widget _buildRoomIndicator(Color statusColor, int roomCount) {
+    if (roomCount == 1) {
+      return Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          color: statusColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(
+            booking.allRoomNumbers,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Multiple rooms - show count with icon
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        color: statusColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.bed, color: Colors.white, size: 20),
+          Text(
+            '×$roomCount',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Color _getStatusColor(BookingStatus status) {
     switch (status) {
       case BookingStatus.confirmed:
@@ -252,7 +296,8 @@ class BookingCard extends StatelessWidget {
   }
 }
 
-/// Booking details bottom sheet
+
+/// Booking details bottom sheet - shows all rooms, guests, and payment info
 class BookingDetailsSheet extends StatelessWidget {
   final Booking booking;
   final bool canViewMoney;
@@ -293,7 +338,7 @@ class BookingDetailsSheet extends StatelessWidget {
     final hasPendingPayment = !booking.isFullyPaid && booking.pendingAmount > 0;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
+      height: MediaQuery.of(context).size.height * 0.85,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -315,51 +360,324 @@ class BookingDetailsSheet extends StatelessWidget {
               children: [
                 _buildHeader(statusColor),
                 const SizedBox(height: 24),
-                _buildDetailRow(
-                  Icons.login,
-                  'Check In',
-                  _formatDate(booking.checkIn),
-                ),
-                _buildDetailRow(
-                  Icons.logout,
-                  'Check Out',
-                  _formatDate(booking.checkOut),
-                ),
-                _buildDetailRow(
-                  Icons.nights_stay,
-                  'Duration',
-                  '${booking.stayDuration} night(s)',
-                ),
-                _buildDetailRow(
-                  Icons.people,
-                  'Guests',
-                  '${booking.guestCount}',
-                ),
-                // Payment details section
-                const Divider(height: 32),
-                _buildDetailRow(
-                  Icons.currency_rupee,
-                  'Total',
-                  '₹${booking.totalAmount.toStringAsFixed(0)}',
-                ),
-                _buildDetailRow(
-                  Icons.check_circle,
-                  'Paid',
-                  '₹${booking.paidAmount.toStringAsFixed(0)}',
-                ),
-                if (!booking.isFullyPaid)
-                  _buildDetailRow(
-                    Icons.warning,
-                    'Pending',
-                    '₹${booking.pendingAmount.toStringAsFixed(0)}',
-                    valueColor: AppColors.error,
-                  ),
-                // Payment action buttons for pending payments - always show if there's pending payment
-                if (hasPendingPayment) ...[
+                
+                // Rooms Section
+                _buildSectionTitle('Rooms', Icons.bed),
+                const SizedBox(height: 12),
+                _buildRoomsSection(statusColor),
+                const SizedBox(height: 24),
+                
+                // Guests Section
+                _buildSectionTitle('Guests', Icons.people),
+                const SizedBox(height: 12),
+                _buildGuestsSection(),
+                const SizedBox(height: 24),
+                
+                // Stay Details Section
+                _buildSectionTitle('Stay Details', Icons.calendar_today),
+                const SizedBox(height: 12),
+                _buildStayDetailsSection(),
+                
+                // Payment Section
+                if (canViewMoney) ...[
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Payment', Icons.payment),
+                  const SizedBox(height: 12),
+                  _buildPaymentSection(),
+                ],
+                
+                // Payment action buttons for pending payments
+                if (hasPendingPayment && canViewMoney) ...[
                   const SizedBox(height: 24),
                   _buildPaymentActions(context),
                 ],
+                
+                const SizedBox(height: 24),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: AppColors.grey600),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.grey800,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRoomsSection(Color statusColor) {
+    final rooms = booking.rooms.isNotEmpty 
+        ? booking.rooms 
+        : [BookingRoom(roomId: booking.roomId, roomNumber: booking.roomNumber, roomPrice: booking.totalAmount)];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.grey100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: rooms.asMap().entries.map((entry) {
+          final index = entry.key;
+          final room = entry.value;
+          return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: index < rooms.length - 1
+                  ? Border(bottom: BorderSide(color: AppColors.grey200))
+                  : null,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(
+                      room.roomNumber,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Room ${room.roomNumber}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      if (room.roomPrice > 0)
+                        Text(
+                          '₹${room.roomPrice.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildGuestsSection() {
+    final guests = booking.guests.isNotEmpty 
+        ? booking.guests 
+        : [BookingGuest(guestId: booking.customerId, name: booking.customerName, phone: booking.customerPhone, email: booking.customerEmail, isPrimary: true)];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.grey100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: guests.asMap().entries.map((entry) {
+          final index = entry.key;
+          final guest = entry.value;
+          return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: index < guests.length - 1
+                  ? Border(bottom: BorderSide(color: AppColors.grey200))
+                  : null,
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: guest.isPrimary ? AppColors.info : AppColors.grey400,
+                  child: Text(
+                    guest.name.isNotEmpty ? guest.name[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            guest.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                          if (guest.isPrimary) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.info.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Primary',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: AppColors.info,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      if (guest.phone != null && guest.phone!.isNotEmpty)
+                        Row(
+                          children: [
+                            Icon(Icons.phone, size: 12, color: AppColors.textSecondary),
+                            const SizedBox(width: 4),
+                            Text(
+                              guest.phone!,
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      if (guest.idType != null && guest.idNumber != null)
+                        Row(
+                          children: [
+                            Icon(Icons.badge, size: 12, color: AppColors.textSecondary),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${guest.idType}: ${guest.idNumber}',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildStayDetailsSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.grey100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          _buildDetailRow(Icons.login, 'Check In', _formatDateFull(booking.checkIn)),
+          const SizedBox(height: 12),
+          _buildDetailRow(Icons.logout, 'Check Out', _formatDateFull(booking.checkOut)),
+          const SizedBox(height: 12),
+          _buildDetailRow(Icons.nights_stay, 'Duration', '${booking.stayDuration} night(s)'),
+          const SizedBox(height: 12),
+          _buildDetailRow(Icons.people, 'Total Guests', '${booking.guestCount}'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentSection() {
+    final paymentColor = _getPaymentColor(booking.paymentStatus);
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.grey100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Total Amount', style: TextStyle(fontSize: 14)),
+              Text(
+                '₹${booking.totalAmount.toStringAsFixed(0)}',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Paid', style: TextStyle(fontSize: 14)),
+              Text(
+                '₹${booking.paidAmount.toStringAsFixed(0)}',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.success),
+              ),
+            ],
+          ),
+          if (!booking.isFullyPaid) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Pending', style: TextStyle(fontSize: 14)),
+                Text(
+                  '₹${booking.pendingAmount.toStringAsFixed(0)}',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.error),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: paymentColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              booking.paymentStatus.displayName,
+              style: TextStyle(
+                color: paymentColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
             ),
           ),
         ],
@@ -460,6 +778,8 @@ class BookingDetailsSheet extends StatelessWidget {
   }
 
   Widget _buildHeader(Color statusColor) {
+    final roomCount = booking.rooms.isNotEmpty ? booking.rooms.length : 1;
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -477,14 +797,29 @@ class BookingDetailsSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
-              child: Text(
-                booking.roomNumber,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 24,
-                ),
-              ),
+              child: roomCount > 1
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.bed, color: Colors.white, size: 24),
+                        Text(
+                          '×$roomCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Text(
+                      booking.allRoomNumbers,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 16),
@@ -499,13 +834,22 @@ class BookingDetailsSheet extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 4),
                 Row(
                   children: [
-                    Text(
-                      booking.status.displayName,
-                      style: TextStyle(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
                         color: statusColor,
-                        fontWeight: FontWeight.w600,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        booking.status.displayName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
                       ),
                     ),
                     if (!booking.isFullyPaid) ...[
@@ -536,37 +880,27 @@ class BookingDetailsSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value, {Color? valueColor}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: AppColors.textSecondary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: valueColor,
-                  ),
-                ),
-              ],
-            ),
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: AppColors.textSecondary),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: AppColors.textSecondary,
           ),
-        ],
-      ),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 
@@ -583,7 +917,21 @@ class BookingDetailsSheet extends StatelessWidget {
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}';
+  Color _getPaymentColor(PaymentStatus status) {
+    switch (status) {
+      case PaymentStatus.paid:
+        return AppColors.success;
+      case PaymentStatus.partial:
+        return AppColors.warning;
+      case PaymentStatus.pending:
+        return AppColors.error;
+      case PaymentStatus.refunded:
+        return AppColors.info;
+    }
+  }
+
+  String _formatDateFull(DateTime date) {
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }

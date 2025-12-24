@@ -40,6 +40,48 @@ enum PaymentStatus {
   }
 }
 
+/// Room info for a booking
+class BookingRoom {
+  final String roomId;
+  final String roomNumber;
+  final double roomPrice;
+  final String? roomTypeName;
+  final String? roomStatus;
+
+  const BookingRoom({
+    required this.roomId,
+    required this.roomNumber,
+    required this.roomPrice,
+    this.roomTypeName,
+    this.roomStatus,
+  });
+}
+
+/// Guest info for a booking
+class BookingGuest {
+  final String guestId;
+  final String name;
+  final String? phone;
+  final String? email;
+  final String? idType;
+  final String? idNumber;
+  final String? gender;
+  final int? age;
+  final bool isPrimary;
+
+  const BookingGuest({
+    required this.guestId,
+    required this.name,
+    this.phone,
+    this.email,
+    this.idType,
+    this.idNumber,
+    this.gender,
+    this.age,
+    this.isPrimary = false,
+  });
+}
+
 /// Booking entity
 class Booking {
   final String id;
@@ -48,6 +90,8 @@ class Booking {
   final String customerId;
   final String roomNumber;
   final String customerName;
+  final String? customerPhone;
+  final String? customerEmail;
   final DateTime checkIn;
   final DateTime checkOut;
   final int guestCount;
@@ -58,6 +102,8 @@ class Booking {
   final String? notes;
   final DateTime createdAt;
   final String createdBy;
+  final List<BookingRoom> rooms;
+  final List<BookingGuest> guests;
 
   const Booking({
     required this.id,
@@ -66,6 +112,8 @@ class Booking {
     required this.customerId,
     required this.roomNumber,
     required this.customerName,
+    this.customerPhone,
+    this.customerEmail,
     required this.checkIn,
     required this.checkOut,
     required this.guestCount,
@@ -76,6 +124,8 @@ class Booking {
     this.notes,
     required this.createdAt,
     required this.createdBy,
+    this.rooms = const [],
+    this.guests = const [],
   });
 
   Booking copyWith({
@@ -85,6 +135,8 @@ class Booking {
     String? customerId,
     String? roomNumber,
     String? customerName,
+    String? customerPhone,
+    String? customerEmail,
     DateTime? checkIn,
     DateTime? checkOut,
     int? guestCount,
@@ -95,6 +147,8 @@ class Booking {
     String? notes,
     DateTime? createdAt,
     String? createdBy,
+    List<BookingRoom>? rooms,
+    List<BookingGuest>? guests,
   }) {
     return Booking(
       id: id ?? this.id,
@@ -103,6 +157,8 @@ class Booking {
       customerId: customerId ?? this.customerId,
       roomNumber: roomNumber ?? this.roomNumber,
       customerName: customerName ?? this.customerName,
+      customerPhone: customerPhone ?? this.customerPhone,
+      customerEmail: customerEmail ?? this.customerEmail,
       checkIn: checkIn ?? this.checkIn,
       checkOut: checkOut ?? this.checkOut,
       guestCount: guestCount ?? this.guestCount,
@@ -113,10 +169,23 @@ class Booking {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       createdBy: createdBy ?? this.createdBy,
+      rooms: rooms ?? this.rooms,
+      guests: guests ?? this.guests,
     );
   }
 
   double get pendingAmount => totalAmount - paidAmount;
   bool get isFullyPaid => paidAmount >= totalAmount;
   int get stayDuration => checkOut.difference(checkIn).inDays;
+  
+  /// Get all room numbers as a comma-separated string
+  String get allRoomNumbers {
+    if (rooms.isNotEmpty) {
+      return rooms.map((r) => r.roomNumber).join(', ');
+    }
+    return roomNumber;
+  }
+  
+  /// Check if booking has multiple rooms
+  bool get hasMultipleRooms => rooms.length > 1;
 }

@@ -17,9 +17,9 @@ class CollectPaymentDialog extends ConsumerStatefulWidget {
     required this.booking,
   });
 
-  /// Show the collect payment dialog
-  static Future<bool?> show(BuildContext context, Booking booking) {
-    return showModalBottomSheet<bool>(
+  /// Show the collect payment dialog - returns the collected amount or null if cancelled
+  static Future<double?> show(BuildContext context, Booking booking) {
+    return showModalBottomSheet<double>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -197,7 +197,7 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _isProcessing ? null : () => Navigator.pop(context, false),
+                      onPressed: _isProcessing ? null : () => Navigator.pop(context, null),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         side: const BorderSide(color: AppColors.grey400),
@@ -397,7 +397,8 @@ class _CollectPaymentDialogState extends ConsumerState<CollectPaymentDialog> {
       ref.invalidate(todayDayBookProvider);
 
       if (mounted) {
-        Navigator.pop(context, true);
+        // Return the collected amount so the UI can update immediately
+        Navigator.pop(context, amount);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Payment of ₹${amount.toStringAsFixed(0)} collected'),

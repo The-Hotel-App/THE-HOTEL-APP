@@ -23,12 +23,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
   // Hardcoded test accounts for development
   static const List<Map<String, String>> _testAccounts = [
-    {
-      'email': 'thai.adityabharti@gmail.com',
-      'label': 'Owner',
-      'password': '123456',
-    },
-    {'email': 'staff@meow.com', 'label': 'Manager', 'password': '123456'},
+    {'email': 'thai.adityabharti@gmail.com','label': 'Owner','password': '123456'},
+    {'email': 'adityabharti1214@gmail.com','label': 'Manager','password': '123456'},
+    {'email': 'aditya.bharti2023@vitstudent.ac.in','label': 'Staff','password': '123456'},
+    {'email': 'adityabhartiofficial2020@gmail.com','label': 'Kitchen','password': '123456'},
   ];
 
   @override

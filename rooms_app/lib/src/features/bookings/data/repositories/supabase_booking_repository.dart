@@ -51,19 +51,28 @@ class SupabaseBookingRepository implements BookingRepository {
   }
 
   /// Convert database row to Booking entity
-  Booking _fromJson(Map<String, dynamic> json) {
+  Future<Booking> _fromJson(Map<String, dynamic> json) async {
     final guest = json['guests'] as Map<String, dynamic>?;
     final room = json['rooms'] as Map<String, dynamic>?;
     final totalAmount = (json['total_amount'] as num?)?.toDouble() ?? 0;
     final paidAmount = (json['amount_paid'] as num?)?.toDouble() ?? 0;
+    final bookingId = json['id'] as String;
+
+    // Fetch all rooms for this booking
+    final roomsData = await _fetchBookingRooms(bookingId);
+    
+    // Fetch all guests for this booking
+    final guestsData = await _fetchBookingGuests(bookingId);
 
     return Booking(
-      id: json['id'] as String,
+      id: bookingId,
       hotelId: json['hotel_id'] as String,
       roomId: json['room_id'] as String,
       customerId: json['guest_id'] as String,
       roomNumber: room?['room_number'] as String? ?? '',
       customerName: guest?['name'] as String? ?? 'Guest',
+      customerPhone: guest?['phone'] as String?,
+      customerEmail: guest?['email'] as String?,
       checkIn: DateTime.parse(json['check_in'] as String),
       checkOut: DateTime.parse(json['check_out'] as String),
       guestCount: json['number_of_guests'] as int? ?? 1,
@@ -74,7 +83,62 @@ class SupabaseBookingRepository implements BookingRepository {
       notes: json['booking_source'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       createdBy: json['created_by'] as String? ?? '',
+      rooms: roomsData,
+      guests: guestsData,
     );
+  }
+
+  /// Fetch all rooms associated with a booking
+  Future<List<BookingRoom>> _fetchBookingRooms(String bookingId) async {
+    try {
+      final response = await _client
+          .from('booking_rooms')
+          .select('room_id, room_price, rooms(room_number, status, room_types(name))')
+          .eq('booking_id', bookingId);
+
+      return (response as List).map((json) {
+        final roomData = json['rooms'] as Map<String, dynamic>?;
+        final roomTypeData = roomData?['room_types'] as Map<String, dynamic>?;
+        return BookingRoom(
+          roomId: json['room_id'] as String,
+          roomNumber: roomData?['room_number'] as String? ?? '',
+          roomPrice: (json['room_price'] as num?)?.toDouble() ?? 0,
+          roomTypeName: roomTypeData?['name'] as String?,
+          roomStatus: roomData?['status'] as String?,
+        );
+      }).toList();
+    } catch (e) {
+      AppLogger.error('Error fetching booking rooms', tag: 'Bookings', error: e);
+      return [];
+    }
+  }
+
+  /// Fetch all guests associated with a booking
+  Future<List<BookingGuest>> _fetchBookingGuests(String bookingId) async {
+    try {
+      final response = await _client
+          .from('booking_guests')
+          .select('guest_id, is_primary, guests(name, phone, email, id_type, id_number, gender, age)')
+          .eq('booking_id', bookingId);
+
+      return (response as List).map((json) {
+        final guestData = json['guests'] as Map<String, dynamic>?;
+        return BookingGuest(
+          guestId: json['guest_id'] as String,
+          name: guestData?['name'] as String? ?? 'Guest',
+          phone: guestData?['phone'] as String?,
+          email: guestData?['email'] as String?,
+          idType: guestData?['id_type'] as String?,
+          idNumber: guestData?['id_number'] as String?,
+          gender: guestData?['gender'] as String?,
+          age: guestData?['age'] as int?,
+          isPrimary: json['is_primary'] as bool? ?? false,
+        );
+      }).toList();
+    } catch (e) {
+      AppLogger.error('Error fetching booking guests', tag: 'Bookings', error: e);
+      return [];
+    }
   }
 
   @override
@@ -83,13 +147,14 @@ class SupabaseBookingRepository implements BookingRepository {
       AppLogger.debug('Fetching bookings for hotel: $hotelId', tag: 'Bookings');
       final response = await _client
           .from('bookings')
-          .select('*, guests(name), rooms(room_number)')
+          .select('*, guests(name, phone, email), rooms(room_number)')
           .eq('hotel_id', hotelId)
           .order('check_in', ascending: false);
 
-      final bookings = (response as List)
-          .map((json) => _fromJson(json))
-          .toList();
+      final bookings = <Booking>[];
+      for (final json in response as List) {
+        bookings.add(await _fromJson(json));
+      }
       AppLogger.success('Fetched ${bookings.length} bookings', tag: 'Bookings');
       return bookings;
     } catch (e) {
@@ -111,10 +176,10 @@ class SupabaseBookingRepository implements BookingRepository {
             try {
               final fullData = await _client
                   .from('bookings')
-                  .select('*, guests(name), rooms(room_number)')
+                  .select('*, guests(name, phone, email), rooms(room_number)')
                   .eq('id', row['id'])
                   .single();
-              bookings.add(_fromJson(fullData));
+              bookings.add(await _fromJson(fullData));
             } catch (e) {
               AppLogger.error(
                 'Error fetching booking details',
@@ -132,12 +197,12 @@ class SupabaseBookingRepository implements BookingRepository {
     try {
       final response = await _client
           .from('bookings')
-          .select('*, guests(name), rooms(room_number)')
+          .select('*, guests(name, phone, email), rooms(room_number)')
           .eq('id', bookingId)
           .maybeSingle();
 
       if (response == null) return null;
-      return _fromJson(response);
+      return await _fromJson(response);
     } catch (e) {
       AppLogger.error(
         'Error fetching booking by ID',
@@ -153,12 +218,16 @@ class SupabaseBookingRepository implements BookingRepository {
     try {
       final response = await _client
           .from('bookings')
-          .select('*, guests(name), rooms(room_number)')
+          .select('*, guests(name, phone, email), rooms(room_number)')
           .eq('hotel_id', hotelId)
           .eq('status', 'checked_in')
           .order('check_in', ascending: false);
 
-      return (response as List).map((json) => _fromJson(json)).toList();
+      final bookings = <Booking>[];
+      for (final json in response as List) {
+        bookings.add(await _fromJson(json));
+      }
+      return bookings;
     } catch (e) {
       AppLogger.error(
         'Error fetching active bookings',
@@ -174,11 +243,15 @@ class SupabaseBookingRepository implements BookingRepository {
     try {
       final response = await _client
           .from('bookings')
-          .select('*, guests(name), rooms(room_number)')
+          .select('*, guests(name, phone, email), rooms(room_number)')
           .eq('room_id', roomId)
           .order('check_in', ascending: false);
 
-      return (response as List).map((json) => _fromJson(json)).toList();
+      final bookings = <Booking>[];
+      for (final json in response as List) {
+        bookings.add(await _fromJson(json));
+      }
+      return bookings;
     } catch (e) {
       AppLogger.error(
         'Error fetching bookings for room',
@@ -194,11 +267,15 @@ class SupabaseBookingRepository implements BookingRepository {
     try {
       final response = await _client
           .from('bookings')
-          .select('*, guests(name), rooms(room_number)')
+          .select('*, guests(name, phone, email), rooms(room_number)')
           .eq('guest_id', customerId)
           .order('check_in', ascending: false);
 
-      return (response as List).map((json) => _fromJson(json)).toList();
+      final bookings = <Booking>[];
+      for (final json in response as List) {
+        bookings.add(await _fromJson(json));
+      }
+      return bookings;
     } catch (e) {
       AppLogger.error(
         'Error fetching bookings for customer',
@@ -231,11 +308,11 @@ class SupabaseBookingRepository implements BookingRepository {
             'booking_source': booking.notes,
             'created_by': booking.createdBy,
           })
-          .select('*, guests(name), rooms(room_number)')
+          .select('*, guests(name, phone, email), rooms(room_number)')
           .single();
 
       AppLogger.success('Booking created', tag: 'Bookings');
-      return _fromJson(response);
+      return await _fromJson(response);
     } catch (e) {
       AppLogger.error('Error creating booking', tag: 'Bookings', error: e);
       rethrow;
@@ -323,13 +400,17 @@ class SupabaseBookingRepository implements BookingRepository {
 
       final response = await _client
           .from('bookings')
-          .select('*, guests(name), rooms(room_number)')
+          .select('*, guests(name, phone, email), rooms(room_number)')
           .eq('hotel_id', hotelId)
           .gte('check_in', startOfDay.toIso8601String())
           .lt('check_in', endOfDay.toIso8601String())
           .order('check_in');
 
-      return (response as List).map((json) => _fromJson(json)).toList();
+      final bookings = <Booking>[];
+      for (final json in response as List) {
+        bookings.add(await _fromJson(json));
+      }
+      return bookings;
     } catch (e) {
       AppLogger.error(
         'Error fetching today check-ins',
@@ -349,13 +430,17 @@ class SupabaseBookingRepository implements BookingRepository {
 
       final response = await _client
           .from('bookings')
-          .select('*, guests(name), rooms(room_number)')
+          .select('*, guests(name, phone, email), rooms(room_number)')
           .eq('hotel_id', hotelId)
           .gte('check_out', startOfDay.toIso8601String())
           .lt('check_out', endOfDay.toIso8601String())
           .order('check_out');
 
-      return (response as List).map((json) => _fromJson(json)).toList();
+      final bookings = <Booking>[];
+      for (final json in response as List) {
+        bookings.add(await _fromJson(json));
+      }
+      return bookings;
     } catch (e) {
       AppLogger.error(
         'Error fetching today check-outs',
