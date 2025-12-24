@@ -272,7 +272,7 @@ class _HotelSettingsPageState extends ConsumerState<HotelSettingsPage> {
         const BiometricSettingsSection(),
         const SizedBox(height: 24),
 
-        // TODO: Daily Reports Section
+        // TODO: Daily Reports For Owner Section
         // ============================================================
         // DAILY REPORTS FEATURE (TO BE IMPLEMENTED)
         // ============================================================
