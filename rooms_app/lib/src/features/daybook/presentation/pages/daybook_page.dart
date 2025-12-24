@@ -660,7 +660,7 @@ class _AddTransactionDialogState extends ConsumerState<_AddTransactionDialog> {
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<TransactionCategory>(
-                      value: _selectedCategory,
+                      initialValue: _selectedCategory,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
