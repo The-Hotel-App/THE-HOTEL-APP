@@ -67,6 +67,14 @@ jobs:
       - name: Create google-services.json
         run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
 
+      - name: Setup Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> android/key.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
+          echo "storeFile=keystore.jks" >> android/key.properties
+
       - name: Build APK (all ABIs)
         run: |
           flutter build apk --split-per-abi --release \
@@ -78,14 +86,6 @@ jobs:
           VERSION="1.0.0"
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
              build/app/outputs/flutter-apk/rooms.io-$VERSION.apk
-
-      - name: Setup Keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
-          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> android/key.properties
-          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
-          echo "storeFile=keystore.jks" >> android/key.properties
 
       - name: Get version
         id: version
@@ -130,7 +130,7 @@ jobs:
           CURRENT_RUN_ID=${{ github.run_id }}
 
           # Get workflow runs, skip the first one (current/latest)
-          RUNS=$(gh run list --workflow=build-apk.yml --repo ${{ github.repository }} --limit 100 --json databaseId,status --jq ".[] | select(.databaseId != $CURRENT_RUN_ID) | .databaseId")
+          RUNS=$(gh run list --workflow=release.yml --repo ${{ github.repository }} --limit 100 --json databaseId,status --jq ".[] | select(.databaseId != $CURRENT_RUN_ID) | .databaseId")
 
           for RUN_ID in $RUNS; do
             echo "Deleting workflow run: $RUN_ID"

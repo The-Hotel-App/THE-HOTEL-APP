@@ -9,10 +9,10 @@ import 'package:rooms/src/core/services/supabase_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase first (critical for app)
+  // Initialize Supabase
   await SupabaseService.initialize();
 
-  // Initialize Firebase (required for FCM push notifications)
+  // Initialize Firebase
   await _initFirebase();
 
   runApp(const ProviderScope(child: _AppWithNotifications()));
