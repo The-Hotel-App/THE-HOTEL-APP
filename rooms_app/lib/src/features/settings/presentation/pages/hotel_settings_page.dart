@@ -271,6 +271,51 @@ class _HotelSettingsPageState extends ConsumerState<HotelSettingsPage> {
         const SizedBox(height: 12),
         const BiometricSettingsSection(),
         const SizedBox(height: 24),
+
+        // TODO: Daily Reports Section
+        // ============================================================
+        // DAILY REPORTS FEATURE (TO BE IMPLEMENTED)
+        // ============================================================
+        //
+        // Feature: Send daily summary report to owner at a customizable time
+        //
+        // Report Contents:
+        // - Check-ins for the day
+        // - Check-outs for the day
+        // - Room status changes (with timestamps and who made them)
+        // - Revenue summary (if applicable)
+        // - Occupancy statistics
+        // - Any emergency/maintenance flags
+        //
+        // Implementation:
+        // 1. Add a "Notifications" section in this settings page with:
+        //    - Time picker for report delivery time (e.g., 9:00 PM)
+        //    - Toggle to enable/disable daily reports
+        //    - Store settings in hotel_settings or user_preferences table
+        //
+        // 2. Backend (Supabase):
+        //    - Create Edge Function: send-daily-report
+        //    - Use pg_cron extension to schedule the function
+        //    - Query all hotels with daily reports enabled
+        //    - For each hotel, gather day's activities and format report
+        //    - Send via push notification and/or email to owner
+        //
+        // 3. Database Schema:
+        //    - Add columns to hotels table or create hotel_settings:
+        //      * daily_report_enabled: boolean
+        //      * daily_report_time: time (e.g., '21:00:00')
+        //      * daily_report_timezone: text (e.g., 'Asia/Kolkata')
+        //
+        // 4. CRON Setup (in Supabase SQL):
+        //    SELECT cron.schedule(
+        //      'send-daily-reports',
+        //      '0 * * * *', -- Run every hour, check which hotels need reports
+        //      $$SELECT net.http_post(
+        //        url := 'https://<project>.supabase.co/functions/v1/send-daily-report',
+        //        headers := '{"Authorization": "Bearer <anon-key>"}'::jsonb
+        //      );$$
+        //    );
+        // ============================================================
       ],
     );
   }

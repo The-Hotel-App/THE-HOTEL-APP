@@ -480,7 +480,6 @@ class _BiometricSettingsSectionState
             ),
           ],
           // Reset fingerprint option (when biometric is enabled)
-          // TODO: Allow user to reset and re-add fingerprint
           if (hasBiometric) ...[
             const Divider(height: 1),
             ListTile(

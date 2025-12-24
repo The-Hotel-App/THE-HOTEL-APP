@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/widgets/custom_dialog.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/booking_guests_page.dart';
@@ -17,6 +18,11 @@ class NewBookingPage extends ConsumerStatefulWidget {
 }
 
 class _NewBookingPageState extends ConsumerState<NewBookingPage> {
+  /// Format date to short format like "24 Dec"
+  String _formatShortDate(DateTime date) {
+    return DateFormat('d MMM').format(date);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -162,22 +168,22 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
       },
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppColors.grey100,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               label,
-              style: TextStyle(fontSize: 12, color: AppColors.grey600),
+              style: TextStyle(fontSize: 11, color: AppColors.grey600),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
-              '${date.day}/${date.month}/${date.year}',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              _formatShortDate(date),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -205,7 +211,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
               Text(
                 '${state.guestCount}',
                 style: const TextStyle(
-                  fontSize: 28,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -215,48 +221,48 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
           Row(
             children: [
               // Minus Button
-              Expanded(
-                child: SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: state.guestCount > 1
-                        ? () => ref
-                              .read(newBookingProvider.notifier)
-                              .setGuestCount(state.guestCount - 1)
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.grey200,
-                      foregroundColor: AppColors.black,
-                      disabledBackgroundColor: AppColors.grey100,
-                      disabledForegroundColor: AppColors.grey400,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+              SizedBox(
+                width: 80,
+                height: 44,
+                child: ElevatedButton(
+                  onPressed: state.guestCount > 1
+                      ? () => ref
+                            .read(newBookingProvider.notifier)
+                            .setGuestCount(state.guestCount - 1)
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.grey200,
+                    foregroundColor: AppColors.black,
+                    disabledBackgroundColor: AppColors.grey100,
+                    disabledForegroundColor: AppColors.grey400,
+                    elevation: 0,
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.remove, size: 28),
                   ),
+                  child: const Icon(Icons.remove, size: 22),
                 ),
               ),
-              const SizedBox(width: 16),
+              const Spacer(),
               // Plus Button
-              Expanded(
-                child: SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: () => ref
-                        .read(newBookingProvider.notifier)
-                        .setGuestCount(state.guestCount + 1),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.black,
-                      foregroundColor: AppColors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+              SizedBox(
+                width: 80,
+                height: 44,
+                child: ElevatedButton(
+                  onPressed: () => ref
+                      .read(newBookingProvider.notifier)
+                      .setGuestCount(state.guestCount + 1),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.black,
+                    foregroundColor: AppColors.white,
+                    elevation: 0,
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.add, size: 28),
                   ),
+                  child: const Icon(Icons.add, size: 22),
                 ),
               ),
             ],

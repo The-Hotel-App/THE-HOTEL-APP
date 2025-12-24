@@ -318,28 +318,27 @@ class _CheckoutFlowPageState extends ConsumerState<CheckoutFlowPage> {
   Future<void> _handleCheckout() async {
     final currentUser = ref.read(currentUserProvider).valueOrNull;
 
-    // Require fingerprint verification for managers
-    if (currentUser?.role.name == 'manager') {
-      final biometricService = ref.read(biometricServiceProvider);
-      final hasBiometric = ref.read(userBiometricStatusProvider);
+    // Require fingerprint verification for all users setting room to free or cleaning
+    final biometricService = ref.read(biometricServiceProvider);
+    final hasBiometric = ref.read(userBiometricStatusProvider);
 
-      if (hasBiometric) {
-        final authenticated = await biometricService.authenticate(
-          reason: 'Verify your identity to complete checkout',
-          biometricOnly: false,
-        );
+    if (hasBiometric) {
+      final newStatusName = _setToCleaning ? 'cleaning' : 'free';
+      final authenticated = await biometricService.authenticate(
+        reason: 'Verify your identity to set room to $newStatusName',
+        biometricOnly: false,
+      );
 
-        if (!authenticated) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Verification failed'),
-                backgroundColor: AppColors.error,
-              ),
-            );
-          }
-          return;
+      if (!authenticated) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Verification failed or cancelled'),
+              backgroundColor: AppColors.error,
+            ),
+          );
         }
+        return;
       }
     }
     if (!mounted) return;

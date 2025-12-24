@@ -45,11 +45,14 @@ class _BookingGuestsPageState extends ConsumerState<BookingGuestsPage>
   @override
   Widget build(BuildContext context) {
     final bookingState = ref.watch(newBookingProvider);
-    
+
     // Update tab controller if guest count changes
     if (_tabController.length != bookingState.guestCount) {
       _tabController.dispose();
-      _tabController = TabController(length: bookingState.guestCount, vsync: this);
+      _tabController = TabController(
+        length: bookingState.guestCount,
+        vsync: this,
+      );
       _initFormKeys(bookingState.guestCount);
     }
 
@@ -73,11 +76,15 @@ class _BookingGuestsPageState extends ConsumerState<BookingGuestsPage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text('Guest ${index + 1}'),
-                  if (bookingState.guests.length > index && 
+                  if (bookingState.guests.length > index &&
                       bookingState.guests[index] != null)
                     const Padding(
                       padding: EdgeInsets.only(left: 4),
-                      child: Icon(Icons.check_circle, size: 16, color: AppColors.success),
+                      child: Icon(
+                        Icons.check_circle,
+                        size: 16,
+                        color: AppColors.success,
+                      ),
                     ),
                 ],
               ),
@@ -92,8 +99,8 @@ class _BookingGuestsPageState extends ConsumerState<BookingGuestsPage>
           (index) => _GuestForm(
             key: _formKeys.length > index ? _formKeys[index] : null,
             guestIndex: index,
-            existingGuest: bookingState.guests.length > index 
-                ? bookingState.guests[index] 
+            existingGuest: bookingState.guests.length > index
+                ? bookingState.guests[index]
                 : null,
           ),
         ),
@@ -107,60 +114,71 @@ class _BookingGuestsPageState extends ConsumerState<BookingGuestsPage>
     final allFilled = filledCount == state.guestCount;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
+            blurRadius: 8,
             offset: const Offset(0, -2),
           ),
         ],
       ),
       child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           children: [
-            // Progress indicator
-            Row(
-              children: [
-                Expanded(
-                  child: LinearProgressIndicator(
-                    value: state.guestCount > 0 ? filledCount / state.guestCount : 0,
-                    backgroundColor: AppColors.grey200,
-                    valueColor: AlwaysStoppedAnimation(
-                      allFilled ? AppColors.success : AppColors.primary,
+            // Compact progress indicator
+            Expanded(
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 60,
+                    child: LinearProgressIndicator(
+                      value: state.guestCount > 0
+                          ? filledCount / state.guestCount
+                          : 0,
+                      backgroundColor: AppColors.grey200,
+                      valueColor: AlwaysStoppedAnimation(
+                        allFilled ? AppColors.success : AppColors.primary,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  '$filledCount/${state.guestCount}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: allFilled ? AppColors.success : AppColors.textSecondary,
+                  const SizedBox(width: 8),
+                  Text(
+                    '$filledCount/${state.guestCount}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: allFilled
+                          ? AppColors.success
+                          : AppColors.textSecondary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(width: 12),
+            // Done button
             SizedBox(
-              width: double.infinity,
-              height: 56,
+              height: 44,
               child: ElevatedButton(
                 onPressed: allFilled ? () => Navigator.pop(context) : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.success,
                   foregroundColor: AppColors.white,
                   disabledBackgroundColor: AppColors.grey300,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 child: Text(
-                  allFilled ? 'Done' : 'Complete all guest info',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  allFilled ? 'Done' : 'Fill all',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -176,11 +194,7 @@ class _GuestForm extends ConsumerStatefulWidget {
   final int guestIndex;
   final Customer? existingGuest;
 
-  const _GuestForm({
-    super.key,
-    required this.guestIndex,
-    this.existingGuest,
-  });
+  const _GuestForm({super.key, required this.guestIndex, this.existingGuest});
 
   @override
   ConsumerState<_GuestForm> createState() => _GuestFormState();
@@ -200,7 +214,7 @@ class _GuestFormState extends ConsumerState<_GuestForm>
   IdType _selectedIdType = IdType.aadhar;
   bool _isSaving = false;
   bool _isSaved = false;
-  
+
   // OCR related
   final IdOcrService _ocrService = IdOcrService();
   bool _isProcessingOcr = false;
@@ -256,11 +270,15 @@ class _GuestFormState extends ConsumerState<_GuestForm>
         hotelId: hotel.hotelId,
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
-        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+        email: _emailController.text.trim().isEmpty
+            ? null
+            : _emailController.text.trim(),
         gender: _selectedGender,
         idType: _selectedIdType,
         idNumber: _idNumberController.text.trim(),
-        address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+        address: _addressController.text.trim().isEmpty
+            ? null
+            : _addressController.text.trim(),
         age: int.tryParse(_ageController.text.trim()),
         createdAt: widget.existingGuest?.createdAt ?? DateTime.now(),
       );
@@ -268,7 +286,7 @@ class _GuestFormState extends ConsumerState<_GuestForm>
       // Save to database
       final repo = ref.read(supabaseCustomerRepositoryProvider);
       Customer savedCustomer;
-      
+
       if (widget.existingGuest != null && widget.existingGuest!.id.isNotEmpty) {
         // Update existing
         await repo.updateCustomer(customer);
@@ -279,7 +297,9 @@ class _GuestFormState extends ConsumerState<_GuestForm>
       }
 
       // Update booking state
-      ref.read(newBookingProvider.notifier).setGuest(widget.guestIndex, savedCustomer);
+      ref
+          .read(newBookingProvider.notifier)
+          .setGuest(widget.guestIndex, savedCustomer);
 
       setState(() {
         _isSaving = false;
@@ -326,7 +346,9 @@ class _GuestFormState extends ConsumerState<_GuestForm>
                 decoration: BoxDecoration(
                   color: AppColors.success.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppColors.success.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -335,7 +357,10 @@ class _GuestFormState extends ConsumerState<_GuestForm>
                     const Expanded(
                       child: Text(
                         'Guest information saved',
-                        style: TextStyle(color: AppColors.success, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                          color: AppColors.success,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                     TextButton(
@@ -366,7 +391,8 @@ class _GuestFormState extends ConsumerState<_GuestForm>
                         label: 'Phone Number',
                         icon: Icons.phone,
                         keyboardType: TextInputType.phone,
-                        validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                        validator: (v) =>
+                            v?.isEmpty ?? true ? 'Required' : null,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -432,10 +458,19 @@ class _GuestFormState extends ConsumerState<_GuestForm>
             // Save Button
             SizedBox(
               width: double.infinity,
-              height: 56,
-              child: ElevatedButton.icon(
+              height: 48,
+              child: ElevatedButton(
                 onPressed: _isSaving ? null : _saveGuest,
-                icon: _isSaving
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isSaved
+                      ? AppColors.primary
+                      : AppColors.black,
+                  foregroundColor: AppColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: _isSaving
                     ? const SizedBox(
                         width: 20,
                         height: 20,
@@ -444,15 +479,13 @@ class _GuestFormState extends ConsumerState<_GuestForm>
                           color: Colors.white,
                         ),
                       )
-                    : Icon(_isSaved ? Icons.check : Icons.save),
-                label: Text(_isSaved ? 'Update Guest' : 'Save Guest'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isSaved ? AppColors.primary : AppColors.black,
-                  foregroundColor: AppColors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+                    : Text(
+                        _isSaved ? 'Update' : 'Save',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 100), // Space for bottom bar
@@ -506,10 +539,11 @@ class _GuestFormState extends ConsumerState<_GuestForm>
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: AppColors.grey600),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }
@@ -545,7 +579,9 @@ class _GuestFormState extends ConsumerState<_GuestForm>
                         gender.displayName,
                         style: TextStyle(
                           color: isSelected ? AppColors.white : AppColors.black,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
                       ),
                     ),
@@ -565,15 +601,10 @@ class _GuestFormState extends ConsumerState<_GuestForm>
       decoration: InputDecoration(
         labelText: 'ID Type',
         prefixIcon: const Icon(Icons.credit_card, color: AppColors.grey600),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
       items: IdType.values.map((type) {
-        return DropdownMenuItem(
-          value: type,
-          child: Text(type.displayName),
-        );
+        return DropdownMenuItem(value: type, child: Text(type.displayName));
       }).toList(),
       onChanged: (value) {
         if (value != null) {
@@ -653,7 +684,9 @@ class _GuestFormState extends ConsumerState<_GuestForm>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${result.idType ?? 'ID'} number extracted: ${result.idNumber}'),
+              content: Text(
+                '${result.idType ?? 'ID'} number extracted: ${result.idNumber}',
+              ),
               backgroundColor: AppColors.success,
             ),
           );

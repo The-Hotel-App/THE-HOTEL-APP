@@ -43,34 +43,41 @@ class AppDialog extends StatelessWidget {
             const SizedBox(height: 16),
             content,
             const SizedBox(height: 24),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            Row(
               children: [
-                if (primaryButtonText != null)
-                  ElevatedButton(
-                    onPressed:
-                        onPrimaryPressed ?? () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.black,
-                      foregroundColor: AppColors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 14,
+                if (secondaryButtonText != null)
+                  Expanded(
+                    child: TextButton(
+                      onPressed:
+                          onSecondaryPressed ??
+                          () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(
+                        secondaryButtonText!,
+                        style: const TextStyle(color: AppColors.textSecondary),
                       ),
                     ),
-                    child: Text(primaryButtonText!),
                   ),
-                if (secondaryButtonText != null) ...[
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed:
-                        onSecondaryPressed ?? () => Navigator.of(context).pop(),
-                    child: Text(
-                      secondaryButtonText!,
-                      style: const TextStyle(color: AppColors.textSecondary),
+                if (secondaryButtonText != null && primaryButtonText != null)
+                  const SizedBox(width: 12),
+                if (primaryButtonText != null)
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed:
+                          onPrimaryPressed ?? () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.black,
+                        foregroundColor: AppColors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 14,
+                        ),
+                      ),
+                      child: Text(primaryButtonText!),
                     ),
                   ),
-                ],
               ],
             ),
           ],

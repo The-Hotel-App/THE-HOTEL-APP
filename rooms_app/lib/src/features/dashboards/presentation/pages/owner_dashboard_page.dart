@@ -6,7 +6,7 @@ import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/services/notification_service.dart';
 import 'package:rooms/src/core/widgets/app_dialog.dart';
-import 'package:rooms/src/core/widgets/hotel_switcher_button.dart';
+import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/biometric_providers.dart';
 
@@ -84,24 +84,13 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
       appBar: AppBar(
         backgroundColor: AppColors.black,
         foregroundColor: AppColors.white,
-        title: Row(
-          children: [
-            Icon(Icons.admin_panel_settings, size: 24),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                hotel?.hotelName ?? 'Owner Dashboard',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
+        titleSpacing: 8,
+        title: _buildHotelSwitcher(hotel),
         actions: [
-          // Hotel switcher for users with multiple hotels
-          const HotelSwitcherButton(),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => _showLogoutConfirmation(context),
+            tooltip: 'Logout',
           ),
         ],
       ),
@@ -137,6 +126,105 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Build GitHub-style hotel switcher for AppBar
+  Widget _buildHotelSwitcher(UserHotel? hotel) {
+    final hotelsAsync = ref.watch(userHotelsProvider);
+    final hotelName = hotel?.hotelName ?? 'Select Hotel';
+    final firstLetter = hotelName.isNotEmpty ? hotelName[0].toUpperCase() : 'H';
+
+    // Build the switcher widget
+    Widget buildSwitcherContent({required VoidCallback? onTap}) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Hotel avatar with first letter
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: AppColors.warning,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Center(
+                  child: Text(
+                    firstLetter,
+                    style: const TextStyle(
+                      color: AppColors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Hotel name (truncated)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 140),
+                child: Text(
+                  hotelName,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              // Dropdown indicator
+              const Icon(Icons.keyboard_arrow_down, size: 20),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return hotelsAsync.when(
+      loading: () => buildSwitcherContent(onTap: null), // Show but not tappable
+      error: (error, stackTrace) =>
+          buildSwitcherContent(onTap: null), // Show but not tappable
+      data: (hotels) => buildSwitcherContent(
+        onTap: () => _showHotelSwitcherSheet(hotels, hotel),
+      ),
+    );
+  }
+
+  /// Show hotel switcher bottom sheet
+  void _showHotelSwitcherSheet(
+    List<UserHotel> hotels,
+    UserHotel? currentHotel,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => _HotelSwitcherSheet(
+        hotels: hotels,
+        currentHotelId: currentHotel?.hotelId,
+        onSelect: (hotel) {
+          Navigator.pop(ctx);
+          if (hotel.hotelId != currentHotel?.hotelId) {
+            ref.read(selectedHotelIdProvider.notifier).state = hotel.hotelId;
+            ref.invalidate(userHotelsProvider);
+            ref.invalidate(currentHotelProvider);
+          }
+        },
+        onAddNewHotel: () {
+          Navigator.pop(ctx);
+          context.push('/create-hotel');
+        },
       ),
     );
   }
@@ -449,6 +537,204 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
               ),
               textAlign: TextAlign.center,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Hotel Switcher Bottom Sheet
+class _HotelSwitcherSheet extends StatelessWidget {
+  final List<UserHotel> hotels;
+  final String? currentHotelId;
+  final void Function(UserHotel hotel) onSelect;
+  final VoidCallback onAddNewHotel;
+
+  const _HotelSwitcherSheet({
+    required this.hotels,
+    required this.currentHotelId,
+    required this.onSelect,
+    required this.onAddNewHotel,
+  });
+
+  Color _getRoleColor(UserRole role) {
+    switch (role) {
+      case UserRole.owner:
+        return AppColors.warning;
+      case UserRole.manager:
+        return AppColors.info;
+      case UserRole.staff:
+        return AppColors.success;
+      case UserRole.kitchenManager:
+        return Colors.orange;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.grey300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  const Icon(Icons.swap_horiz, color: AppColors.black),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Switch Hotel',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(height: 1),
+
+            // Hotel list
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.5,
+              ),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: hotels.length,
+                itemBuilder: (context, index) {
+                  final hotel = hotels[index];
+                  final isSelected = hotel.hotelId == currentHotelId;
+                  final roleColor = _getRoleColor(hotel.role);
+                  final firstLetter = hotel.hotelName.isNotEmpty
+                      ? hotel.hotelName[0].toUpperCase()
+                      : 'H';
+
+                  return ListTile(
+                    onTap: () => onSelect(hotel),
+                    leading: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.success.withValues(alpha: 0.15)
+                            : AppColors.warning.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Center(
+                        child: Text(
+                          firstLetter,
+                          style: TextStyle(
+                            color: isSelected
+                                ? AppColors.success
+                                : AppColors.warning,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      hotel.hotelName,
+                      style: TextStyle(
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
+                        color: isSelected ? AppColors.success : AppColors.black,
+                      ),
+                    ),
+                    subtitle: Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: roleColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              hotel.role.displayName,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: roleColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? const Icon(
+                            Icons.check_circle,
+                            color: AppColors.success,
+                          )
+                        : const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                            color: AppColors.grey400,
+                          ),
+                  );
+                },
+              ),
+            ),
+
+            const Divider(height: 1),
+
+            // Add New Hotel button
+            ListTile(
+              onTap: onAddNewHotel,
+              leading: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.info.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.add_business, color: AppColors.info),
+              ),
+              title: const Text(
+                'Add New Hotel',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.info,
+                ),
+              ),
+              subtitle: const Text(
+                'Set up another hotel property',
+                style: TextStyle(fontSize: 12),
+              ),
+              trailing: const Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: AppColors.info,
+              ),
+            ),
+
+            const SizedBox(height: 16),
           ],
         ),
       ),

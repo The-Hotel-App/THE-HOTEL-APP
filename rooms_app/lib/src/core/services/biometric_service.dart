@@ -116,7 +116,7 @@ class BiometricService {
       final authenticated = await _localAuth.authenticate(
         localizedReason: reason,
         options: AuthenticationOptions(
-          stickyAuth: true,
+          stickyAuth: false, // Allow user to cancel without re-prompting
           biometricOnly: biometricOnly,
         ),
       );
