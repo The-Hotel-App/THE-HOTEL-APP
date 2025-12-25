@@ -21,7 +21,7 @@ class _RoomsManagementPageState extends ConsumerState<RoomsManagementPage> {
   String? _error;
   Map<int, List<ManagedRoom>> _roomsByFloor = {};
   List<RoomType> _roomTypes = [];
-  Set<int> _expandedFloors = {};
+  final Set<int> _expandedFloors = {};
   final Set<String> _selectedRooms = {};
 
   @override

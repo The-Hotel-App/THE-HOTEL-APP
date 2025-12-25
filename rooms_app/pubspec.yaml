@@ -1,7 +1,7 @@
 name: rooms
 description: "ROOMS.io - Hotel Internal Operations Mobile App"
 publish_to: "none"
-version: 0.1.0+1
+version: 1.1.0+2
 
 environment:
   sdk: ^3.10.1
@@ -46,6 +46,12 @@ dependencies:
   # Image handling (for ID photos)
   image_picker: ^1.1.2
   cached_network_image: ^3.4.1
+
+  # URL handling (for update dialog)
+  url_launcher: ^6.3.1
+
+  # Package info (for version detection)
+  package_info_plus: ^8.1.0
 
   # OCR for Aadhaar card
   google_mlkit_text_recognition: ^0.14.0

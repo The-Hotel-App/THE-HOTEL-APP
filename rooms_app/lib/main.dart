@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rooms/src/app.dart';
 import 'package:rooms/src/core/logging/app_logger.dart';
+import 'package:rooms/src/core/services/app_update_service.dart';
 import 'package:rooms/src/core/services/notification_service.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
+import 'package:rooms/src/core/widgets/update_dialog.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +47,7 @@ class _AppWithNotificationsState extends ConsumerState<_AppWithNotifications> {
     // Initialize notifications after first frame (and after Firebase is ready)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initNotifications();
+      _checkForUpdates();
     });
   }
 
@@ -64,6 +67,22 @@ class _AppWithNotificationsState extends ConsumerState<_AppWithNotifications> {
       };
     } catch (e) {
       AppLogger.warning('Notification service init failed: $e');
+    }
+  }
+
+  /// Check for app updates on startup
+  Future<void> _checkForUpdates() async {
+    try {
+      final updateInfo = await AppUpdateService.checkForUpdate();
+      if (updateInfo != null && mounted) {
+        // Small delay to ensure UI is ready
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          UpdateDialog.show(context, updateInfo);
+        }
+      }
+    } catch (e) {
+      AppLogger.warning('Update check error: $e', tag: 'Update');
     }
   }
 

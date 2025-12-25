@@ -81,24 +81,25 @@ jobs:
             --no-tree-shake-icons \
             --suppress-analytics
 
+      - name: Get version from pubspec
+        id: version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
+
       - name: Rename APK
         run: |
-          VERSION="1.0.0"
+          VERSION=${{ steps.version.outputs.version }}
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
              build/app/outputs/flutter-apk/rooms.io-$VERSION.apk
 
-      - name: Get version
-        id: version
-        run: |
-          VERSION="1.0.0"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Delete existing 1.0.0 release
+      - name: Delete existing release with same version
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.0.0 --repo ${{ github.repository }} --yes --cleanup-tag || true
+          gh release delete ${{ steps.version.outputs.tag }} --repo ${{ github.repository }} --yes --cleanup-tag || true
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
