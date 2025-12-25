@@ -525,6 +525,38 @@ SELECT add_staff_to_hotel(
 
 ---
 
+#### `find_user_by_email(p_email text, p_hotel_id uuid, p_requester_id uuid)`
+
+**Purpose:** Searches for an existing user by email to add them to a hotel.
+
+**Parameters:**
+
+- `p_email`: Email address to search for
+- `p_hotel_id`: Hotel ID for context
+- `p_requester_id`: ID of the user making the request (must be hotel owner)
+
+**Returns:** JSONB with:
+
+- `found`: boolean - whether user was found
+- `user_id`: uuid - the user's ID (if found)
+- `name`: text - the user's name (if found)
+- `already_staff`: boolean - whether user is already staff at this hotel
+- `error`: text - error message (if any)
+
+**Security:** Bypasses RLS with owner verification
+
+**Usage:**
+
+```sql
+SELECT find_user_by_email(
+  'user@example.com',
+  'hotel-uuid',
+  'owner-uuid'
+);
+```
+
+---
+
 ### Notification Functions
 
 #### `get_owner_fcm_tokens(p_hotel_id uuid)`
@@ -590,6 +622,14 @@ SELECT toggle_notifications_visibility(false);
 **Event:** INSERT on `bookings`
 
 **Action:** Creates notification for hotel owners when new booking is created.
+Includes guest info AND the staff member who created the booking.
+
+**Notification Data:**
+
+- `booking_id`, `room_id`, `room_number`, `guest_name`
+- `staff_id`, `staff_name` - The staff member who created the booking
+- `hotel_id`, `hotel_name`, `check_in`, `check_out`
+- `total_amount`, `amount_paid`
 
 **Fires:** After insert
 
@@ -665,14 +705,15 @@ supabase/migrations/
 
 ### Key Migrations
 
-| File                                     | Description                               |
-| ---------------------------------------- | ----------------------------------------- |
-| `20241212_onboarding_schema.sql`         | Initial onboarding schema with hotel_code |
-| `20241213_add_staff_function.sql`        | Staff management function with RLS bypass |
-| `20241222_remove_join_workflow.sql`      | Removed deprecated join codes workflow    |
-| `20241223_push_notifications.sql`        | Push notification infrastructure          |
-| `20241223_auto_invoke_edge_function.sql` | Auto-invoke Edge Functions via pg_net     |
-| `20241223_fix_get_owner_fcm_tokens.sql`  | Fixed token retrieval from auth.users     |
+| File                                           | Description                                 |
+| ---------------------------------------------- | ------------------------------------------- |
+| `20241212_onboarding_schema.sql`               | Initial onboarding schema with hotel_code   |
+| `20241213_add_staff_function.sql`              | Staff management function with RLS bypass   |
+| `20241222_remove_join_workflow.sql`            | Removed deprecated join codes workflow      |
+| `20241223_push_notifications.sql`              | Push notification infrastructure            |
+| `20241223_auto_invoke_edge_function.sql`       | Auto-invoke Edge Functions via pg_net       |
+| `20241223_fix_get_owner_fcm_tokens.sql`        | Fixed token retrieval from auth.users       |
+| `20241225_booking_notification_staff_info.sql` | Add staff info to new booking notifications |
 
 ---
 
@@ -703,6 +744,33 @@ npx supabase secrets set SECRET_NAME "secret-value"
 - ✅ Edge Functions for external API integration
 - ✅ Financial daybook and transaction tracking
 - ✅ Maintenance and service history tracking
+- ✅ **Supabase Realtime for live data updates**
+
+---
+
+## 🔴 Realtime Configuration
+
+The following tables have **Supabase Realtime** enabled for live data
+synchronization:
+
+| Table                  | Purpose                  |
+| ---------------------- | ------------------------ |
+| `rooms`                | Room status changes      |
+| `room_types`           | Room type updates        |
+| `bookings`             | Booking status changes   |
+| `hotel_staff`          | Staff management updates |
+| `guests`               | Guest/customer data      |
+| `daybooks`             | Daily financial records  |
+| `daybook_transactions` | Transaction updates      |
+| `hotels`               | Hotel settings changes   |
+| `notifications`        | In-app notifications     |
+
+**Flutter Integration:**
+
+- Providers use `StreamProvider` with `.stream()` method
+- Data automatically refreshes on any INSERT/UPDATE/DELETE
+- Pull-to-refresh is still available as a manual fallback
+- AppBar refresh icons have been removed (auto-sync enabled)
 
 ---
 
@@ -734,4 +802,4 @@ auth.users
   └── device_tokens (many)
 ```
 
-_Last Updated: December 24, 2024_
+_Last Updated: December 25, 2024_

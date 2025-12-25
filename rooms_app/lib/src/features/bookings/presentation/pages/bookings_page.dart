@@ -51,21 +51,23 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
             const Text('Bookings'),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refresh,
-            tooltip: 'Refresh',
-          ),
-        ],
+        actions: const [],
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: bookingsAsync.when(
-          data: (bookings) => _buildBookingsList(context, bookings, canViewMoney),
+          data: (bookings) =>
+              _buildBookingsList(context, bookings, canViewMoney),
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => ListView(
-            children: [Center(child: Padding(padding: const EdgeInsets.all(32), child: Text('Error: $e')))],
+            children: [
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Text('Error: $e'),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -162,7 +164,11 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
     );
   }
 
-  void _showBookingDetails(BuildContext context, Booking booking, bool canViewMoney) {
+  void _showBookingDetails(
+    BuildContext context,
+    Booking booking,
+    bool canViewMoney,
+  ) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => BookingDetailsPage(booking: booking),

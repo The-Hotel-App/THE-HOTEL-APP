@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
+import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/bookings/data/repositories/supabase_booking_repository.dart';
 import 'package:rooms/src/features/bookings/domain/entities/booking.dart';
@@ -9,14 +11,35 @@ final bookingRepositoryProvider = Provider<BookingRepository>((ref) {
   return SupabaseBookingRepository();
 });
 
-/// Provider for all bookings for current hotel
-final bookingsProvider = FutureProvider<List<Booking>>((ref) async {
+/// Provider for all bookings for current hotel - with realtime updates
+final bookingsProvider = StreamProvider<List<Booking>>((ref) {
   final hotel = ref.watch(currentHotelProvider);
   if (hotel == null) {
-    return [];
+    return Stream.value([]);
   }
+
+  final client = SupabaseService.instance.client;
+  final hotelId = hotel.hotelId;
   final repo = ref.watch(bookingRepositoryProvider);
-  return repo.getBookings(hotel.hotelId);
+
+  AppLogger.info(
+    'Setting up realtime subscription for bookings in hotel: $hotelId',
+    tag: 'Bookings',
+  );
+
+  // Create a stream that emits booking updates
+  return client
+      .from('bookings')
+      .stream(primaryKey: ['id'])
+      .eq('hotel_id', hotelId)
+      .asyncMap((_) async {
+        // When any change occurs, fetch full booking data with relations
+        AppLogger.debug(
+          'Realtime update received for bookings',
+          tag: 'Bookings',
+        );
+        return repo.getBookings(hotelId);
+      });
 });
 
 /// Provider for active bookings (checked in) for current hotel

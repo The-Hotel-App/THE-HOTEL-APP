@@ -4,13 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
+import 'package:rooms/src/features/auth/presentation/providers/biometric_providers.dart';
 import 'package:rooms/src/features/bookings/domain/entities/booking.dart';
 import 'package:rooms/src/features/bookings/presentation/providers/booking_providers.dart';
 import 'package:rooms/src/features/bookings/presentation/providers/new_booking_providers.dart';
 import 'package:rooms/src/features/daybook/domain/entities/transaction.dart';
 import 'package:rooms/src/features/daybook/presentation/providers/daybook_providers.dart';
-import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
+import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
 
 /// Payment page - Final step of booking flow
 class BookingPaymentPage extends ConsumerStatefulWidget {
@@ -132,45 +133,47 @@ class _BookingPaymentPageState extends ConsumerState<BookingPaymentPage> {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          ...state.selectedRooms.map((room) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.grey100,
-                    borderRadius: BorderRadius.circular(8),
+          ...state.selectedRooms.map(
+            (room) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.grey100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.bed, color: AppColors.grey600),
                   ),
-                  child: const Icon(Icons.bed, color: AppColors.grey600),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Room ${room.roomNumber}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        room.roomTypeName ?? 'Standard',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Room ${room.roomNumber}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                      ),
-                    ],
+                        Text(
+                          room.roomTypeName ?? 'Standard',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Text(
-                  '₹${(room.pricePerNight * state.numberOfNights).toStringAsFixed(0)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
+                  Text(
+                    '₹${(room.pricePerNight * state.numberOfNights).toStringAsFixed(0)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
             ),
-          )),
+          ),
           const Divider(),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -196,7 +199,7 @@ class _BookingPaymentPageState extends ConsumerState<BookingPaymentPage> {
 
   Widget _buildGuestSummaryCard(NewBookingState state) {
     final guests = state.guests.where((g) => g != null).toList();
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -267,7 +270,7 @@ class _BookingPaymentPageState extends ConsumerState<BookingPaymentPage> {
 
   Widget _buildPaymentCard(NewBookingState state) {
     final paidAmount = double.tryParse(_amountController.text) ?? 0;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -359,7 +362,9 @@ class _BookingPaymentPageState extends ConsumerState<BookingPaymentPage> {
                   mode.displayName,
                   style: TextStyle(
                     color: isSelected ? AppColors.white : AppColors.black,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
               ],
@@ -398,10 +403,7 @@ class _BookingPaymentPageState extends ConsumerState<BookingPaymentPage> {
           color: AppColors.grey100,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w500),
-        ),
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
       ),
     );
   }
@@ -487,7 +489,10 @@ class _BookingPaymentPageState extends ConsumerState<BookingPaymentPage> {
                       )
                     : const Text(
                         'Complete Check-In',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
               ),
             ),
@@ -498,6 +503,29 @@ class _BookingPaymentPageState extends ConsumerState<BookingPaymentPage> {
   }
 
   Future<void> _completeBooking() async {
+    // Require fingerprint verification for users with biometric enabled
+    final biometricService = ref.read(biometricServiceProvider);
+    final hasBiometric = ref.read(userBiometricStatusProvider);
+
+    if (hasBiometric) {
+      final authenticated = await biometricService.authenticate(
+        reason: 'Verify your identity to complete check-in',
+        biometricOnly: false,
+      );
+
+      if (!authenticated) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Verification failed or cancelled'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     setState(() => _isProcessing = true);
 
     try {
@@ -518,7 +546,7 @@ class _BookingPaymentPageState extends ConsumerState<BookingPaymentPage> {
 
       // Use the first room for the main booking record
       final firstRoom = bookingState.selectedRooms.first;
-      
+
       // Create a single booking with total amount
       final booking = Booking(
         id: '',
@@ -536,8 +564,8 @@ class _BookingPaymentPageState extends ConsumerState<BookingPaymentPage> {
         paymentStatus: paidAmount >= bookingState.totalAmount
             ? PaymentStatus.paid
             : paidAmount > 0
-                ? PaymentStatus.partial
-                : PaymentStatus.pending,
+            ? PaymentStatus.partial
+            : PaymentStatus.pending,
         createdAt: DateTime.now(),
         createdBy: user?.id ?? '',
       );
@@ -561,7 +589,8 @@ class _BookingPaymentPageState extends ConsumerState<BookingPaymentPage> {
         await supabase.from('booking_rooms').insert({
           'booking_id': createdBooking.id,
           'room_id': selectedRoom.roomId,
-          'room_price': selectedRoom.pricePerNight * bookingState.numberOfNights,
+          'room_price':
+              selectedRoom.pricePerNight * bookingState.numberOfNights,
         });
 
         // Update room status to occupied
@@ -590,7 +619,8 @@ class _BookingPaymentPageState extends ConsumerState<BookingPaymentPage> {
             type: TransactionType.income,
             category: TransactionCategory.roomPayment,
             amount: paidAmount,
-            description: 'Room $roomNumbers - ${primaryGuest.name} (${bookingState.paymentMode.displayName})',
+            description:
+                'Room $roomNumbers - ${primaryGuest.name} (${bookingState.paymentMode.displayName})',
             createdAt: DateTime.now(),
             createdBy: user?.id ?? '',
             bookingId: createdBooking.id,
@@ -617,7 +647,10 @@ class _BookingPaymentPageState extends ConsumerState<BookingPaymentPage> {
       setState(() => _isProcessing = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
