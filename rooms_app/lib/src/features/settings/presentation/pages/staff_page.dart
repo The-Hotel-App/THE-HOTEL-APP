@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
-import 'package:rooms/src/core/widgets/add_staff_sheet.dart';
+import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/settings/data/repositories/staff_repository.dart';
@@ -66,7 +66,13 @@ class _StaffPageState extends ConsumerState<StaffPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        actions: const [],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadStaff,
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: _buildBody(),
     );
@@ -105,11 +111,11 @@ class _StaffPageState extends ConsumerState<StaffPage> {
 
           const SizedBox(height: 20),
 
-          // Add Staff Button - shows options bottom sheet
+          // Add Staff Button
           ElevatedButton.icon(
-            onPressed: () => AddStaffSheet.show(context),
+            onPressed: () => context.push(AppRoutes.createStaff),
             icon: const Icon(Icons.person_add),
-            label: const Text('Add Staff'),
+            label: const Text('Add New Staff'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.black,
               foregroundColor: AppColors.white,

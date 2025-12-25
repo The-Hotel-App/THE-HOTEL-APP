@@ -55,7 +55,13 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
             const Text('Guests'),
           ],
         ),
-        actions: const [],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refresh,
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: Column(
         children: [

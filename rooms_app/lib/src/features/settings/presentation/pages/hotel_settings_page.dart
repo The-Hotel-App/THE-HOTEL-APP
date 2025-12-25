@@ -132,7 +132,13 @@ class _HotelSettingsPageState extends ConsumerState<HotelSettingsPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        actions: const [],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadHotel,
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: _buildBody(),
     );

@@ -77,6 +77,11 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
             onPressed: () => _showAddEditDialog(null),
             tooltip: 'Add Room Type',
           ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadRoomTypes,
+            tooltip: 'Refresh',
+          ),
         ],
       ),
       body: _buildBody(),

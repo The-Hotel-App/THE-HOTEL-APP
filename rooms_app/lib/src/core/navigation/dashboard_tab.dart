@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
-import 'package:rooms/src/core/widgets/add_staff_sheet.dart';
 import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
@@ -588,7 +587,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
             icon: Icons.person_add,
             label: 'Add Staff',
             color: AppColors.grey700,
-            onTap: () => AddStaffSheet.show(context),
+            onTap: () => context.push(AppRoutes.createStaff),
           ),
         if (isOwner)
           _buildActionCard(

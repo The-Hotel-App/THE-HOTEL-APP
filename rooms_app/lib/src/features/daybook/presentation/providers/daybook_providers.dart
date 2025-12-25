@@ -1,6 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rooms/src/core/logging/app_logger.dart';
-import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/daybook/data/repositories/supabase_daybook_repository.dart';
 import 'package:rooms/src/features/daybook/domain/entities/transaction.dart';
@@ -14,47 +12,36 @@ final dayBookRepositoryProvider = Provider<DayBookRepository>((ref) {
 /// Provider for current daybook ID (set when summary is loaded)
 final currentDaybookIdProvider = StateProvider<String?>((ref) => null);
 
-/// Provider for today's day book summary - with realtime updates
-final todayDayBookProvider = StreamProvider<DayBookSummary>((ref) {
+/// Provider for today's day book summary
+final todayDayBookProvider = FutureProvider<DayBookSummary>((ref) async {
   final repo = ref.watch(dayBookRepositoryProvider);
   final hotelId = ref.watch(selectedHotelIdProvider);
 
   if (hotelId == null) {
-    return Stream.error(Exception('No hotel selected'));
+    throw Exception('No hotel selected');
   }
 
-  final client = SupabaseService.instance.client;
+  final summary = await repo.getTodaySummary(hotelId);
 
-  AppLogger.info(
-    'Setting up realtime subscription for daybook in hotel: $hotelId',
-    tag: 'DayBook',
-  );
+  // Store the daybook ID for real-time updates
+  ref.read(currentDaybookIdProvider.notifier).state = summary.id;
 
-  // Listen to daybook_transactions changes and refetch summary
-  return client
-      .from('daybook_transactions')
-      .stream(primaryKey: ['id'])
-      .eq('hotel_id', hotelId)
-      .asyncMap((_) async {
-        AppLogger.debug('Realtime update received for daybook', tag: 'DayBook');
-        final summary = await repo.getTodaySummary(hotelId);
-        ref.read(currentDaybookIdProvider.notifier).state = summary.id;
-        return summary;
-      });
+  return summary;
 });
 
 /// Provider for all transactions (optionally filtered by date)
-final transactionsProvider =
-    FutureProvider.family<List<Transaction>, DateTime?>((ref, date) async {
-      final repo = ref.watch(dayBookRepositoryProvider);
-      final hotelId = ref.watch(selectedHotelIdProvider);
+final transactionsProvider = FutureProvider.family<List<Transaction>, DateTime?>(
+  (ref, date) async {
+    final repo = ref.watch(dayBookRepositoryProvider);
+    final hotelId = ref.watch(selectedHotelIdProvider);
 
-      if (hotelId == null) {
-        throw Exception('No hotel selected');
-      }
+    if (hotelId == null) {
+      throw Exception('No hotel selected');
+    }
 
-      return repo.getTransactions(hotelId, date: date);
-    });
+    return repo.getTransactions(hotelId, date: date);
+  },
+);
 
 /// Stream provider for real-time transaction updates
 final transactionsStreamProvider = StreamProvider<List<Transaction>>((ref) {
@@ -70,15 +57,14 @@ final transactionsStreamProvider = StreamProvider<List<Transaction>>((ref) {
 });
 
 /// Provider for adding a transaction
-final addTransactionProvider = FutureProvider.family<Transaction, Transaction>((
-  ref,
-  transaction,
-) async {
-  final repo = ref.read(dayBookRepositoryProvider);
-  final result = await repo.addTransaction(transaction);
+final addTransactionProvider = FutureProvider.family<Transaction, Transaction>(
+  (ref, transaction) async {
+    final repo = ref.read(dayBookRepositoryProvider);
+    final result = await repo.addTransaction(transaction);
 
-  // Invalidate the summary to refresh data
-  ref.invalidate(todayDayBookProvider);
+    // Invalidate the summary to refresh data
+    ref.invalidate(todayDayBookProvider);
 
-  return result;
-});
+    return result;
+  },
+);

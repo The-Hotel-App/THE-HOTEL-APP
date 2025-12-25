@@ -1,6 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rooms/src/core/logging/app_logger.dart';
-import 'package:rooms/src/core/services/supabase_service.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/customers/data/repositories/supabase_customer_repository.dart';
 import 'package:rooms/src/features/customers/domain/entities/customer.dart';
@@ -11,62 +9,33 @@ final customerRepositoryProvider = Provider<CustomerRepository>((ref) {
   return SupabaseCustomerRepository();
 });
 
-/// Provider for all customers for current hotel - with realtime updates
-final customersProvider = StreamProvider<List<Customer>>((ref) {
+/// Provider for all customers for current hotel
+final customersProvider = FutureProvider<List<Customer>>((ref) async {
   final hotel = ref.watch(currentHotelProvider);
   if (hotel == null) {
-    return Stream.value([]);
+    return [];
   }
-
-  final client = SupabaseService.instance.client;
-  final hotelId = hotel.hotelId;
   final repo = ref.watch(customerRepositoryProvider);
-
-  AppLogger.info(
-    'Setting up realtime subscription for guests in hotel: $hotelId',
-    tag: 'Customers',
-  );
-
-  // Create a stream that emits customer updates
-  return client
-      .from('guests')
-      .stream(primaryKey: ['id'])
-      .eq('hotel_id', hotelId)
-      .asyncMap((_) async {
-        AppLogger.debug(
-          'Realtime update received for guests',
-          tag: 'Customers',
-        );
-        return repo.getCustomers(hotelId);
-      });
+  return repo.getCustomers(hotel.hotelId);
 });
 
 /// Provider for customer search
 final customerSearchQueryProvider = StateProvider<String>((ref) => '');
 
-/// Provider for filtered customers - with realtime updates
-final filteredCustomersProvider = StreamProvider<List<Customer>>((ref) {
+/// Provider for filtered customers
+final filteredCustomersProvider = FutureProvider<List<Customer>>((ref) async {
   final hotel = ref.watch(currentHotelProvider);
   if (hotel == null) {
-    return Stream.value([]);
+    return [];
   }
 
-  final client = SupabaseService.instance.client;
-  final hotelId = hotel.hotelId;
   final repo = ref.watch(customerRepositoryProvider);
   final query = ref.watch(customerSearchQueryProvider);
 
-  // Create a stream that emits filtered customer updates
-  return client
-      .from('guests')
-      .stream(primaryKey: ['id'])
-      .eq('hotel_id', hotelId)
-      .asyncMap((_) async {
-        if (query.isEmpty) {
-          return repo.getCustomers(hotelId);
-        }
-        return repo.searchCustomers(hotelId, query);
-      });
+  if (query.isEmpty) {
+    return repo.getCustomers(hotel.hotelId);
+  }
+  return repo.searchCustomers(hotel.hotelId, query);
 });
 
 /// Provider for single customer

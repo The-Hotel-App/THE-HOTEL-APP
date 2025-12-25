@@ -81,7 +81,9 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
           onPressed: () => context.pop(),
         ),
         title: const Text('Booking Details'),
-        actions: const [],
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _refresh),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
