@@ -10,34 +10,23 @@ class AppUpdateService {
   /// Check for available updates
   /// Returns UpdateInfo if update available, null otherwise
   static Future<UpdateInfo?> checkForUpdate() async {
-    AppLogger.info('=== UPDATE CHECK STARTED ===', tag: 'Update');
-
     if (!AppConfig.enableUpdateCheck) {
-      AppLogger.warning('Update check is DISABLED in AppConfig', tag: 'Update');
+      AppLogger.info('Update check disabled', tag: 'Update');
       return null;
     }
 
-    AppLogger.info('Update check is ENABLED', tag: 'Update');
-
     try {
-      // Get current app version from package info (reads from pubspec.yaml)
-      AppLogger.info('Getting package info...', tag: 'Update');
+      // Get current app version from package info
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
-      AppLogger.success('Current app version: $currentVersion', tag: 'Update');
+      AppLogger.info('Current version: $currentVersion', tag: 'Update');
 
       final url =
           'https://api.github.com/repos/${AppConfig.githubOwner}/${AppConfig.githubRepo}/releases/latest';
-      AppLogger.info('Fetching from: $url', tag: 'Update');
 
       final response = await _dio.get(
         url,
         options: Options(headers: {'Accept': 'application/vnd.github.v3+json'}),
-      );
-
-      AppLogger.info(
-        'GitHub API response status: ${response.statusCode}',
-        tag: 'Update',
       );
 
       if (response.statusCode == 200) {
@@ -45,18 +34,13 @@ class AppUpdateService {
         final tagName = data['tag_name'] as String? ?? '';
         final latestVersion = _parseVersion(tagName);
 
-        AppLogger.info('GitHub tag: $tagName', tag: 'Update');
-        AppLogger.info('Parsed latest version: $latestVersion', tag: 'Update');
-        AppLogger.info(
-          'Comparing: current=$currentVersion vs latest=$latestVersion',
-          tag: 'Update',
-        );
+        AppLogger.info('Latest release: $latestVersion', tag: 'Update');
 
-        final isNewer = _isNewerVersion(latestVersion, currentVersion);
-        AppLogger.info('Is newer version available? $isNewer', tag: 'Update');
-
-        if (isNewer) {
-          AppLogger.success('=== UPDATE AVAILABLE! ===', tag: 'Update');
+        if (_isNewerVersion(latestVersion, currentVersion)) {
+          AppLogger.success(
+            'Update available: $currentVersion → $latestVersion',
+            tag: 'Update',
+          );
           return UpdateInfo(
             currentVersion: currentVersion,
             latestVersion: latestVersion,
@@ -66,21 +50,18 @@ class AppUpdateService {
             releaseNotes: data['body'] as String? ?? '',
           );
         } else {
-          AppLogger.info('=== APP IS UP TO DATE ===', tag: 'Update');
+          AppLogger.info('App is up to date', tag: 'Update');
         }
-      } else {
-        AppLogger.warning(
-          'GitHub API returned non-200: ${response.statusCode}',
-          tag: 'Update',
-        );
       }
-    } catch (e, stackTrace) {
-      AppLogger.error(
-        'Update check failed',
-        tag: 'Update',
-        error: e,
-        stackTrace: stackTrace,
-      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        // No release yet - this is normal, not an error
+        AppLogger.info('No releases found yet', tag: 'Update');
+      } else {
+        AppLogger.warning('Update check failed: ${e.message}', tag: 'Update');
+      }
+    } catch (e) {
+      AppLogger.warning('Update check failed: $e', tag: 'Update');
     }
 
     return null;
@@ -88,23 +69,14 @@ class AppUpdateService {
 
   /// Parse version from tag (removes 'v' prefix if present)
   static String _parseVersion(String tag) {
-    final parsed = tag.startsWith('v') ? tag.substring(1) : tag;
-    AppLogger.debug('Parsed "$tag" -> "$parsed"', tag: 'Update');
-    return parsed;
+    return tag.startsWith('v') ? tag.substring(1) : tag;
   }
 
   /// Compare versions: returns true if latest > current
   static bool _isNewerVersion(String latest, String current) {
-    AppLogger.debug(
-      'Comparing versions: latest="$latest" vs current="$current"',
-      tag: 'Update',
-    );
     try {
       final latestParts = latest.split('.').map(int.parse).toList();
       final currentParts = current.split('.').map(int.parse).toList();
-
-      AppLogger.debug('Latest parts: $latestParts', tag: 'Update');
-      AppLogger.debug('Current parts: $currentParts', tag: 'Update');
 
       // Pad to same length
       while (latestParts.length < 3) {
@@ -115,25 +87,11 @@ class AppUpdateService {
       }
 
       for (int i = 0; i < 3; i++) {
-        AppLogger.debug(
-          'Comparing index $i: ${latestParts[i]} vs ${currentParts[i]}',
-          tag: 'Update',
-        );
-        if (latestParts[i] > currentParts[i]) {
-          AppLogger.debug('Latest[$i] > Current[$i] -> NEWER', tag: 'Update');
-          return true;
-        }
-        if (latestParts[i] < currentParts[i]) {
-          AppLogger.debug(
-            'Latest[$i] < Current[$i] -> NOT NEWER',
-            tag: 'Update',
-          );
-          return false;
-        }
+        if (latestParts[i] > currentParts[i]) return true;
+        if (latestParts[i] < currentParts[i]) return false;
       }
-      AppLogger.debug('All parts equal -> NOT NEWER', tag: 'Update');
     } catch (e) {
-      AppLogger.warning('Version parse error: $e', tag: 'Update');
+      // Version parse error - treat as no update
     }
     return false;
   }
