@@ -3,7 +3,7 @@ import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/services/app_update_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Minimalistic update dialog
+/// Dark mode update dialog
 class UpdateDialog extends StatelessWidget {
   final UpdateInfo updateInfo;
 
@@ -21,7 +21,8 @@ class UpdateDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: AppColors.black,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -31,13 +32,13 @@ class UpdateDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.grey100,
+                color: AppColors.info.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.system_update_rounded,
                 size: 40,
-                color: AppColors.primary,
+                color: AppColors.info,
               ),
             ),
             const SizedBox(height: 20),
@@ -47,18 +48,26 @@ class UpdateDialog extends StatelessWidget {
               'Update Available',
               style: TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+                color: AppColors.white,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+
+            // Subtitle
+            Text(
+              'A new version is ready to install',
+              style: TextStyle(fontSize: 14, color: AppColors.grey400),
+            ),
+            const SizedBox(height: 20),
 
             // Version info
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.grey100,
-                borderRadius: BorderRadius.circular(8),
+                color: AppColors.black,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.grey700),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -66,46 +75,51 @@ class UpdateDialog extends StatelessWidget {
                   Text(
                     'v${updateInfo.currentVersion}',
                     style: TextStyle(
-                      color: AppColors.textSecondary,
+                      color: AppColors.grey400,
                       fontWeight: FontWeight.w500,
+                      fontSize: 16,
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Icon(
                       Icons.arrow_forward_rounded,
-                      size: 18,
-                      color: AppColors.textSecondary,
+                      size: 20,
+                      color: AppColors.info,
                     ),
                   ),
                   Text(
                     'v${updateInfo.latestVersion}',
                     style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
+                      color: AppColors.info,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
 
             // Buttons
             Row(
               children: [
                 // Later button
                 Expanded(
-                  child: OutlinedButton(
+                  child: TextButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
-                      side: BorderSide(color: AppColors.grey300),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.grey400,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: AppColors.grey700),
                       ),
                     ),
-                    child: const Text('Later'),
+                    child: const Text(
+                      'Later',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -115,14 +129,18 @@ class UpdateDialog extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () => _openReleaseUrl(context),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: AppColors.info,
                       foregroundColor: AppColors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Update Now'),
+                    child: const Text(
+                      'Update',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],
