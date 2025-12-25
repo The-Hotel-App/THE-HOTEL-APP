@@ -54,7 +54,7 @@ class _RoomsManagementPageState extends ConsumerState<RoomsManagementPage> {
       setState(() {
         _roomsByFloor = results[0] as Map<int, List<ManagedRoom>>;
         _roomTypes = results[1] as List<RoomType>;
-        _expandedFloors = _roomsByFloor.keys.toSet();
+        // Keep floors collapsed by default
         _isLoading = false;
         _error = null;
       });
@@ -69,54 +69,124 @@ class _RoomsManagementPageState extends ConsumerState<RoomsManagementPage> {
   @override
   Widget build(BuildContext context) {
     final floors = _roomsByFloor.keys.toList()..sort();
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: AppColors.grey100,
-      appBar: AppBar(
-        backgroundColor: AppColors.black,
-        foregroundColor: AppColors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Manage Rooms'),
-        actions: [
-          if (_selectedRooms.isNotEmpty)
-            TextButton.icon(
-              onPressed: _showBulkAssignDialog,
-              icon: const Icon(Icons.edit, color: AppColors.warning),
-              label: Text(
-                'Edit ${_selectedRooms.length}',
-                style: const TextStyle(color: AppColors.warning),
+      backgroundColor: AppColors.background,
+      appBar: _buildAppBar(theme),
+      body: _buildBody(floors),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(ThemeData theme) {
+    return AppBar(
+      elevation: 0,
+      backgroundColor: AppColors.primary,
+      foregroundColor: AppColors.white,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => context.pop(),
+      ),
+      title: const Text('Manage Rooms'),
+      actions: [
+        if (_selectedRooms.isNotEmpty)
+          TextButton(
+            onPressed: _showBulkAssignDialog,
+            child: Text(
+              'Edit (${_selectedRooms.length})',
+              style: const TextStyle(
+                color: AppColors.warning,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _showAddRoomDialog,
-            tooltip: 'Add Room',
           ),
-        ],
-      ),
-      body: _buildBody(floors),
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: _showAddRoomDialog,
+          tooltip: 'Add Room',
+        ),
+      ],
     );
   }
 
   Widget _buildBody(List<int> floors) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 64, color: AppColors.error),
-            const SizedBox(height: 16),
-            Text('Error: $_error'),
-            const SizedBox(height: 16),
-            ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation(AppColors.primary),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Loading rooms...',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            ),
           ],
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.error_outline_rounded,
+                  size: 40,
+                  color: AppColors.error,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Something went wrong',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _loadData,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Try Again'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -126,19 +196,24 @@ class _RoomsManagementPageState extends ConsumerState<RoomsManagementPage> {
     }
 
     return RefreshIndicator(
+      color: AppColors.primary,
       onRefresh: _loadData,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+        physics: const AlwaysScrollableScrollPhysics(),
         itemCount: floors.length,
         itemBuilder: (context, index) {
           final floor = floors[index];
           final rooms = _roomsByFloor[floor]!;
-          return FloorSection(
-            floor: floor,
-            rooms: rooms,
-            isExpanded: _expandedFloors.contains(floor),
-            onToggle: () => _toggleFloor(floor),
-            buildRoomTile: (room) => _buildRoomTile(room),
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: FloorSection(
+              floor: floor,
+              rooms: rooms,
+              isExpanded: _expandedFloors.contains(floor),
+              onToggle: () => _toggleFloor(floor),
+              buildRoomTile: (room) => _buildRoomTile(room),
+            ),
           );
         },
       ),
@@ -157,31 +232,74 @@ class _RoomsManagementPageState extends ConsumerState<RoomsManagementPage> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.meeting_room_outlined, size: 80, color: AppColors.grey400),
-          const SizedBox(height: 16),
-          const Text(
-            'No Rooms Yet',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Add rooms to your hotel',
-            style: TextStyle(color: AppColors.grey500),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _showAddRoomDialog,
-            icon: const Icon(Icons.add),
-            label: const Text('Add Room'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.black,
-              foregroundColor: AppColors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.grey200, AppColors.grey100],
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withValues(alpha: 0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.meeting_room_outlined,
+                size: 56,
+                color: AppColors.grey600,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 28),
+            const Text(
+              'No Rooms Yet',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Start by adding rooms to your hotel.\nYou can assign room types and manage floors.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _showAddRoomDialog,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Add Your First Room'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

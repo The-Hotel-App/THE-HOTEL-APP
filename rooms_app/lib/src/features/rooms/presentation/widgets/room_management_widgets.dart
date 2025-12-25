@@ -24,77 +24,75 @@ class FloorSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Sort rooms by room number
+    final sortedRooms = List<ManagedRoom>.from(rooms)
+      ..sort((a, b) {
+        final aNum = int.tryParse(a.roomNumber) ?? 0;
+        final bNum = int.tryParse(b.roomNumber) ?? 0;
+        if (aNum != 0 && bNum != 0) return aNum.compareTo(bNum);
+        return a.roomNumber.compareTo(b.roomNumber);
+      });
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.vertical(
-              top: const Radius.circular(16),
-              bottom: isExpanded ? Radius.zero : const Radius.circular(16),
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.grey800,
-                borderRadius: BorderRadius.vertical(
-                  top: const Radius.circular(16),
-                  bottom: isExpanded ? Radius.zero : const Radius.circular(16),
+          // Floor Header - Clean & Simple
+          Material(
+            color: AppColors.primary,
+            child: InkWell(
+              onTap: onToggle,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
                 ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.layers, color: AppColors.white, size: 24),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Floor $floor',
-                    style: const TextStyle(
-                      color: AppColors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${rooms.length} rooms',
+                child: Row(
+                  children: [
+                    Text(
+                      'Floor $floor',
                       style: const TextStyle(
-                        color: AppColors.grey800,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                        color: AppColors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: AppColors.white,
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Text(
+                      '(${sortedRooms.length})',
+                      style: TextStyle(
+                        color: AppColors.white.withValues(alpha: 0.7),
+                        fontSize: 14,
+                      ),
+                    ),
+                    const Spacer(),
+                    AnimatedRotation(
+                      turns: isExpanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: AppColors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-          if (isExpanded) ...rooms.map((room) => buildRoomTile(room)),
+          // Rooms List
+          if (isExpanded) ...sortedRooms.map((room) => buildRoomTile(room)),
         ],
       ),
     );
@@ -124,80 +122,104 @@ class RoomTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor(room.status);
 
-    return InkWell(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.info.withValues(alpha: 0.1) : null,
-          border: Border(bottom: BorderSide(color: AppColors.grey200)),
-        ),
-        child: Row(
-          children: [
-            if (showCheckbox)
-              Checkbox(
-                value: isSelected,
-                onChanged: onCheckboxChanged,
-                activeColor: AppColors.info,
-              ),
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: AppColors.grey100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: Text(
-                  room.roomNumber,
-                  style: const TextStyle(
-                    color: AppColors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.info.withValues(alpha: 0.08)
+                : AppColors.surface,
+            border: Border(bottom: BorderSide(color: AppColors.grey200)),
+          ),
+          child: Row(
+            children: [
+              // Checkbox for selection mode
+              if (showCheckbox)
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: Checkbox(
+                      value: isSelected,
+                      onChanged: onCheckboxChanged,
+                      activeColor: AppColors.primary,
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    room.roomTypeName ?? 'No Type',
+              // Room Number Badge
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.grey100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
+                    room.roomNumber,
                     style: const TextStyle(
-                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
                       fontSize: 16,
                     ),
                   ),
-                  Text(
-                    room.pricePerNight != null
-                        ? '₹${room.pricePerNight!.toStringAsFixed(0)}/night • Max ${room.maxOccupancy ?? 2} guests'
-                        : 'No pricing set',
-                    style: TextStyle(color: AppColors.grey600, fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                room.status.displayName,
-                style: TextStyle(
-                  color: statusColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.edit, color: AppColors.grey400, size: 18),
-          ],
+              const SizedBox(width: 14),
+              // Room Details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      room.roomTypeName ?? 'No Type',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: room.roomTypeName != null
+                            ? AppColors.textPrimary
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      room.pricePerNight != null
+                          ? '₹${room.pricePerNight!.toStringAsFixed(0)}/night • Max ${room.maxOccupancy ?? 2}'
+                          : 'Max ${room.maxOccupancy ?? 2} guests',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Status Badge
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  room.status.displayName,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -210,11 +232,11 @@ class RoomTile extends StatelessWidget {
       case RoomStatus.occupied:
         return AppColors.error;
       case RoomStatus.cleaning:
-        return AppColors.warning;
+        return AppColors.roomCleaning;
       case RoomStatus.maintenance:
-        return AppColors.grey600;
+        return AppColors.roomEmergency;
       case RoomStatus.outOfService:
-        return AppColors.grey500;
+        return AppColors.grey600;
     }
   }
 }
@@ -300,6 +322,7 @@ class _AddRoomDialogState extends State<AddRoomDialog> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _selectedTypeId,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Room Type'),
                 items: widget.roomTypes
                     .map(
@@ -307,6 +330,7 @@ class _AddRoomDialogState extends State<AddRoomDialog> {
                         value: type.id,
                         child: Text(
                           '${type.name} (₹${type.basePrice.toStringAsFixed(0)})',
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     )
@@ -396,6 +420,7 @@ class _EditRoomDialogState extends State<EditRoomDialog> {
       title: 'Edit Room ${widget.room.roomNumber}',
       content: DropdownButtonFormField<String>(
         initialValue: _selectedTypeId,
+        isExpanded: true,
         decoration: const InputDecoration(labelText: 'Room Type'),
         items: widget.roomTypes
             .map(
@@ -403,6 +428,7 @@ class _EditRoomDialogState extends State<EditRoomDialog> {
                 value: type.id,
                 child: Text(
                   '${type.name} (₹${type.basePrice.toStringAsFixed(0)})',
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             )
@@ -477,6 +503,7 @@ class _BulkAssignDialogState extends State<BulkAssignDialog> {
       title: 'Assign Type to ${widget.roomCount} Rooms',
       content: DropdownButtonFormField<String>(
         initialValue: _selectedTypeId,
+        isExpanded: true,
         decoration: const InputDecoration(labelText: 'Room Type'),
         items: widget.roomTypes
             .map(
@@ -484,6 +511,7 @@ class _BulkAssignDialogState extends State<BulkAssignDialog> {
                 value: type.id,
                 child: Text(
                   '${type.name} (₹${type.basePrice.toStringAsFixed(0)})',
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             )
