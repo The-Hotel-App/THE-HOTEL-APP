@@ -191,15 +191,19 @@ enum UserRole {
   // ============================================================
 
   /// Can view food orders
-  /// SRS: Manager and Kitchen Manager only (NOT Owner)
+  /// Owner, Manager and Kitchen Manager
   bool get canViewFoodOrders {
-    return this == UserRole.manager || this == UserRole.kitchenManager;
+    return this == UserRole.owner ||
+        this == UserRole.manager ||
+        this == UserRole.kitchenManager;
   }
 
   /// Can manage food orders (update status, etc.)
-  /// SRS: Manager and Kitchen Manager only
+  /// Owner, Manager and Kitchen Manager
   bool get canManageFoodOrders {
-    return this == UserRole.manager || this == UserRole.kitchenManager;
+    return this == UserRole.owner ||
+        this == UserRole.manager ||
+        this == UserRole.kitchenManager;
   }
 
   // ============================================================
@@ -207,15 +211,19 @@ enum UserRole {
   // ============================================================
 
   /// Can view laundry requests
-  /// SRS: Manager and Staff only
+  /// Owner, Manager and Staff
   bool get canViewLaundryRequests {
-    return this == UserRole.manager || this == UserRole.staff;
+    return this == UserRole.owner ||
+        this == UserRole.manager ||
+        this == UserRole.staff;
   }
 
   /// Can manage laundry requests (update status, etc.)
-  /// SRS: Manager and Staff only
+  /// Owner, Manager and Staff
   bool get canManageLaundryRequests {
-    return this == UserRole.manager || this == UserRole.staff;
+    return this == UserRole.owner ||
+        this == UserRole.manager ||
+        this == UserRole.staff;
   }
 
   // ============================================================

@@ -79,15 +79,15 @@
 
 | Permission         | 👑 Owner | 👔 Manager | 👤 Staff | 🍳 Kitchen Manager |
 | ------------------ | :------: | :--------: | :------: | :----------------: |
-| View Food Orders   |    ❌    |     ✅     |    ❌    |         ✅         |
-| Manage Food Orders |    ❌    |     ✅     |    ❌    |         ✅         |
+| View Food Orders   |    ✅    |     ✅     |    ❌    |         ✅         |
+| Manage Food Orders |    ✅    |     ✅     |    ❌    |         ✅         |
 
 ### 👔 Laundry
 
 | Permission              | 👑 Owner | 👔 Manager | 👤 Staff | 🍳 Kitchen Manager |
 | ----------------------- | :------: | :--------: | :------: | :----------------: |
-| View Laundry Requests   |    ❌    |     ✅     |    ✅    |         ❌         |
-| Manage Laundry Requests |    ❌    |     ✅     |    ✅    |         ❌         |
+| View Laundry Requests   |    ✅    |     ✅     |    ✅    |         ❌         |
+| Manage Laundry Requests |    ✅    |     ✅     |    ✅    |         ❌         |
 
 ### 🔔 Notifications
 
@@ -113,7 +113,6 @@
   - Room configuration editing
   - Past booking editing
 - Receives **all notifications**
-- Does **NOT** see food orders (per SRS design)
 
 ### 👔 Manager - Operations Management
 
