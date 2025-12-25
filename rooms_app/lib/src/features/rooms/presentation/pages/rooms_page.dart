@@ -73,13 +73,7 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
           ),
           backgroundColor: AppColors.black,
           foregroundColor: AppColors.white,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _refreshRooms,
-              tooltip: 'Refresh',
-            ),
-          ],
+          actions: const [],
         ),
         body: roomsAsync.when(
           data: (rooms) {

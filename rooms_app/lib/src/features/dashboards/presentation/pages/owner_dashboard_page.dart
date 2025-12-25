@@ -6,6 +6,7 @@ import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/core/services/app_update_service.dart';
 import 'package:rooms/src/core/services/notification_service.dart';
+import 'package:rooms/src/core/widgets/add_staff_sheet.dart';
 import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/core/widgets/update_dialog.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
@@ -412,7 +413,7 @@ class _OwnerDashboardPageState extends ConsumerState<OwnerDashboardPage> {
           icon: Icons.person_add,
           label: 'Add Staff',
           color: AppColors.grey600,
-          onTap: () => context.push(AppRoutes.createStaff),
+          onTap: () => AddStaffSheet.show(context),
         ),
       ],
     );
