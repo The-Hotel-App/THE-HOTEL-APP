@@ -93,17 +93,40 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   /// Check for app updates after successful login
   Future<void> _checkForUpdates() async {
+    AppLogger.info(
+      '>>> _checkForUpdates() CALLED from login page',
+      tag: 'Update',
+    );
     try {
       final updateInfo = await AppUpdateService.checkForUpdate();
+      AppLogger.info(
+        '>>> Update check returned: ${updateInfo != null ? "UPDATE AVAILABLE" : "null"}',
+        tag: 'Update',
+      );
       if (updateInfo != null && mounted) {
+        AppLogger.info(
+          '>>> Waiting 800ms before showing dialog...',
+          tag: 'Update',
+        );
         // Small delay to ensure dashboard UI is ready
         await Future.delayed(const Duration(milliseconds: 800));
         if (mounted) {
+          AppLogger.success('>>> SHOWING UPDATE DIALOG NOW', tag: 'Update');
           UpdateDialog.show(context, updateInfo);
+        } else {
+          AppLogger.warning(
+            '>>> Widget not mounted, cannot show dialog',
+            tag: 'Update',
+          );
         }
       }
-    } catch (e) {
-      AppLogger.warning('Update check error: $e', tag: 'Update');
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Update check error',
+        tag: 'Update',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 

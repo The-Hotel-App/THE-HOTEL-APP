@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/core/services/app_update_service.dart';
 import 'package:rooms/src/core/widgets/custom_dialog.dart';
+import 'package:rooms/src/core/widgets/update_dialog.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/biometric_providers.dart';
 
@@ -43,6 +45,31 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _checkStoredCredentials();
+    // Check for updates when welcome screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForUpdates();
+    });
+  }
+
+  /// Check for app updates
+  Future<void> _checkForUpdates() async {
+    AppLogger.info(
+      '>>> WelcomeScreen _checkForUpdates() CALLED',
+      tag: 'Update',
+    );
+    try {
+      final updateInfo = await AppUpdateService.checkForUpdate();
+      AppLogger.info(
+        '>>> Update result: ${updateInfo != null ? "UPDATE AVAILABLE" : "null"}',
+        tag: 'Update',
+      );
+      if (updateInfo != null && mounted) {
+        AppLogger.success('>>> SHOWING UPDATE DIALOG', tag: 'Update');
+        UpdateDialog.show(context, updateInfo);
+      }
+    } catch (e) {
+      AppLogger.warning('Update check error: $e', tag: 'Update');
+    }
   }
 
   @override

@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/core/services/app_update_service.dart';
 import 'package:rooms/src/core/widgets/app_dialog.dart';
+import 'package:rooms/src/core/widgets/update_dialog.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/biometric_providers.dart';
 
@@ -17,6 +20,29 @@ class ManagerDashboardPage extends ConsumerStatefulWidget {
 }
 
 class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForUpdates();
+    });
+  }
+
+  Future<void> _checkForUpdates() async {
+    AppLogger.info(
+      '>>> Manager Dashboard _checkForUpdates() CALLED',
+      tag: 'Update',
+    );
+    try {
+      final updateInfo = await AppUpdateService.checkForUpdate();
+      if (updateInfo != null && mounted) {
+        UpdateDialog.show(context, updateInfo);
+      }
+    } catch (e) {
+      AppLogger.warning('Update check error: $e', tag: 'Update');
+    }
+  }
+
   Future<void> _refresh() async {
     ref.invalidate(currentUserProvider);
     ref.invalidate(userHotelsProvider);
