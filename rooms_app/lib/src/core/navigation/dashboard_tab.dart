@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
-import 'package:rooms/src/core/widgets/hotel_switcher_button.dart';
+import 'package:rooms/src/core/widgets/app_dialog.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/rooms/domain/entities/room.dart';
@@ -60,19 +60,15 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
       appBar: AppBar(
         backgroundColor: AppColors.black,
         foregroundColor: AppColors.white,
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/new_images/black_logo_on_yellow_bg_new_fixed_ratio.png',
-              height: 28,
-            ),
-            const SizedBox(width: 12),
-            Flexible(
-              child: Text(hotel.hotelName, overflow: TextOverflow.ellipsis),
-            ),
-          ],
-        ),
-        actions: [const HotelSwitcherButton()],
+        titleSpacing: 8,
+        title: _buildHotelSwitcher(hotel),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: () => _showLogoutConfirmation(context),
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
@@ -109,6 +105,269 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Build GitHub-style hotel switcher for AppBar
+  Widget _buildHotelSwitcher(UserHotel hotel) {
+    final hotelsAsync = ref.watch(userHotelsProvider);
+    final hotelName = hotel.hotelName;
+    final firstLetter = hotelName.isNotEmpty ? hotelName[0].toUpperCase() : 'H';
+
+    Widget buildSwitcherContent({required VoidCallback? onTap}) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Hotel avatar with first letter
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: AppColors.warning,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Center(
+                  child: Text(
+                    firstLetter,
+                    style: const TextStyle(
+                      color: AppColors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Hotel name (full, not truncated)
+              Flexible(
+                child: Text(
+                  hotelName,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              // Dropdown indicator
+              const Icon(Icons.keyboard_arrow_down, size: 20),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return hotelsAsync.when(
+      loading: () => buildSwitcherContent(onTap: null),
+      error: (e, s) => buildSwitcherContent(onTap: null),
+      data: (hotels) => buildSwitcherContent(
+        onTap: () => _showHotelSwitcherSheet(hotels, hotel),
+      ),
+    );
+  }
+
+  /// Show hotel switcher bottom sheet
+  void _showHotelSwitcherSheet(List<UserHotel> hotels, UserHotel currentHotel) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.grey300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    const Icon(Icons.swap_horiz, color: AppColors.black),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Switch Hotel',
+                      style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.5,
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: hotels.length,
+                  itemBuilder: (context, index) {
+                    final hotel = hotels[index];
+                    final isSelected = hotel.hotelId == currentHotel.hotelId;
+                    final firstLetter = hotel.hotelName.isNotEmpty
+                        ? hotel.hotelName[0].toUpperCase()
+                        : 'H';
+
+                    return ListTile(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        if (hotel.hotelId != currentHotel.hotelId) {
+                          ref.read(selectedHotelIdProvider.notifier).state =
+                              hotel.hotelId;
+                          ref.invalidate(userHotelsProvider);
+                          ref.invalidate(currentHotelProvider);
+                        }
+                      },
+                      leading: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.success.withValues(alpha: 0.15)
+                              : AppColors.warning.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: Text(
+                            firstLetter,
+                            style: TextStyle(
+                              color: isSelected
+                                  ? AppColors.success
+                                  : AppColors.warning,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        hotel.hotelName,
+                        style: TextStyle(
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.w500,
+                          color: isSelected
+                              ? AppColors.success
+                              : AppColors.black,
+                        ),
+                      ),
+                      subtitle: Container(
+                        margin: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getRoleColor(
+                                  hotel.role,
+                                ).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                hotel.role.displayName,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: _getRoleColor(hotel.role),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      trailing: isSelected
+                          ? const Icon(
+                              Icons.check_circle,
+                              color: AppColors.success,
+                            )
+                          : const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 16,
+                              color: AppColors.grey400,
+                            ),
+                    );
+                  },
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                onTap: () {
+                  Navigator.pop(ctx);
+                  context.push('/create-hotel');
+                },
+                leading: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.info.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.add_business, color: AppColors.info),
+                ),
+                title: const Text(
+                  'Add New Hotel',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.info,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Set up another property',
+                  style: TextStyle(fontSize: 12),
+                ),
+                trailing: const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: AppColors.info,
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Show logout confirmation dialog
+  Future<void> _showLogoutConfirmation(BuildContext context) async {
+    await AppDialog.show(
+      context: context,
+      title: 'Logout',
+      content: const Text('Are you sure you want to logout?'),
+      primaryButtonText: 'Logout',
+      onPrimaryPressed: () async {
+        Navigator.pop(context);
+        await ref.read(authRepositoryProvider).logout();
+        if (context.mounted) context.go(AppRoutes.welcome);
+      },
+      secondaryButtonText: 'Cancel',
     );
   }
 

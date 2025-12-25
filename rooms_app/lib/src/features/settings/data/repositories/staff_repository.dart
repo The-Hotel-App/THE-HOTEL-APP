@@ -135,6 +135,49 @@ class StaffRepository {
       rethrow;
     }
   }
+
+  /// Update staff member details (name and role)
+  Future<void> updateStaff({
+    required String staffId,
+    required String userId,
+    required String name,
+    required UserRole role,
+  }) async {
+    try {
+      AppLogger.info('Updating staff: $staffId', tag: 'Staff');
+
+      // Update user_profiles (name)
+      await _client
+          .from('user_profiles')
+          .update({'name': name})
+          .eq('id', userId);
+
+      // Update hotel_staff (role)
+      final roleString = _roleToString(role);
+      await _client
+          .from('hotel_staff')
+          .update({'role': roleString})
+          .eq('id', staffId);
+
+      AppLogger.success('Staff updated successfully', tag: 'Staff');
+    } catch (e) {
+      AppLogger.error('Error updating staff', tag: 'Staff', error: e);
+      rethrow;
+    }
+  }
+
+  String _roleToString(UserRole role) {
+    switch (role) {
+      case UserRole.owner:
+        return 'owner';
+      case UserRole.manager:
+        return 'manager';
+      case UserRole.staff:
+        return 'staff';
+      case UserRole.kitchenManager:
+        return 'kitchen_manager';
+    }
+  }
 }
 
 /// Provider for staff repository

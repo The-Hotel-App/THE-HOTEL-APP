@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/settings/data/repositories/staff_repository.dart';
 import 'package:rooms/src/features/settings/presentation/widgets/staff_widgets.dart';
@@ -102,23 +103,11 @@ class _StaffPageState extends ConsumerState<StaffPage> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Header Card
-          StaffHeaderCard(staffCount: _staff.length),
-          const SizedBox(height: 20),
-
-          // Staff List
+          // Staff List grouped by role
           if (_staff.isEmpty)
             const StaffEmptyState()
           else
-            ..._staff.map(
-              (member) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: StaffMemberCard(
-                  member: member,
-                  onMenuAction: _handleMenuAction,
-                ),
-              ),
-            ),
+            ..._buildGroupedStaffList(),
 
           const SizedBox(height: 20),
 
@@ -141,8 +130,84 @@ class _StaffPageState extends ConsumerState<StaffPage> {
     );
   }
 
+  /// Build staff list grouped by role with section headers
+  List<Widget> _buildGroupedStaffList() {
+    final currentUser = ref.read(currentUserProvider).valueOrNull;
+
+    // Group staff by role
+    final owners = _staff.where((s) => s.role == UserRole.owner).toList();
+    final managers = _staff.where((s) => s.role == UserRole.manager).toList();
+    final staffMembers = _staff.where((s) => s.role == UserRole.staff).toList();
+    final kitchenManagers = _staff
+        .where((s) => s.role == UserRole.kitchenManager)
+        .toList();
+
+    final widgets = <Widget>[];
+
+    void addSection(String title, List<StaffMember> members, Color color) {
+      if (members.isEmpty) return;
+
+      // Section header
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 8),
+          child: Row(
+            children: [
+              Container(
+                width: 3,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.grey600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Container(height: 1, color: AppColors.grey200)),
+            ],
+          ),
+        ),
+      );
+
+      // Staff cards in this section
+      for (final member in members) {
+        final isCurrentUser = currentUser?.id == member.userId;
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: StaffMemberCard(
+              member: member,
+              onMenuAction: _handleMenuAction,
+              isCurrentUser: isCurrentUser,
+            ),
+          ),
+        );
+      }
+    }
+
+    // Add sections in order: Owners → Managers → Staff → Kitchen
+    addSection('Owners', owners, AppColors.grey800);
+    addSection('Managers', managers, AppColors.info);
+    addSection('Staff', staffMembers, AppColors.success);
+    addSection('Kitchen', kitchenManagers, AppColors.warning);
+
+    return widgets;
+  }
+
   Future<void> _handleMenuAction(String action, StaffMember member) async {
     switch (action) {
+      case 'edit':
+        await _editStaff(member);
+        break;
       case 'activate':
       case 'deactivate':
         await _toggleStaffActive(member, action == 'activate');
@@ -150,6 +215,38 @@ class _StaffPageState extends ConsumerState<StaffPage> {
       case 'remove':
         await _removeStaff(member);
         break;
+    }
+  }
+
+  Future<void> _editStaff(StaffMember member) async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => EditStaffSheet(
+        member: member,
+        onSave: (name, role) async {
+          final repository = ref.read(staffRepositoryProvider);
+          await repository.updateStaff(
+            staffId: member.id,
+            userId: member.userId,
+            name: name,
+            role: role,
+          );
+        },
+      ),
+    );
+
+    if (result == true) {
+      await _loadStaff();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Staff updated'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
     }
   }
 
