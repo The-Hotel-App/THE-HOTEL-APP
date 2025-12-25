@@ -7,30 +7,24 @@
    version: 1.1.0+2 # was 1.0.0+1
    ```
 
-2. **Commit & push**:
-   ```bash
-   git add .
-   git commit -m "v1.1.0 - your changes"
-   git push
-   ```
-
-3. **Done!** → GitHub builds APK → Teammates see update dialog
+2. **Commit & push** → GitHub builds APK → Teammates see dialog after login
 
 ---
 
-## 📲 Getting Updates (For Testers)
+## 📲 Getting Updates (Testers)
 
-1. Open the app → dialog appears if update available
-2. Tap **"Update Now"** → downloads from GitHub
-3. Install the new APK
+1. Open app & log in
+2. Update dialog appears if new version available
+3. Tap **"Update Now"** → downloads from GitHub
+4. Install APK
 
 ---
 
-## 🔧 Toggle Update Checks
+## 🔧 Toggle Updates
 
 ```dart
 // lib/src/core/config/app_config.dart
-static const bool enableUpdateCheck = true;  // false = no prompts
+static const bool enableUpdateCheck = true;  // false = disabled
 ```
 
 ---
@@ -39,8 +33,8 @@ static const bool enableUpdateCheck = true;  // false = no prompts
 
 ```
 1.2.3+4
-│ │ │ └─ Build number (increment each build)
+│ │ │ └─ Build number
 │ │ └─── Patch (bug fixes)
-│ └───── Minor (new features)
-└─────── Major (breaking changes)
+│ └───── Minor (features)
+└─────── Major (breaking)
 ```

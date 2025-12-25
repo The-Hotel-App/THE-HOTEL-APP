@@ -6,8 +6,10 @@ import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/constants/app_constants.dart';
 import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/routing/app_router.dart';
+import 'package:rooms/src/core/services/app_update_service.dart';
 import 'package:rooms/src/core/services/notification_service.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
+import 'package:rooms/src/core/widgets/update_dialog.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/biometric_providers.dart';
@@ -86,6 +88,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         return AppRoutes.staffDashboard;
       case UserRole.kitchenManager:
         return AppRoutes.kitchenDashboard;
+    }
+  }
+
+  /// Check for app updates after successful login
+  Future<void> _checkForUpdates() async {
+    try {
+      final updateInfo = await AppUpdateService.checkForUpdate();
+      if (updateInfo != null && mounted) {
+        // Small delay to ensure dashboard UI is ready
+        await Future.delayed(const Duration(milliseconds: 800));
+        if (mounted) {
+          UpdateDialog.show(context, updateInfo);
+        }
+      }
+    } catch (e) {
+      AppLogger.warning('Update check error: $e', tag: 'Update');
     }
   }
 
@@ -227,6 +245,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         // This prevents the router refresh from interfering with navigation
         if (mounted) {
           context.go(dashboardRoute);
+          // Check for updates after successful login
+          _checkForUpdates();
           // Clear loading after navigation is initiated
           if (mounted) setState(() => _isLoading = false);
         }
@@ -339,6 +359,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
         if (mounted) {
           context.go(dashboardRoute);
+          // Check for updates after successful login
+          _checkForUpdates();
           if (mounted) setState(() => _isBiometricLoading = false);
         }
         return;
@@ -458,6 +480,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           'Navigating to dashboard: $dashboardRoute',
                         );
                         context.go(dashboardRoute);
+                        // Check for updates after successful login
+                        _checkForUpdates();
                       }
                     },
                   ),
