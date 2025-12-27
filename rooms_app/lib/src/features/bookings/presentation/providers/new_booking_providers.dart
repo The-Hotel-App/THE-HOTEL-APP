@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rooms/src/features/customers/domain/entities/customer.dart';
 import 'package:rooms/src/features/rooms/data/repositories/rooms_repository.dart';
@@ -98,9 +99,11 @@ class NewBookingState {
   /// Check if rooms have been selected
   bool get hasRoomsSelected => selectedRooms.isNotEmpty;
 
-  /// Get number of nights
+  /// Get number of nights (based on calendar days, not hours)
   int get numberOfNights {
-    return checkOut.difference(checkIn).inDays;
+    final checkInDate = DateTime(checkIn.year, checkIn.month, checkIn.day);
+    final checkOutDate = DateTime(checkOut.year, checkOut.month, checkOut.day);
+    return checkOutDate.difference(checkInDate).inDays;
   }
 
   /// Calculate total from selected rooms
@@ -142,14 +145,144 @@ class SelectedRoom {
 
 /// Notifier for managing new booking state
 class NewBookingNotifier extends StateNotifier<NewBookingState> {
+  /// Default checkout time (11:00 AM)
+  static const TimeOfDay defaultCheckOutTime = TimeOfDay(hour: 11, minute: 0);
+
   NewBookingNotifier()
       : super(NewBookingState(
-          checkIn: DateTime.now(),
-          checkOut: DateTime.now().add(const Duration(days: 1)),
+          checkIn: roundToNearest15Minutes(DateTime.now()),
+          checkOut: _createDefaultCheckOut(),
         ));
 
+  /// Creates default checkout: tomorrow at 11:00 AM
+  static DateTime _createDefaultCheckOut() {
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    return DateTime(
+      tomorrow.year,
+      tomorrow.month,
+      tomorrow.day,
+      defaultCheckOutTime.hour,
+      defaultCheckOutTime.minute,
+    );
+  }
+
+  /// Rounds a DateTime to the nearest 15-minute interval
+  /// Minutes 0-7 -> :00, 8-22 -> :15, 23-37 -> :30, 38-52 -> :45, 53-59 -> :00 (next hour)
+  static DateTime roundToNearest15Minutes(DateTime dateTime) {
+    final minutes = dateTime.minute;
+    int roundedMinutes;
+    int hourAdjustment = 0;
+
+    if (minutes < 8) {
+      roundedMinutes = 0;
+    } else if (minutes < 23) {
+      roundedMinutes = 15;
+    } else if (minutes < 38) {
+      roundedMinutes = 30;
+    } else if (minutes < 53) {
+      roundedMinutes = 45;
+    } else {
+      roundedMinutes = 0;
+      hourAdjustment = 1;
+    }
+
+    return DateTime(
+      dateTime.year,
+      dateTime.month,
+      dateTime.day,
+      dateTime.hour + hourAdjustment,
+      roundedMinutes,
+    );
+  }
+
   void setDates(DateTime checkIn, DateTime checkOut) {
-    state = state.copyWith(checkIn: checkIn, checkOut: checkOut);
+    // Enforce invariant: check-out must be after check-in
+    DateTime adjustedCheckOut = checkOut;
+    if (checkOut.isBefore(checkIn) || checkOut.isAtSameMomentAs(checkIn) ||
+        (checkOut.year == checkIn.year && checkOut.month == checkIn.month && checkOut.day == checkIn.day)) {
+      // Auto-adjust check-out to next day, preserving time
+      adjustedCheckOut = DateTime(
+        checkIn.year,
+        checkIn.month,
+        checkIn.day + 1,
+        checkOut.hour,
+        checkOut.minute,
+      );
+    }
+    state = state.copyWith(checkIn: checkIn, checkOut: adjustedCheckOut);
+  }
+
+  /// Sets check-in to current time (rounded to 15 minutes)
+  void setCheckInToNow() {
+    final now = roundToNearest15Minutes(DateTime.now());
+    DateTime checkOut = state.checkOut;
+    
+    // Auto-adjust check-out if it becomes invalid
+    if (checkOut.isBefore(now) || checkOut.isAtSameMomentAs(now) ||
+        (checkOut.year == now.year && checkOut.month == now.month && checkOut.day == now.day)) {
+      checkOut = DateTime(
+        now.year,
+        now.month,
+        now.day + 1,
+        state.checkOut.hour,
+        state.checkOut.minute,
+      );
+    }
+    
+    state = state.copyWith(checkIn: now, checkOut: checkOut);
+  }
+
+  /// Sets check-in date while preserving the time
+  void setCheckInDate(DateTime date) {
+    final newCheckIn = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      state.checkIn.hour,
+      state.checkIn.minute,
+    );
+    setDates(newCheckIn, state.checkOut);
+  }
+
+  /// Sets check-in time while preserving the date
+  void setCheckInTime(TimeOfDay time) {
+    final newCheckIn = DateTime(
+      state.checkIn.year,
+      state.checkIn.month,
+      state.checkIn.day,
+      time.hour,
+      time.minute,
+    );
+    state = state.copyWith(checkIn: newCheckIn);
+  }
+
+  /// Sets check-out date while preserving the time
+  void setCheckOutDate(DateTime date) {
+    final newCheckOut = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      state.checkOut.hour,
+      state.checkOut.minute,
+    );
+    // Only update if the new date is valid (on or after check-in date)
+    final checkInDate = DateTime(state.checkIn.year, state.checkIn.month, state.checkIn.day);
+    final newCheckOutDate = DateTime(date.year, date.month, date.day);
+    if (!newCheckOutDate.isBefore(checkInDate) && !newCheckOutDate.isAtSameMomentAs(checkInDate)) {
+      state = state.copyWith(checkOut: newCheckOut);
+    }
+  }
+
+  /// Sets check-out time while preserving the date
+  void setCheckOutTime(TimeOfDay time) {
+    final newCheckOut = DateTime(
+      state.checkOut.year,
+      state.checkOut.month,
+      state.checkOut.day,
+      time.hour,
+      time.minute,
+    );
+    state = state.copyWith(checkOut: newCheckOut);
   }
 
   void setGuestCount(int count) {
@@ -229,8 +362,8 @@ class NewBookingNotifier extends StateNotifier<NewBookingState> {
 
   void reset() {
     state = NewBookingState(
-      checkIn: DateTime.now(),
-      checkOut: DateTime.now().add(const Duration(days: 1)),
+      checkIn: roundToNearest15Minutes(DateTime.now()),
+      checkOut: _createDefaultCheckOut(),
     );
   }
 }

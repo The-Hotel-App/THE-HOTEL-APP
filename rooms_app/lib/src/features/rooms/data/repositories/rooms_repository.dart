@@ -145,6 +145,16 @@ class RoomsRepository {
     return map;
   }
 
+  /// Get rooms grouped by floor and then by room type
+  /// Returns Map<floor, Map<roomTypeId, List<ManagedRoom>>>
+  /// Rooms within each group are sorted by room number
+  Future<Map<int, Map<String?, List<ManagedRoom>>>> getRoomsByFloorAndType(
+    String hotelId,
+  ) async {
+    final rooms = await getRooms(hotelId);
+    return groupRoomsByFloorAndType(rooms);
+  }
+
   /// Get available rooms filtered by criteria
   Future<List<ManagedRoom>> getAvailableRooms({
     required String hotelId,
@@ -321,6 +331,140 @@ class RoomsRepository {
       rethrow;
     }
   }
+
+  /// Update room details including room number, floor, and room type
+  Future<ManagedRoom> updateRoomDetails({
+    required String id,
+    String? roomNumber,
+    int? floor,
+    String? roomTypeId,
+    bool clearRoomType = false,
+  }) async {
+    try {
+      AppLogger.debug('Updating room details: $id', tag: 'Rooms');
+      final updates = <String, dynamic>{};
+      if (roomNumber != null) updates['room_number'] = roomNumber;
+      if (floor != null) updates['floor'] = floor;
+      if (clearRoomType) {
+        updates['room_type_id'] = null;
+      } else if (roomTypeId != null) {
+        updates['room_type_id'] = roomTypeId;
+      }
+
+      if (updates.isEmpty) {
+        // No updates, just fetch and return current room
+        final response = await _client
+            .from('rooms')
+            .select('*, room_types(name, base_price, max_occupancy)')
+            .eq('id', id)
+            .single();
+        return ManagedRoom.fromJson(response);
+      }
+
+      final response = await _client
+          .from('rooms')
+          .update(updates)
+          .eq('id', id)
+          .select('*, room_types(name, base_price, max_occupancy)')
+          .single();
+
+      AppLogger.success('Room details updated', tag: 'Rooms');
+      return ManagedRoom.fromJson(response);
+    } catch (e) {
+      AppLogger.error('Error updating room details', tag: 'Rooms', error: e);
+      rethrow;
+    }
+  }
+
+  /// Swap room numbers between two rooms
+  /// This is an atomic operation that swaps the room_number field
+  Future<void> swapRoomNumbers({
+    required String roomId1,
+    required String roomId2,
+  }) async {
+    try {
+      AppLogger.info('Swapping room numbers: $roomId1 <-> $roomId2', tag: 'Rooms');
+
+      // Fetch both rooms first
+      final room1Response = await _client
+          .from('rooms')
+          .select('room_number')
+          .eq('id', roomId1)
+          .single();
+      final room2Response = await _client
+          .from('rooms')
+          .select('room_number')
+          .eq('id', roomId2)
+          .single();
+
+      final room1Number = room1Response['room_number'] as String;
+      final room2Number = room2Response['room_number'] as String;
+
+      // Use a temporary value to avoid unique constraint violations
+      final tempNumber = '__temp_swap_${DateTime.now().millisecondsSinceEpoch}';
+
+      // Swap: room1 -> temp, room2 -> room1's number, temp -> room2's number
+      await _client
+          .from('rooms')
+          .update({'room_number': tempNumber})
+          .eq('id', roomId1);
+      await _client
+          .from('rooms')
+          .update({'room_number': room1Number})
+          .eq('id', roomId2);
+      await _client
+          .from('rooms')
+          .update({'room_number': room2Number})
+          .eq('id', roomId1);
+
+      AppLogger.success('Room numbers swapped', tag: 'Rooms');
+    } catch (e) {
+      AppLogger.error('Error swapping room numbers', tag: 'Rooms', error: e);
+      rethrow;
+    }
+  }
+
+  /// Create multiple rooms for a floor with sequential room numbers
+  Future<List<ManagedRoom>> createRoomsForFloor({
+    required String hotelId,
+    required int floor,
+    required int startRoom,
+    required int endRoom,
+    String? roomTypeId,
+  }) async {
+    try {
+      AppLogger.info(
+        'Creating rooms $startRoom-$endRoom for floor $floor',
+        tag: 'Rooms',
+      );
+
+      final roomsToCreate = <Map<String, dynamic>>[];
+      for (int i = startRoom; i <= endRoom; i++) {
+        roomsToCreate.add({
+          'hotel_id': hotelId,
+          'room_number': i.toString(),
+          'floor': floor,
+          'room_type_id': roomTypeId,
+          'status': 'free',
+        });
+      }
+
+      final response = await _client
+          .from('rooms')
+          .insert(roomsToCreate)
+          .select('*, room_types(name, base_price, max_occupancy)');
+
+      final rooms = (response as List)
+          .map((json) => ManagedRoom.fromJson(json))
+          .toList();
+
+      AppLogger.success('Created ${rooms.length} rooms for floor $floor', tag: 'Rooms');
+      return rooms;
+    } catch (e) {
+      AppLogger.error('Error creating rooms for floor', tag: 'Rooms', error: e);
+      rethrow;
+    }
+  }
 }
 
 /// Provider for rooms repository
@@ -346,3 +490,49 @@ final roomsByFloorProvider =
       final repository = ref.watch(roomsRepositoryProvider);
       return repository.getRoomsByFloor(hotelId);
     });
+
+/// Provider for rooms grouped by floor and type
+final roomsByFloorAndTypeProvider =
+    FutureProvider.family<Map<int, Map<String?, List<ManagedRoom>>>, String>((
+      ref,
+      hotelId,
+    ) async {
+      final repository = ref.watch(roomsRepositoryProvider);
+      return repository.getRoomsByFloorAndType(hotelId);
+    });
+
+/// Helper function to group rooms by floor and type
+/// This is a pure function that can be tested independently
+Map<int, Map<String?, List<ManagedRoom>>> groupRoomsByFloorAndType(
+  List<ManagedRoom> rooms,
+) {
+  final result = <int, Map<String?, List<ManagedRoom>>>{};
+
+  for (final room in rooms) {
+    result
+        .putIfAbsent(room.floor, () => <String?, List<ManagedRoom>>{})
+        .putIfAbsent(room.roomTypeId, () => <ManagedRoom>[])
+        .add(room);
+  }
+
+  // Sort rooms within each group by room number
+  for (final floorMap in result.values) {
+    for (final roomList in floorMap.values) {
+      roomList.sort((a, b) => compareRoomNumbers(a.roomNumber, b.roomNumber));
+    }
+  }
+
+  return result;
+}
+
+/// Compare room numbers for sorting
+/// Handles both numeric and alphanumeric room numbers
+int compareRoomNumbers(String a, String b) {
+  final aNum = int.tryParse(a);
+  final bNum = int.tryParse(b);
+
+  if (aNum != null && bNum != null) {
+    return aNum.compareTo(bNum);
+  }
+  return a.compareTo(b);
+}
