@@ -79,33 +79,6 @@ class RoomDetailsSheet extends ConsumerWidget {
           _buildPrimaryAction(context, ref, statusColor),
           const SizedBox(height: 24),
 
-          // Max occupancy info
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.grey100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.people, size: 20, color: AppColors.grey600),
-                const SizedBox(width: 8),
-                Text(
-                  'Max Occupancy: ',
-                  style: TextStyle(color: AppColors.grey600, fontSize: 14),
-                ),
-                Text(
-                  '${room.maxOccupancy}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
           const SizedBox(height: 24),
 
           // Quick status buttons - 2x2 grid

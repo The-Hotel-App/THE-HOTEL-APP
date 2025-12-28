@@ -47,28 +47,38 @@ class FloorSection extends StatelessWidget {
   Widget build(BuildContext context) {
     // Collect all rooms with their colors
     final allRooms = <_RoomWithColor>[];
-    
+
     for (int i = 0; i < roomTypes.length; i++) {
       final roomType = roomTypes[i];
       final rooms = roomsByType[roomType.id];
       if (rooms != null) {
         final color = getRoomTypeColor(i);
         for (final room in rooms) {
-          allRooms.add(_RoomWithColor(room: room, color: color, typeName: roomType.name));
+          allRooms.add(
+            _RoomWithColor(room: room, color: color, typeName: roomType.name),
+          );
         }
       }
     }
-    
+
     // Add unassigned rooms (grey)
     final unassignedRooms = roomsByType[null];
     if (unassignedRooms != null) {
       for (final room in unassignedRooms) {
-        allRooms.add(_RoomWithColor(room: room, color: AppColors.grey400, typeName: 'Unassigned'));
+        allRooms.add(
+          _RoomWithColor(
+            room: room,
+            color: AppColors.grey400,
+            typeName: 'Unassigned',
+          ),
+        );
       }
     }
-    
+
     // Sort by room number
-    allRooms.sort((a, b) => compareRoomNumbers(a.room.roomNumber, b.room.roomNumber));
+    allRooms.sort(
+      (a, b) => compareRoomNumbers(a.room.roomNumber, b.room.roomNumber),
+    );
 
     return _buildFloorContainer(
       floor: floor,
@@ -79,15 +89,22 @@ class FloorSection extends StatelessWidget {
           : Wrap(
               spacing: 10,
               runSpacing: 10,
-              children: allRooms.map((item) => RoomSquare(
-                room: item.room,
-                color: item.color,
-                typeName: item.typeName,
-                isDragging: draggingRoomId == item.room.id,
-                isDropTarget: draggingRoomId != null && draggingRoomId != item.room.id,
-                onTap: () => onEditRoom(item.room),
-                onSwap: (draggedRoom) => onSwapRooms(draggedRoom, item.room),
-              )).toList(),
+              children: allRooms
+                  .map(
+                    (item) => RoomSquare(
+                      room: item.room,
+                      color: item.color,
+                      typeName: item.typeName,
+                      isDragging: draggingRoomId == item.room.id,
+                      isDropTarget:
+                          draggingRoomId != null &&
+                          draggingRoomId != item.room.id,
+                      onTap: () => onEditRoom(item.room),
+                      onSwap: (draggedRoom) =>
+                          onSwapRooms(draggedRoom, item.room),
+                    ),
+                  )
+                  .toList(),
             ),
     );
   }
@@ -98,7 +115,7 @@ class FloorSectionSelectable extends StatelessWidget {
   final int floor;
   final Map<String?, List<ManagedRoom>> roomsByType;
   final List<RoomType> roomTypes;
-  final VoidCallback onAddRoom;
+  final VoidCallback? onAddRoom;
   final Function(ManagedRoom)? onEditRoom;
   final Function(ManagedRoom, ManagedRoom)? onSwapRooms;
   final String? draggingRoomId;
@@ -112,7 +129,7 @@ class FloorSectionSelectable extends StatelessWidget {
     required this.floor,
     required this.roomsByType,
     required this.roomTypes,
-    required this.onAddRoom,
+    this.onAddRoom,
     this.onEditRoom,
     this.onSwapRooms,
     this.draggingRoomId,
@@ -142,12 +159,15 @@ class FloorSectionSelectable extends StatelessWidget {
                   color: item.color,
                   typeName: item.typeName,
                   isDragging: draggingRoomId == item.room.id,
-                  isDropTarget: !isSelectionMode && draggingRoomId != null && draggingRoomId != item.room.id,
+                  isDropTarget:
+                      !isSelectionMode &&
+                      draggingRoomId != null &&
+                      draggingRoomId != item.room.id,
                   isSelectionMode: isSelectionMode,
                   isSelected: isSelected,
                   onTap: () => onRoomTap(item.room),
                   onLongPress: () => onRoomLongPress(item.room),
-                  onSwap: onSwapRooms != null 
+                  onSwap: onSwapRooms != null
                       ? (draggedRoom) => onSwapRooms!(draggedRoom, item.room)
                       : (_) {},
                 );
@@ -158,26 +178,36 @@ class FloorSectionSelectable extends StatelessWidget {
 
   List<_RoomWithColor> _collectRooms() {
     final allRooms = <_RoomWithColor>[];
-    
+
     for (int i = 0; i < roomTypes.length; i++) {
       final roomType = roomTypes[i];
       final rooms = roomsByType[roomType.id];
       if (rooms != null) {
         final color = getRoomTypeColor(i);
         for (final room in rooms) {
-          allRooms.add(_RoomWithColor(room: room, color: color, typeName: roomType.name));
+          allRooms.add(
+            _RoomWithColor(room: room, color: color, typeName: roomType.name),
+          );
         }
       }
     }
-    
+
     final unassignedRooms = roomsByType[null];
     if (unassignedRooms != null) {
       for (final room in unassignedRooms) {
-        allRooms.add(_RoomWithColor(room: room, color: AppColors.grey400, typeName: 'Unassigned'));
+        allRooms.add(
+          _RoomWithColor(
+            room: room,
+            color: AppColors.grey400,
+            typeName: 'Unassigned',
+          ),
+        );
       }
     }
-    
-    allRooms.sort((a, b) => compareRoomNumbers(a.room.roomNumber, b.room.roomNumber));
+
+    allRooms.sort(
+      (a, b) => compareRoomNumbers(a.room.roomNumber, b.room.roomNumber),
+    );
     return allRooms;
   }
 }
@@ -220,14 +250,15 @@ class FloorSectionWithActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final allRooms = _collectRooms();
-    
+
     // Check if all rooms on this floor are selected
     final floorRoomIds = allRooms.map((r) => r.room.id).toSet();
-    final allSelected = floorRoomIds.isNotEmpty && 
+    final allSelected =
+        floorRoomIds.isNotEmpty &&
         floorRoomIds.every((id) => selectedRoomIds.contains(id));
-    
+
     // Check if any room on this floor is selected
-    final anySelected = floorRoomIds.any((id) => selectedRoomIds.contains(id));
+    final _ = floorRoomIds.any((id) => selectedRoomIds.contains(id));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -249,7 +280,10 @@ class FloorSectionWithActions extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.grey100,
                     borderRadius: BorderRadius.circular(10),
@@ -282,7 +316,10 @@ class FloorSectionWithActions extends StatelessWidget {
                       ),
                     ),
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
@@ -306,19 +343,25 @@ class FloorSectionWithActions extends StatelessWidget {
                     runSpacing: 10,
                     children: [
                       ...allRooms.map((item) {
-                        final isSelected = selectedRoomIds.contains(item.room.id);
+                        final isSelected = selectedRoomIds.contains(
+                          item.room.id,
+                        );
                         return RoomSquareSelectable(
                           room: item.room,
                           color: item.color,
                           typeName: item.typeName,
                           isDragging: draggingRoomId == item.room.id,
-                          isDropTarget: !isSelectionMode && draggingRoomId != null && draggingRoomId != item.room.id,
+                          isDropTarget:
+                              !isSelectionMode &&
+                              draggingRoomId != null &&
+                              draggingRoomId != item.room.id,
                           isSelectionMode: isSelectionMode,
                           isSelected: isSelected,
                           onTap: () => onRoomTap(item.room),
                           onLongPress: () => onRoomLongPress(item.room),
-                          onSwap: onSwapRooms != null 
-                              ? (draggedRoom) => onSwapRooms!(draggedRoom, item.room)
+                          onSwap: onSwapRooms != null
+                              ? (draggedRoom) =>
+                                    onSwapRooms!(draggedRoom, item.room)
                               : (_) {},
                         );
                       }),
@@ -343,26 +386,36 @@ class FloorSectionWithActions extends StatelessWidget {
 
   List<_RoomWithColor> _collectRooms() {
     final allRooms = <_RoomWithColor>[];
-    
+
     for (int i = 0; i < roomTypes.length; i++) {
       final roomType = roomTypes[i];
       final rooms = roomsByType[roomType.id];
       if (rooms != null) {
         final color = getRoomTypeColor(i);
         for (final room in rooms) {
-          allRooms.add(_RoomWithColor(room: room, color: color, typeName: roomType.name));
+          allRooms.add(
+            _RoomWithColor(room: room, color: color, typeName: roomType.name),
+          );
         }
       }
     }
-    
+
     final unassignedRooms = roomsByType[null];
     if (unassignedRooms != null) {
       for (final room in unassignedRooms) {
-        allRooms.add(_RoomWithColor(room: room, color: AppColors.grey400, typeName: 'Unassigned'));
+        allRooms.add(
+          _RoomWithColor(
+            room: room,
+            color: AppColors.grey400,
+            typeName: 'Unassigned',
+          ),
+        );
       }
     }
-    
-    allRooms.sort((a, b) => compareRoomNumbers(a.room.roomNumber, b.room.roomNumber));
+
+    allRooms.sort(
+      (a, b) => compareRoomNumbers(a.room.roomNumber, b.room.roomNumber),
+    );
     return allRooms;
   }
 }
@@ -370,7 +423,7 @@ class FloorSectionWithActions extends StatelessWidget {
 Widget _buildFloorContainer({
   required int floor,
   required int roomCount,
-  required VoidCallback onAddRoom,
+  VoidCallback? onAddRoom,
   required Widget child,
 }) {
   return Container(
@@ -408,15 +461,19 @@ Widget _buildFloorContainer({
                 ),
               ),
               const Spacer(),
-              TextButton.icon(
-                onPressed: onAddRoom,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              if (onAddRoom != null)
+                TextButton.icon(
+                  onPressed: onAddRoom,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -442,10 +499,7 @@ Widget _buildEmptyFloor() {
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Text(
         'No rooms on this floor',
-        style: TextStyle(
-          color: AppColors.textSecondary,
-          fontSize: 13,
-        ),
+        style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
       ),
     ),
   );
@@ -455,8 +509,12 @@ class _RoomWithColor {
   final ManagedRoom room;
   final Color color;
   final String typeName;
-  
-  _RoomWithColor({required this.room, required this.color, required this.typeName});
+
+  _RoomWithColor({
+    required this.room,
+    required this.color,
+    required this.typeName,
+  });
 }
 
 /// Add room button widget (+ icon square)
@@ -482,11 +540,7 @@ class AddRoomButton extends StatelessWidget {
           ),
         ),
         child: Center(
-          child: Icon(
-            Icons.add,
-            color: AppColors.textSecondary,
-            size: 24,
-          ),
+          child: Icon(Icons.add, color: AppColors.textSecondary, size: 24),
         ),
       ),
     );
@@ -532,10 +586,7 @@ class RoomSquare extends StatelessWidget {
             shadowColor: color.withValues(alpha: 0.4),
             child: _buildSquare(color, isHighlighted: true, scale: 1.1),
           ),
-          childWhenDragging: Opacity(
-            opacity: 0.25,
-            child: _buildSquare(color),
-          ),
+          childWhenDragging: Opacity(opacity: 0.25, child: _buildSquare(color)),
           child: _buildSquare(
             color,
             isHighlighted: isValidDropTarget,
@@ -546,13 +597,19 @@ class RoomSquare extends StatelessWidget {
     );
   }
 
-  Widget _buildSquare(Color bgColor, {bool isHighlighted = false, bool showTooltip = false, double scale = 1.0}) {
+  Widget _buildSquare(
+    Color bgColor, {
+    bool isHighlighted = false,
+    bool showTooltip = false,
+    double scale = 1.0,
+  }) {
     // Determine if room is occupied/unavailable
     final isOccupied = room.status == RoomStatus.occupied;
     final isCleaning = room.status == RoomStatus.cleaning;
     final isMaintenance = room.status == RoomStatus.maintenance;
     final isOutOfService = room.status == RoomStatus.outOfService;
-    final isUnavailable = isOccupied || isCleaning || isMaintenance || isOutOfService;
+    final isUnavailable =
+        isOccupied || isCleaning || isMaintenance || isOutOfService;
 
     Widget square = GestureDetector(
       onTap: onTap,
@@ -572,7 +629,7 @@ class RoomSquare extends StatelessWidget {
                     Color.lerp(bgColor, AppColors.black, 0.15)!,
                   ],
                 ),
-          color: isUnavailable ? bgColor.withValues(alpha: 0.35) : null,
+          color: isUnavailable ? bgColor : null,
           borderRadius: BorderRadius.circular(10),
           border: isHighlighted
               ? Border.all(color: AppColors.primary, width: 2.5)
@@ -621,7 +678,9 @@ class RoomSquare extends StatelessWidget {
                     border: Border.all(color: AppColors.white, width: 1.5),
                     boxShadow: [
                       BoxShadow(
-                        color: _getStatusIndicatorColor().withValues(alpha: 0.4),
+                        color: _getStatusIndicatorColor().withValues(
+                          alpha: 0.4,
+                        ),
                         blurRadius: 4,
                       ),
                     ],
@@ -725,10 +784,7 @@ class RoomSquareSelectable extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             child: _buildSquare(isHighlighted: true),
           ),
-          childWhenDragging: Opacity(
-            opacity: 0.3,
-            child: _buildSquare(),
-          ),
+          childWhenDragging: Opacity(opacity: 0.3, child: _buildSquare()),
           onDragStarted: onLongPress, // Enter selection mode when drag starts
           child: GestureDetector(
             onTap: onTap,
@@ -778,14 +834,14 @@ class RoomSquareSelectable extends StatelessWidget {
       width: 52,
       height: 52,
       decoration: BoxDecoration(
-        color: isUnavailable ? bgColor.withValues(alpha: 0.4) : bgColor,
+        color: bgColor,
         borderRadius: BorderRadius.circular(10),
         border: isHighlighted
             ? Border.all(color: AppColors.primary, width: 2.5)
             : Border.all(color: bgColor.withValues(alpha: 0.3), width: 1),
         boxShadow: [
           BoxShadow(
-            color: isHighlighted 
+            color: isHighlighted
                 ? AppColors.primary.withValues(alpha: 0.3)
                 : AppColors.black.withValues(alpha: 0.1),
             blurRadius: isHighlighted ? 8 : 4,
@@ -805,10 +861,11 @@ class RoomSquareSelectable extends StatelessWidget {
               ),
             ),
           ),
-          if (isUnavailable && !isSelectionMode)
+          // Status indicator - bottom-left to avoid conflict with selection checkmark
+          if (isUnavailable)
             Positioned(
-              top: 4,
-              right: 4,
+              bottom: 4,
+              left: 4,
               child: Container(
                 width: 8,
                 height: 8,
@@ -878,10 +935,12 @@ class RoomTypeLegendWithStatus extends StatelessWidget {
             spacing: 16,
             runSpacing: 8,
             children: [
-              ...roomTypes.asMap().entries.map((entry) => _LegendItem(
-                    color: getRoomTypeColor(entry.key),
-                    label: entry.value.name,
-                  )),
+              ...roomTypes.asMap().entries.map(
+                (entry) => _LegendItem(
+                  color: getRoomTypeColor(entry.key),
+                  label: entry.value.name,
+                ),
+              ),
               _LegendItem(color: AppColors.grey400, label: 'Unassigned'),
             ],
           ),
@@ -902,9 +961,18 @@ class RoomTypeLegendWithStatus extends StatelessWidget {
             runSpacing: 8,
             children: [
               _StatusLegendItem(color: AppColors.error, label: 'Occupied'),
-              _StatusLegendItem(color: AppColors.roomCleaning, label: 'Cleaning'),
-              _StatusLegendItem(color: AppColors.roomEmergency, label: 'Maintenance'),
-              _StatusLegendItem(color: AppColors.grey600, label: 'Out of Service'),
+              _StatusLegendItem(
+                color: AppColors.roomCleaning,
+                label: 'Cleaning',
+              ),
+              _StatusLegendItem(
+                color: AppColors.roomEmergency,
+                label: 'Maintenance',
+              ),
+              _StatusLegendItem(
+                color: AppColors.grey600,
+                label: 'Out of Service',
+              ),
             ],
           ),
         ],
@@ -982,10 +1050,12 @@ class RoomTypeLegend extends StatelessWidget {
             spacing: 20,
             runSpacing: 10,
             children: [
-              ...roomTypes.asMap().entries.map((entry) => _LegendItem(
-                    color: getRoomTypeColor(entry.key),
-                    label: entry.value.name,
-                  )),
+              ...roomTypes.asMap().entries.map(
+                (entry) => _LegendItem(
+                  color: getRoomTypeColor(entry.key),
+                  label: entry.value.name,
+                ),
+              ),
               _LegendItem(color: AppColors.grey400, label: 'Unassigned'),
             ],
           ),
@@ -1013,10 +1083,7 @@ class _LegendItem extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                color,
-                Color.lerp(color, AppColors.black, 0.15)!,
-              ],
+              colors: [color, Color.lerp(color, AppColors.black, 0.15)!],
             ),
             borderRadius: BorderRadius.circular(4),
             boxShadow: [
@@ -1042,7 +1109,6 @@ class _LegendItem extends StatelessWidget {
   }
 }
 
-
 /// Add room dialog
 class AddRoomDialog extends StatefulWidget {
   final List<RoomType> roomTypes;
@@ -1052,7 +1118,8 @@ class AddRoomDialog extends StatefulWidget {
     required String roomNumber,
     required int floor,
     String? roomTypeId,
-  }) onAdd;
+  })
+  onAdd;
 
   const AddRoomDialog({
     super.key,
@@ -1069,7 +1136,8 @@ class AddRoomDialog extends StatefulWidget {
       required String roomNumber,
       required int floor,
       String? roomTypeId,
-    }) onAdd,
+    })
+    onAdd,
     int? initialFloor,
     String? initialRoomTypeId,
   }) {
@@ -1116,7 +1184,7 @@ class _AddRoomDialogState extends State<AddRoomDialog> {
     // Generate hint text based on current floor value
     final floorValue = int.tryParse(_floorController.text) ?? 1;
     final roomHint = 'e.g. ${floorValue}01';
-    
+
     return CustomDialog(
       title: 'Add Room',
       content: Form(
@@ -1146,15 +1214,18 @@ class _AddRoomDialogState extends State<AddRoomDialog> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _selectedTypeId,
+              initialValue: _selectedTypeId,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Room Type'),
               items: [
-                const DropdownMenuItem<String>(value: null, child: Text('No Type')),
-                ...widget.roomTypes.map((type) => DropdownMenuItem(
-                      value: type.id,
-                      child: Text(type.name),
-                    )),
+                const DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('No Type'),
+                ),
+                ...widget.roomTypes.map(
+                  (type) =>
+                      DropdownMenuItem(value: type.id, child: Text(type.name)),
+                ),
               ],
               onChanged: (v) => setState(() => _selectedTypeId = v),
             ),
@@ -1183,7 +1254,10 @@ class _AddRoomDialogState extends State<AddRoomDialog> {
       setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -1200,7 +1274,8 @@ class EditRoomDialog extends StatefulWidget {
     String? roomTypeId,
     int? floor,
     bool clearRoomType,
-  }) onSave;
+  })
+  onSave;
   final Future<void> Function() onDelete;
 
   const EditRoomDialog({
@@ -1222,7 +1297,8 @@ class EditRoomDialog extends StatefulWidget {
       String? roomTypeId,
       int? floor,
       bool clearRoomType,
-    }) onSave,
+    })
+    onSave,
     required Future<void> Function() onDelete,
   }) {
     return showDialog(
@@ -1280,25 +1356,30 @@ class _EditRoomDialogState extends State<EditRoomDialog> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<int>(
-              value: _selectedFloor,
+              initialValue: _selectedFloor,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Floor'),
               items: widget.availableFloors
-                  .map((f) => DropdownMenuItem(value: f, child: Text('Floor $f')))
+                  .map(
+                    (f) => DropdownMenuItem(value: f, child: Text('Floor $f')),
+                  )
                   .toList(),
               onChanged: (v) => setState(() => _selectedFloor = v!),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _selectedTypeId,
+              initialValue: _selectedTypeId,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Room Type'),
               items: [
-                const DropdownMenuItem<String>(value: null, child: Text('No Type')),
-                ...widget.roomTypes.map((type) => DropdownMenuItem(
-                      value: type.id,
-                      child: Text(type.name),
-                    )),
+                const DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('No Type'),
+                ),
+                ...widget.roomTypes.map(
+                  (type) =>
+                      DropdownMenuItem(value: type.id, child: Text(type.name)),
+                ),
               ],
               onChanged: (v) => setState(() => _selectedTypeId = v),
             ),
@@ -1306,10 +1387,19 @@ class _EditRoomDialogState extends State<EditRoomDialog> {
             OutlinedButton.icon(
               onPressed: _isDeleting ? null : _handleDelete,
               icon: _isDeleting
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Icon(Icons.delete_outline, color: AppColors.error),
-              label: Text(_isDeleting ? 'Deleting...' : 'Delete', style: const TextStyle(color: AppColors.error)),
-              style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.error)),
+              label: Text(
+                _isDeleting ? 'Deleting...' : 'Delete',
+                style: const TextStyle(color: AppColors.error),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.error),
+              ),
             ),
           ],
         ),
@@ -1328,17 +1418,26 @@ class _EditRoomDialogState extends State<EditRoomDialog> {
     try {
       final newRoomNumber = _roomNumberController.text.trim();
       await widget.onSave(
-        roomNumber: newRoomNumber != widget.room.roomNumber ? newRoomNumber : null,
+        roomNumber: newRoomNumber != widget.room.roomNumber
+            ? newRoomNumber
+            : null,
         floor: _selectedFloor != widget.room.floor ? _selectedFloor : null,
-        roomTypeId: _selectedTypeId != widget.room.roomTypeId ? _selectedTypeId : null,
-        clearRoomType: _selectedTypeId != widget.room.roomTypeId && _selectedTypeId == null,
+        roomTypeId: _selectedTypeId != widget.room.roomTypeId
+            ? _selectedTypeId
+            : null,
+        clearRoomType:
+            _selectedTypeId != widget.room.roomTypeId &&
+            _selectedTypeId == null,
       );
       if (mounted) Navigator.pop(context);
     } catch (e) {
       setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -1351,7 +1450,10 @@ class _EditRoomDialogState extends State<EditRoomDialog> {
         title: const Text('Delete Room?'),
         content: Text('Delete room ${widget.room.roomNumber}?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
@@ -1369,7 +1471,10 @@ class _EditRoomDialogState extends State<EditRoomDialog> {
       setState(() => _isDeleting = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -1379,18 +1484,33 @@ class _EditRoomDialogState extends State<EditRoomDialog> {
 /// Add floor dialog
 class AddFloorDialog extends StatefulWidget {
   final Set<int> existingFloors;
-  final Future<void> Function({required int floorNumber, int? startRoom, int? endRoom}) onAdd;
+  final Future<void> Function({
+    required int floorNumber,
+    int? startRoom,
+    int? endRoom,
+  })
+  onAdd;
 
-  const AddFloorDialog({super.key, required this.existingFloors, required this.onAdd});
+  const AddFloorDialog({
+    super.key,
+    required this.existingFloors,
+    required this.onAdd,
+  });
 
   static Future<void> show(
     BuildContext context, {
     required Set<int> existingFloors,
-    required Future<void> Function({required int floorNumber, int? startRoom, int? endRoom}) onAdd,
+    required Future<void> Function({
+      required int floorNumber,
+      int? startRoom,
+      int? endRoom,
+    })
+    onAdd,
   }) {
     return showDialog(
       context: context,
-      builder: (context) => AddFloorDialog(existingFloors: existingFloors, onAdd: onAdd),
+      builder: (context) =>
+          AddFloorDialog(existingFloors: existingFloors, onAdd: onAdd),
     );
   }
 
@@ -1463,7 +1583,9 @@ class _AddFloorDialogState extends State<AddFloorDialog> {
                       controller: _startRoomController,
                       decoration: const InputDecoration(labelText: 'Start'),
                       keyboardType: TextInputType.number,
-                      validator: _createRooms ? (v) => v?.isEmpty ?? true ? 'Required' : null : null,
+                      validator: _createRooms
+                          ? (v) => v?.isEmpty ?? true ? 'Required' : null
+                          : null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1476,8 +1598,12 @@ class _AddFloorDialogState extends State<AddFloorDialog> {
                           ? (v) {
                               if (v?.isEmpty ?? true) return 'Required';
                               final end = int.tryParse(v!);
-                              final start = int.tryParse(_startRoomController.text);
-                              if (end != null && start != null && end < start) return 'Invalid';
+                              final start = int.tryParse(
+                                _startRoomController.text,
+                              );
+                              if (end != null && start != null && end < start) {
+                                return 'Invalid';
+                              }
                               return null;
                             }
                           : null,
@@ -1503,7 +1629,9 @@ class _AddFloorDialogState extends State<AddFloorDialog> {
     try {
       await widget.onAdd(
         floorNumber: int.parse(_floorController.text),
-        startRoom: _createRooms ? int.tryParse(_startRoomController.text) : null,
+        startRoom: _createRooms
+            ? int.tryParse(_startRoomController.text)
+            : null,
         endRoom: _createRooms ? int.tryParse(_endRoomController.text) : null,
       );
       if (mounted) Navigator.pop(context);
@@ -1511,7 +1639,10 @@ class _AddFloorDialogState extends State<AddFloorDialog> {
       setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -1521,18 +1652,33 @@ class _AddFloorDialogState extends State<AddFloorDialog> {
 /// Add floor dialog with required room creation
 class AddFloorDialogRequired extends StatefulWidget {
   final Set<int> existingFloors;
-  final Future<void> Function({required int floorNumber, required int startRoom, required int endRoom}) onAdd;
+  final Future<void> Function({
+    required int floorNumber,
+    required int startRoom,
+    required int endRoom,
+  })
+  onAdd;
 
-  const AddFloorDialogRequired({super.key, required this.existingFloors, required this.onAdd});
+  const AddFloorDialogRequired({
+    super.key,
+    required this.existingFloors,
+    required this.onAdd,
+  });
 
   static Future<void> show(
     BuildContext context, {
     required Set<int> existingFloors,
-    required Future<void> Function({required int floorNumber, required int startRoom, required int endRoom}) onAdd,
+    required Future<void> Function({
+      required int floorNumber,
+      required int startRoom,
+      required int endRoom,
+    })
+    onAdd,
   }) {
     return showDialog(
       context: context,
-      builder: (context) => AddFloorDialogRequired(existingFloors: existingFloors, onAdd: onAdd),
+      builder: (context) =>
+          AddFloorDialogRequired(existingFloors: existingFloors, onAdd: onAdd),
     );
   }
 
@@ -1586,7 +1732,9 @@ class _AddFloorDialogRequiredState extends State<AddFloorDialogRequired> {
                 if (v?.isEmpty ?? true) return 'Required';
                 final floor = int.tryParse(v!);
                 if (floor == null || floor <= 0) return 'Invalid floor number';
-                if (widget.existingFloors.contains(floor)) return 'Floor already exists';
+                if (widget.existingFloors.contains(floor)) {
+                  return 'Floor already exists';
+                }
                 return null;
               },
               onChanged: (v) {
@@ -1634,7 +1782,9 @@ class _AddFloorDialogRequiredState extends State<AddFloorDialogRequired> {
                       final end = int.tryParse(v!);
                       final start = int.tryParse(_startRoomController.text);
                       if (end == null) return 'Invalid';
-                      if (start != null && end < start) return 'Must be >= start';
+                      if (start != null && end < start) {
+                        return 'Must be >= start';
+                      }
                       return null;
                     },
                   ),
@@ -1675,7 +1825,10 @@ class _AddFloorDialogRequiredState extends State<AddFloorDialogRequired> {
       setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -1727,10 +1880,15 @@ class _BulkAssignDialogState extends State<BulkAssignDialog> {
     return CustomDialog(
       title: 'Assign Type (${widget.roomCount})',
       content: DropdownButtonFormField<String>(
-        value: _selectedTypeId,
+        initialValue: _selectedTypeId,
         isExpanded: true,
         decoration: const InputDecoration(labelText: 'Room Type'),
-        items: widget.roomTypes.map((type) => DropdownMenuItem(value: type.id, child: Text(type.name))).toList(),
+        items: widget.roomTypes
+            .map(
+              (type) =>
+                  DropdownMenuItem(value: type.id, child: Text(type.name)),
+            )
+            .toList(),
         onChanged: (v) => setState(() => _selectedTypeId = v),
       ),
       primaryButtonText: 'Assign',
@@ -1743,7 +1901,10 @@ class _BulkAssignDialogState extends State<BulkAssignDialog> {
         } catch (e) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+              SnackBar(
+                content: Text('Error: $e'),
+                backgroundColor: AppColors.error,
+              ),
             );
           }
         }
@@ -1786,7 +1947,12 @@ class RoomTile extends StatelessWidget {
           color: AppColors.grey100,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Center(child: Text(room.roomNumber, style: const TextStyle(fontWeight: FontWeight.bold))),
+        child: Center(
+          child: Text(
+            room.roomNumber,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
       ),
       title: Text(room.roomTypeName ?? 'No Type'),
       subtitle: Text(room.status.displayName),
@@ -1844,22 +2010,22 @@ class _BulkEditRoomTypeDialogState extends State<BulkEditRoomTypeDialog> {
         children: [
           Text(
             'Change room type for ${widget.roomCount} selected room(s)',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 13,
-            ),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _selectedTypeId,
+            initialValue: _selectedTypeId,
             isExpanded: true,
             decoration: const InputDecoration(labelText: 'Room Type'),
             items: [
-              const DropdownMenuItem<String>(value: null, child: Text('No Type')),
-              ...widget.roomTypes.map((type) => DropdownMenuItem(
-                    value: type.id,
-                    child: Text(type.name),
-                  )),
+              const DropdownMenuItem<String>(
+                value: null,
+                child: Text('No Type'),
+              ),
+              ...widget.roomTypes.map(
+                (type) =>
+                    DropdownMenuItem(value: type.id, child: Text(type.name)),
+              ),
             ],
             onChanged: (v) => setState(() => _selectedTypeId = v),
           ),
@@ -1882,7 +2048,10 @@ class _BulkEditRoomTypeDialogState extends State<BulkEditRoomTypeDialog> {
       setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }

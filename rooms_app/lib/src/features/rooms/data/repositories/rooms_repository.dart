@@ -19,6 +19,11 @@ class ManagedRoom {
   final DateTime? lastCleaned;
   final String? lastCleanedBy;
 
+  // Tariff-based pricing fields
+  final int tariffDurationHours;
+  final double tariffAmount;
+  final double gracePeriodHours;
+
   const ManagedRoom({
     required this.id,
     required this.hotelId,
@@ -32,10 +37,14 @@ class ManagedRoom {
     this.currentBookingId,
     this.lastCleaned,
     this.lastCleanedBy,
+    this.tariffDurationHours = 24,
+    this.tariffAmount = 0,
+    this.gracePeriodHours = 2,
   });
 
   factory ManagedRoom.fromJson(Map<String, dynamic> json) {
     final roomType = json['room_types'] as Map<String, dynamic>?;
+    final basePrice = (roomType?['base_price'] as num?)?.toDouble() ?? 0;
     return ManagedRoom(
       id: json['id'] as String,
       hotelId: json['hotel_id'] as String,
@@ -43,7 +52,7 @@ class ManagedRoom {
       floor: json['floor'] as int,
       roomTypeId: json['room_type_id'] as String?,
       roomTypeName: roomType?['name'] as String?,
-      pricePerNight: (roomType?['base_price'] as num?)?.toDouble(),
+      pricePerNight: basePrice,
       maxOccupancy: roomType?['max_occupancy'] as int?,
       status: _parseStatus(json['status'] as String),
       currentBookingId: json['current_booking_id'] as String?,
@@ -51,6 +60,11 @@ class ManagedRoom {
           ? DateTime.parse(json['last_cleaned'] as String)
           : null,
       lastCleanedBy: json['last_cleaned_by'] as String?,
+      tariffDurationHours: roomType?['tariff_duration_hours'] as int? ?? 24,
+      tariffAmount:
+          (roomType?['tariff_amount'] as num?)?.toDouble() ?? basePrice,
+      gracePeriodHours:
+          (roomType?['grace_period_hours'] as num?)?.toDouble() ?? 2,
     );
   }
 
@@ -103,6 +117,10 @@ class ManagedRoom {
       lastCleanedBy: lastCleanedBy,
     );
   }
+
+  /// Get tariff display string (e.g., "₹2500 per 24h")
+  String get tariffDisplayString =>
+      '₹${tariffAmount.toStringAsFixed(0)} per ${tariffDurationHours}h';
 }
 
 /// Repository for rooms CRUD operations
@@ -118,7 +136,9 @@ class RoomsRepository {
       AppLogger.debug('Fetching rooms for hotel: $hotelId', tag: 'Rooms');
       final response = await _client
           .from('rooms')
-          .select('*, room_types(name, base_price, max_occupancy)')
+          .select(
+            '*, room_types(name, base_price, max_occupancy, tariff_duration_hours, tariff_amount, grace_period_hours)',
+          )
           .eq('hotel_id', hotelId)
           .order('floor')
           .order('room_number');
@@ -146,6 +166,7 @@ class RoomsRepository {
   }
 
   /// Get rooms grouped by floor and then by room type
+  // ignore: unintended_html_in_doc_comment
   /// Returns Map<floor, Map<roomTypeId, List<ManagedRoom>>>
   /// Rooms within each group are sorted by room number
   Future<Map<int, Map<String?, List<ManagedRoom>>>> getRoomsByFloorAndType(
@@ -171,7 +192,9 @@ class RoomsRepository {
 
       var query = _client
           .from('rooms')
-          .select('*, room_types(name, base_price, max_occupancy)')
+          .select(
+            '*, room_types(name, base_price, max_occupancy, tariff_duration_hours, tariff_amount, grace_period_hours)',
+          )
           .eq('hotel_id', hotelId)
           .eq('status', 'free');
 
@@ -218,7 +241,9 @@ class RoomsRepository {
             'room_type_id': roomTypeId,
             'status': 'free',
           })
-          .select('*, room_types(name, base_price, max_occupancy)')
+          .select(
+            '*, room_types(name, base_price, max_occupancy, tariff_duration_hours, tariff_amount, grace_period_hours)',
+          )
           .single();
 
       AppLogger.success('Room created', tag: 'Rooms');
@@ -247,7 +272,9 @@ class RoomsRepository {
           .from('rooms')
           .update(updates)
           .eq('id', id)
-          .select('*, room_types(name, base_price, max_occupancy)')
+          .select(
+            '*, room_types(name, base_price, max_occupancy, tariff_duration_hours, tariff_amount, grace_period_hours)',
+          )
           .single();
 
       AppLogger.success('Room updated', tag: 'Rooms');
@@ -355,7 +382,9 @@ class RoomsRepository {
         // No updates, just fetch and return current room
         final response = await _client
             .from('rooms')
-            .select('*, room_types(name, base_price, max_occupancy)')
+            .select(
+              '*, room_types(name, base_price, max_occupancy, tariff_duration_hours, tariff_amount, grace_period_hours)',
+            )
             .eq('id', id)
             .single();
         return ManagedRoom.fromJson(response);
@@ -365,7 +394,9 @@ class RoomsRepository {
           .from('rooms')
           .update(updates)
           .eq('id', id)
-          .select('*, room_types(name, base_price, max_occupancy)')
+          .select(
+            '*, room_types(name, base_price, max_occupancy, tariff_duration_hours, tariff_amount, grace_period_hours)',
+          )
           .single();
 
       AppLogger.success('Room details updated', tag: 'Rooms');
@@ -383,7 +414,10 @@ class RoomsRepository {
     required String roomId2,
   }) async {
     try {
-      AppLogger.info('Swapping room numbers: $roomId1 <-> $roomId2', tag: 'Rooms');
+      AppLogger.info(
+        'Swapping room numbers: $roomId1 <-> $roomId2',
+        tag: 'Rooms',
+      );
 
       // Fetch both rooms first
       final room1Response = await _client
@@ -452,13 +486,18 @@ class RoomsRepository {
       final response = await _client
           .from('rooms')
           .insert(roomsToCreate)
-          .select('*, room_types(name, base_price, max_occupancy)');
+          .select(
+            '*, room_types(name, base_price, max_occupancy, tariff_duration_hours, tariff_amount, grace_period_hours)',
+          );
 
       final rooms = (response as List)
           .map((json) => ManagedRoom.fromJson(json))
           .toList();
 
-      AppLogger.success('Created ${rooms.length} rooms for floor $floor', tag: 'Rooms');
+      AppLogger.success(
+        'Created ${rooms.length} rooms for floor $floor',
+        tag: 'Rooms',
+      );
       return rooms;
     } catch (e) {
       AppLogger.error('Error creating rooms for floor', tag: 'Rooms', error: e);

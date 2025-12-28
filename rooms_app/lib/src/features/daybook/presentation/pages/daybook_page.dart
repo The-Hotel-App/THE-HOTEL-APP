@@ -7,6 +7,7 @@ import 'package:rooms/src/core/widgets/custom_dialog.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/daybook/domain/entities/transaction.dart';
 import 'package:rooms/src/features/daybook/presentation/providers/daybook_providers.dart';
+import 'package:rooms/src/features/daybook/presentation/widgets/date_navigation_widget.dart';
 
 class DayBookPage extends ConsumerStatefulWidget {
   const DayBookPage({super.key});
@@ -19,6 +20,17 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
   // Track selected transaction IDs for multi-select
   final Set<String> _selectedIds = {};
   bool _isDeleting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Reset to today when page opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final now = DateTime.now();
+      ref.read(selectedDateProvider.notifier).state =
+          DateTime(now.year, now.month, now.day);
+    });
+  }
 
   void _toggleSelection(String transactionId) {
     setState(() {
@@ -36,12 +48,62 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
     });
   }
 
+  void _goToPreviousDay() {
+    final currentDate = ref.read(selectedDateProvider);
+    ref.read(selectedDateProvider.notifier).state =
+        currentDate.subtract(const Duration(days: 1));
+    _clearSelection();
+  }
+
+  void _goToNextDay() {
+    final currentDate = ref.read(selectedDateProvider);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Don't go past today
+    if (!isSameDay(currentDate, today)) {
+      ref.read(selectedDateProvider.notifier).state =
+          currentDate.add(const Duration(days: 1));
+      _clearSelection();
+    }
+  }
+
+  Future<void> _showDatePicker() async {
+    final currentDate = ref.read(selectedDateProvider);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: currentDate,
+      firstDate: DateTime(2020),
+      lastDate: today,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppColors.black,
+              onPrimary: AppColors.white,
+              surface: AppColors.white,
+              onSurface: AppColors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      ref.read(selectedDateProvider.notifier).state = picked;
+      _clearSelection();
+    }
+  }
+
   Future<void> _deleteSelectedTransactions(
     List<Transaction> allTransactions,
   ) async {
-    final selectedTransactions = allTransactions
-        .where((t) => _selectedIds.contains(t.id))
-        .toList();
+    final selectedTransactions =
+        allTransactions.where((t) => _selectedIds.contains(t.id)).toList();
 
     if (selectedTransactions.isEmpty) return;
 
@@ -66,7 +128,7 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
         await repo.deleteTransaction(transaction);
       }
 
-      ref.invalidate(todayDayBookProvider);
+      ref.invalidate(dayBookSummaryProvider);
       _clearSelection();
 
       if (mounted) {
@@ -98,9 +160,16 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
   @override
   Widget build(BuildContext context) {
     final hotelId = ref.watch(selectedHotelIdProvider);
-    final summaryAsync = ref.watch(todayDayBookProvider);
+    final summaryAsync = ref.watch(dayBookSummaryProvider);
     final currentHotel = ref.watch(currentHotelProvider);
+    final selectedDate = ref.watch(selectedDateProvider);
+    final isToday = ref.watch(isSelectedDateTodayProvider);
+
+    // Get isOwner from the hotel value
     final isOwner = currentHotel?.isOwner ?? false;
+
+    // Only allow editing on today's daybook
+    final canEdit = isOwner && isToday;
 
     return Scaffold(
       backgroundColor: AppColors.grey100,
@@ -127,17 +196,36 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
       ),
       body: hotelId == null
           ? const Center(child: Text('No hotel selected'))
-          : RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(todayDayBookProvider);
-              },
-              child: summaryAsync.when(
-                data: (summary) => _buildContent(context, summary, isOwner),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => _buildErrorView(context, e),
-              ),
+          : Column(
+              children: [
+                // Date navigation widget
+                if (isOwner)
+                  DateNavigationWidget(
+                    selectedDate: selectedDate,
+                    isToday: isToday,
+                    onPreviousDay: _goToPreviousDay,
+                    onNextDay: isToday ? null : _goToNextDay,
+                    onDateTap: _showDatePicker,
+                  ),
+                // Main content
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(dayBookSummaryProvider);
+                    },
+                    child: summaryAsync.when(
+                      data: (summary) => summary == null
+                          ? _buildEmptyDateView(selectedDate)
+                          : _buildContent(context, summary, canEdit, isToday),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (e, _) => _buildErrorView(context, e),
+                    ),
+                  ),
+                ),
+              ],
             ),
-      floatingActionButton: hotelId != null && _selectedIds.isEmpty
+      floatingActionButton: hotelId != null && canEdit && _selectedIds.isEmpty
           ? FloatingActionButton.extended(
               onPressed: () => _showAddTransaction(context),
               backgroundColor: AppColors.black,
@@ -146,6 +234,49 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
               label: const Text('Add Entry'),
             )
           : null,
+    );
+  }
+
+  Widget _buildEmptyDateView(DateTime date) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        const SizedBox(height: 100),
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.event_busy, size: 80, color: AppColors.grey400),
+              const SizedBox(height: 24),
+              Text(
+                'No records for this date',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _formatDate(date),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No daybook was created on this day.\nUse the arrows to navigate to other dates.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -174,7 +305,7 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => ref.invalidate(todayDayBookProvider),
+              onPressed: () => ref.invalidate(dayBookSummaryProvider),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
@@ -191,20 +322,21 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
   Widget _buildContent(
     BuildContext context,
     DayBookSummary summary,
-    bool isOwner,
+    bool canEdit,
+    bool isToday,
   ) {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
-        _buildSummaryCard(summary, isOwner),
+        _buildSummaryCard(summary, canEdit, isToday),
         const SizedBox(height: 24),
-        _buildTransactionsList(context, summary.transactions, isOwner),
+        _buildTransactionsList(context, summary.transactions, canEdit),
       ],
     );
   }
 
-  Widget _buildSummaryCard(DayBookSummary summary, bool isOwner) {
+  Widget _buildSummaryCard(DayBookSummary summary, bool canEdit, bool isToday) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -222,15 +354,40 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
         children: [
           Row(
             children: [
-              Icon(Icons.calendar_today, color: AppColors.black),
+              Icon(
+                isToday ? Icons.calendar_today : Icons.history,
+                color: isToday ? AppColors.black : AppColors.grey600,
+              ),
               const SizedBox(width: 8),
-              Text(
-                'Today - ${_formatDate(summary.date)}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  isToday
+                      ? 'Today - ${_formatDate(summary.date)}'
+                      : _formatDate(summary.date),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isToday ? AppColors.black : AppColors.grey700,
+                  ),
                 ),
               ),
+              if (!isToday)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.grey200,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Read-only',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppColors.grey600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
             ],
           ),
           const Divider(height: 24),
@@ -238,14 +395,12 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: isOwner
-                      ? () => _showEditOpeningBalance(summary)
-                      : null,
+                  onTap: canEdit ? () => _showEditOpeningBalance(summary) : null,
                   child: _buildBalanceItem(
                     'Opening',
                     summary.openingBalance,
                     AppColors.grey600,
-                    isEditable: isOwner,
+                    isEditable: canEdit,
                   ),
                 ),
               ),
@@ -285,6 +440,7 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
       ),
     );
   }
+
 
   Widget _buildBalanceItem(
     String label,
@@ -367,8 +523,10 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
   Widget _buildTransactionsList(
     BuildContext context,
     List<Transaction> transactions,
-    bool isOwner,
+    bool canEdit,
   ) {
+    final isToday = ref.watch(isSelectedDateTodayProvider);
+
     if (transactions.isEmpty) {
       return Center(
         child: Column(
@@ -376,9 +534,10 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
             const SizedBox(height: 40),
             Icon(Icons.receipt_long, size: 64, color: AppColors.grey400),
             const SizedBox(height: 16),
-            const Text(
-              'No transactions today',
-              style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
+            Text(
+              isToday ? 'No transactions today' : 'No transactions on this day',
+              style: const TextStyle(
+                  fontSize: 16, color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -402,8 +561,8 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
                 ),
               ),
             ),
-            // Show delete button when items are selected (only for owners)
-            if (_selectedIds.isNotEmpty && isOwner)
+            // Show delete button when items are selected (only for owners on today)
+            if (_selectedIds.isNotEmpty && canEdit)
               _isDeleting
                   ? const SizedBox(
                       width: 24,
@@ -434,12 +593,12 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
           ],
         ),
         const SizedBox(height: 12),
-        ...transactions.map((t) => _buildTransactionCard(t, isOwner)),
+        ...transactions.map((t) => _buildTransactionCard(t, canEdit)),
       ],
     );
   }
 
-  Widget _buildTransactionCard(Transaction transaction, bool isOwner) {
+  Widget _buildTransactionCard(Transaction transaction, bool canEdit) {
     final isIncome = transaction.type == TransactionType.income;
     final color = isIncome ? AppColors.success : AppColors.error;
     final isSelected = _selectedIds.contains(transaction.id);
@@ -458,9 +617,9 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
       ),
       child: Row(
         children: [
-          // Selectable icon (only for owners)
+          // Selectable icon (only for owners on today)
           GestureDetector(
-            onTap: isOwner ? () => _toggleSelection(transaction.id) : null,
+            onTap: canEdit ? () => _toggleSelection(transaction.id) : null,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               width: 44,
@@ -481,7 +640,7 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
           // Transaction details - tappable to select in selection mode
           Expanded(
             child: GestureDetector(
-              onTap: isInSelectionMode && isOwner
+              onTap: isInSelectionMode && canEdit
                   ? () => _toggleSelection(transaction.id)
                   : null,
               child: Column(
@@ -591,7 +750,7 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
       final repo = ref.read(dayBookRepositoryProvider);
       await repo.updateOpeningBalance(daybookId, newBalance);
 
-      ref.invalidate(todayDayBookProvider);
+      ref.invalidate(dayBookSummaryProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -633,6 +792,7 @@ class _DayBookPageState extends ConsumerState<DayBookPage> {
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }
+
 
 class _AddTransactionDialog extends ConsumerStatefulWidget {
   final WidgetRef ref;
@@ -696,7 +856,7 @@ class _AddTransactionDialogState extends ConsumerState<_AddTransactionDialog> {
       final repo = widget.ref.read(dayBookRepositoryProvider);
       await repo.addTransaction(transaction);
 
-      widget.ref.invalidate(todayDayBookProvider);
+      widget.ref.invalidate(dayBookSummaryProvider);
 
       if (mounted) {
         Navigator.pop(context);

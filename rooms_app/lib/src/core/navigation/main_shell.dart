@@ -4,7 +4,9 @@ import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/features/auth/domain/entities/user_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/bookings_page.dart';
+import 'package:rooms/src/features/bookings/presentation/providers/booking_providers.dart';
 import 'package:rooms/src/features/customers/presentation/pages/customers_page.dart';
+import 'package:rooms/src/features/customers/presentation/providers/customer_providers.dart';
 import 'package:rooms/src/features/rooms/presentation/pages/rooms_page.dart';
 import 'package:rooms/src/features/rooms/presentation/providers/room_providers.dart';
 import 'package:rooms/src/features/settings/presentation/pages/more_page.dart';
@@ -30,8 +32,14 @@ class _MainShellState extends ConsumerState<MainShell> {
     final hotel = ref.watch(currentHotelProvider);
     final role = hotel?.role ?? UserRole.staff;
 
+    // Watch booking and customer counts for badges
+    final bookingsAsync = ref.watch(bookingsProvider);
+    final customersAsync = ref.watch(customersProvider);
+    final bookingCount = bookingsAsync.valueOrNull?.length ?? 0;
+    final guestCount = customersAsync.valueOrNull?.length ?? 0;
+
     // Build tabs based on role
-    final tabs = _buildTabs(role);
+    final tabs = _buildTabs(role, bookingCount, guestCount);
     final currentIndex = tabIndex.clamp(0, tabs.length - 1);
 
     return Scaffold(
@@ -43,7 +51,7 @@ class _MainShellState extends ConsumerState<MainShell> {
     );
   }
 
-  List<NavTab> _buildTabs(UserRole role) {
+  List<NavTab> _buildTabs(UserRole role, int bookingCount, int guestCount) {
     final isOwnerOrManager = role == UserRole.owner || role == UserRole.manager;
 
     return [
@@ -68,6 +76,7 @@ class _MainShellState extends ConsumerState<MainShell> {
           activeIcon: Icons.book_online,
           label: 'Bookings',
           page: const BookingsTabContent(),
+          badgeCount: bookingCount,
         ),
       // Guests - Owner/Manager only
       if (isOwnerOrManager)
@@ -76,6 +85,7 @@ class _MainShellState extends ConsumerState<MainShell> {
           activeIcon: Icons.people,
           label: 'Guests',
           page: const GuestsTabContent(),
+          badgeCount: guestCount,
         ),
       // More - Always visible
       NavTab(
@@ -135,12 +145,12 @@ class _MainShellState extends ConsumerState<MainShell> {
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Icon(
-                            isSelected ? tab.activeIcon : tab.icon,
+                          child: _buildIconWithBadge(
+                            icon: isSelected ? tab.activeIcon : tab.icon,
                             color: isSelected
                                 ? AppColors.black
                                 : AppColors.grey500,
-                            size: 24,
+                            badgeCount: tab.badgeCount,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -167,6 +177,45 @@ class _MainShellState extends ConsumerState<MainShell> {
       ),
     );
   }
+
+  /// Build icon with optional badge count
+  Widget _buildIconWithBadge({
+    required IconData icon,
+    required Color color,
+    int? badgeCount,
+  }) {
+    if (badgeCount == null || badgeCount == 0) {
+      return Icon(icon, color: color, size: 24);
+    }
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(icon, color: color, size: 24),
+        Positioned(
+          right: -8,
+          top: -4,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            constraints: const BoxConstraints(minWidth: 16),
+            decoration: BoxDecoration(
+              color: AppColors.error,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              badgeCount > 99 ? '99+' : badgeCount.toString(),
+              style: const TextStyle(
+                color: AppColors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// Data class for navigation tabs
@@ -175,12 +224,14 @@ class NavTab {
   final IconData activeIcon;
   final String label;
   final Widget page;
+  final int? badgeCount;
 
   const NavTab({
     required this.icon,
     required this.activeIcon,
     required this.label,
     required this.page,
+    this.badgeCount,
   });
 }
 

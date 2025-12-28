@@ -363,6 +363,38 @@ class SupabaseBookingRepository implements BookingRepository {
     }
   }
 
+  /// Update specific booking fields without requiring full booking object
+  /// Useful for extending stays, updating checkout times, etc.
+  Future<void> updateBookingFields({
+    required String bookingId,
+    DateTime? checkIn,
+    DateTime? checkOut,
+    double? totalAmount,
+    double? paidAmount,
+    int? guestCount,
+  }) async {
+    try {
+      final updates = <String, dynamic>{};
+      if (checkIn != null) updates['check_in'] = checkIn.toIso8601String();
+      if (checkOut != null) updates['check_out'] = checkOut.toIso8601String();
+      if (totalAmount != null) updates['total_amount'] = totalAmount;
+      if (paidAmount != null) updates['amount_paid'] = paidAmount;
+      if (guestCount != null) updates['number_of_guests'] = guestCount;
+
+      if (updates.isEmpty) return;
+
+      await _client.from('bookings').update(updates).eq('id', bookingId);
+      AppLogger.success('Booking fields updated', tag: 'Bookings');
+    } catch (e) {
+      AppLogger.error(
+        'Error updating booking fields',
+        tag: 'Bookings',
+        error: e,
+      );
+      rethrow;
+    }
+  }
+
   @override
   Future<void> updateBookingStatus(
     String bookingId,

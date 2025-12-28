@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/utils/tariff_calculator.dart';
+import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
+import 'package:rooms/src/features/bookings/data/repositories/supabase_booking_repository.dart';
 import 'package:rooms/src/features/bookings/domain/entities/booking.dart';
 import 'package:rooms/src/features/bookings/presentation/providers/booking_providers.dart';
 import 'package:rooms/src/features/bookings/presentation/widgets/collect_payment_dialog.dart';
+import 'package:rooms/src/features/rooms/data/repositories/rooms_repository.dart';
 
 /// Full-page booking details view
 class BookingDetailsPage extends ConsumerStatefulWidget {
@@ -20,10 +25,46 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
   late Booking _booking;
   bool _isRefreshing = false;
 
+  // Tariff fields for visualization
+  int _tariffDurationHours = 24;
+  double _tariffAmount = 0;
+  double _gracePeriodHours = 2;
+  bool _tariffLoaded = false;
+
   @override
   void initState() {
     super.initState();
     _booking = widget.booking;
+    _loadTariffInfo();
+  }
+
+  /// Load tariff info from room type
+  Future<void> _loadTariffInfo() async {
+    // Get room info from first room (use same tariff for all rooms in multi-room booking)
+    final roomId = _booking.rooms.isNotEmpty
+        ? _booking.rooms.first.roomId
+        : _booking.roomId;
+
+    try {
+      final hotel = ref.read(currentHotelProvider);
+      if (hotel != null) {
+        final rooms = await ref.read(roomsProvider(hotel.hotelId).future);
+        final room = rooms.where((r) => r.id == roomId).firstOrNull;
+        if (room != null && mounted) {
+          setState(() {
+            _tariffDurationHours = room.tariffDurationHours;
+            _tariffAmount = room.tariffAmount;
+            _gracePeriodHours = room.gracePeriodHours;
+            _tariffLoaded = true;
+          });
+        }
+      }
+    } catch (e) {
+      // Use defaults if loading fails
+      if (mounted) {
+        setState(() => _tariffLoaded = true);
+      }
+    }
   }
 
   /// Update the local booking state with new payment amount
@@ -113,16 +154,23 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
               _buildStayDetailsCard(),
               const SizedBox(height: 20),
 
+              // Tariff Timeline Section (for checked-in bookings)
+              if (_tariffLoaded &&
+                  _booking.status == BookingStatus.checkedIn) ...[
+                _buildSectionTitle('Tariff Cycles', Icons.timeline),
+                const SizedBox(height: 12),
+                _buildTariffTimelineCard(),
+                const SizedBox(height: 20),
+              ],
+
               // Payment Section
               _buildSectionTitle('Payment', Icons.payment),
               const SizedBox(height: 12),
               _buildPaymentCard(),
 
-              // Collect Payment Button
-              if (hasPendingPayment) ...[
-                const SizedBox(height: 20),
-                _buildCollectPaymentButton(),
-              ],
+              // Action Buttons Section
+              const SizedBox(height: 24),
+              _buildActionButtons(hasPendingPayment),
 
               const SizedBox(height: 32),
             ],
@@ -771,9 +819,11 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
             children: [
               Expanded(
                 child: _buildStayDetailItem(
-                  Icons.nights_stay,
+                  Icons.schedule,
                   'Duration',
-                  '${_booking.stayDuration} night(s)',
+                  TariffCalculator.formatDuration(
+                    _booking.checkOut.difference(_booking.checkIn),
+                  ),
                   AppColors.info,
                 ),
               ),
@@ -983,6 +1033,421 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
         ),
       ),
     );
+  }
+
+  /// Tariff timeline visualization card
+  Widget _buildTariffTimelineCard() {
+    final result = TariffCalculator.calculate(
+      checkIn: _booking.checkIn,
+      checkOut: DateTime.now(), // Calculate based on current time for live view
+      tariffDurationHours: _tariffDurationHours,
+      tariffAmount: _tariffAmount,
+      gracePeriodHours: _gracePeriodHours,
+    );
+
+    // Calculate expected total if checkout now
+    final expectedResult = TariffCalculator.calculate(
+      checkIn: _booking.checkIn,
+      checkOut: _booking.checkOut,
+      tariffDurationHours: _tariffDurationHours,
+      tariffAmount: _tariffAmount,
+      gracePeriodHours: _gracePeriodHours,
+    );
+
+    // Get status color
+    Color statusColor;
+    IconData statusIcon;
+    switch (result.status) {
+      case TariffStatus.withinTariff:
+        statusColor = AppColors.success;
+        statusIcon = Icons.check_circle;
+        break;
+      case TariffStatus.inGracePeriod:
+        statusColor = AppColors.warning;
+        statusIcon = Icons.schedule;
+        break;
+      case TariffStatus.nextTariffApplied:
+        statusColor = AppColors.error;
+        statusIcon = Icons.warning_amber;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Current status banner
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(statusIcon, color: statusColor, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    result.statusMessage,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Tariff rate info
+          Row(
+            children: [
+              Icon(Icons.attach_money, size: 16, color: AppColors.grey600),
+              const SizedBox(width: 8),
+              Text(
+                'Rate: ₹${_tariffAmount.toStringAsFixed(0)} per ${_tariffDurationHours}h',
+                style: TextStyle(color: AppColors.grey600, fontSize: 13),
+              ),
+              const Spacer(),
+              Text(
+                'Grace: ${_gracePeriodHours}h',
+                style: TextStyle(color: AppColors.grey500, fontSize: 12),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Timeline visualization
+          _buildTimelineSegments(result, expectedResult),
+          const SizedBox(height: 16),
+
+          // Cycle info
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Current: ${result.cycles} cycle${result.cycles > 1 ? 's' : ''}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  Text(
+                    'Stay: ${result.formattedDuration}',
+                    style: TextStyle(color: AppColors.grey600, fontSize: 12),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '₹${result.totalAmount.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: statusColor,
+                    ),
+                  ),
+                  if (expectedResult.cycles != result.cycles)
+                    Text(
+                      'Expected: ₹${expectedResult.totalAmount.toStringAsFixed(0)}',
+                      style: TextStyle(color: AppColors.grey500, fontSize: 11),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build timeline segments showing cycles
+  Widget _buildTimelineSegments(TariffResult current, TariffResult expected) {
+    final maxCycles = expected.cycles > current.cycles
+        ? expected.cycles
+        : current.cycles;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.login, size: 14, color: AppColors.grey600),
+            const SizedBox(width: 4),
+            Text(
+              DateFormat('d MMM, h:mm a').format(_booking.checkIn),
+              style: TextStyle(fontSize: 11, color: AppColors.grey600),
+            ),
+            const Spacer(),
+            Icon(Icons.logout, size: 14, color: AppColors.grey600),
+            const SizedBox(width: 4),
+            Text(
+              DateFormat('d MMM, h:mm a').format(_booking.checkOut),
+              style: TextStyle(fontSize: 11, color: AppColors.grey600),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // Cycle segments
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: SizedBox(
+            height: 32,
+            child: Row(
+              children: List.generate(maxCycles, (index) {
+                final cycleNum = index + 1;
+                final isCompleted = cycleNum < current.cycles;
+                final isCurrent = cycleNum == current.cycles;
+
+                Color segmentColor;
+                if (isCompleted) {
+                  segmentColor = AppColors.success;
+                } else if (isCurrent) {
+                  switch (current.status) {
+                    case TariffStatus.withinTariff:
+                      segmentColor = AppColors.info;
+                      break;
+                    case TariffStatus.inGracePeriod:
+                      segmentColor = AppColors.warning;
+                      break;
+                    case TariffStatus.nextTariffApplied:
+                      segmentColor = AppColors.error;
+                      break;
+                  }
+                } else {
+                  segmentColor = AppColors.grey200;
+                }
+
+                return Expanded(
+                  child: Container(
+                    margin: EdgeInsets.only(
+                      right: index < maxCycles - 1 ? 2 : 0,
+                    ),
+                    decoration: BoxDecoration(color: segmentColor),
+                    child: Center(
+                      child: Text(
+                        '$cycleNum',
+                        style: TextStyle(
+                          color: segmentColor == AppColors.grey200
+                              ? AppColors.grey500
+                              : Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+
+        // Legend row
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildLegendItem(AppColors.success, 'Completed'),
+            const SizedBox(width: 12),
+            _buildLegendItem(AppColors.info, 'Current'),
+            const SizedBox(width: 12),
+            _buildLegendItem(AppColors.grey200, 'Expected'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String label) {
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: TextStyle(fontSize: 10, color: AppColors.grey600)),
+      ],
+    );
+  }
+
+  /// Action buttons section
+  Widget _buildActionButtons(bool hasPendingPayment) {
+    final isCheckedIn = _booking.status == BookingStatus.checkedIn;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Primary actions for checked-in bookings
+        if (isCheckedIn && _tariffLoaded) ...[
+          Row(
+            children: [
+              // Extend Stay button
+              Expanded(
+                child: _buildActionButton(
+                  icon: Icons.more_time,
+                  label: 'Extend Stay',
+                  color: AppColors.info,
+                  onPressed: _navigateToExtendStay,
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Checkout button
+              Expanded(
+                child: _buildActionButton(
+                  icon: Icons.logout,
+                  label: 'Checkout',
+                  color: AppColors.warning,
+                  onPressed: _performCheckout,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        // Payment action - always show if pending
+        if (hasPendingPayment)
+          _buildActionButton(
+            icon: Icons.payment,
+            label: 'Collect ₹${_booking.pendingAmount.toStringAsFixed(0)}',
+            color: AppColors.success,
+            onPressed: () async {
+              final collectedAmount = await CollectPaymentDialog.show(
+                context,
+                _booking,
+              );
+              if (collectedAmount != null && collectedAmount > 0) {
+                _updatePayment(collectedAmount);
+              }
+            },
+            isFullWidth: true,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+    bool isFullWidth = false,
+  }) {
+    return SizedBox(
+      width: isFullWidth ? double.infinity : null,
+      height: 50,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 20),
+        label: Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 1,
+        ),
+      ),
+    );
+  }
+
+  /// Navigate to extend stay page
+  void _navigateToExtendStay() {
+    context.push(
+      '/extend-stay',
+      extra: {
+        'booking': _booking,
+        'tariffDurationHours': _tariffDurationHours,
+        'tariffAmount': _tariffAmount,
+        'gracePeriodHours': _gracePeriodHours,
+      },
+    );
+  }
+
+  /// Perform checkout
+  Future<void> _performCheckout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Checkout'),
+        content: Text(
+          'Checkout ${_booking.customerName} from Room ${_booking.allRoomNumbers}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning),
+            child: const Text('Checkout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        final repository =
+            ref.read(bookingRepositoryProvider) as SupabaseBookingRepository;
+        await repository.updateBookingStatus(
+          _booking.id,
+          BookingStatus.checkedOut,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Checkout successful'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          context.pop(); // Return to previous screen
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
   }
 
   // Helper methods

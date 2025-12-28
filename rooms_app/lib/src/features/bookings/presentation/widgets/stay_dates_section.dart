@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/utils/tariff_calculator.dart';
 import 'package:rooms/src/features/bookings/presentation/providers/new_booking_providers.dart';
 
 /// Modern Stay Dates Section widget for the new booking flow
@@ -59,7 +60,7 @@ class StayDatesSection extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
 
-          // Nights badge centered
+          // Duration badge centered
           Center(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -70,10 +71,12 @@ class StayDatesSection extends ConsumerWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.nights_stay, size: 16, color: AppColors.primary),
+                  Icon(Icons.schedule, size: 16, color: AppColors.primary),
                   const SizedBox(width: 6),
                   Text(
-                    '${bookingState.numberOfNights} ${bookingState.numberOfNights == 1 ? 'Night' : 'Nights'}',
+                    TariffCalculator.formatDuration(
+                      bookingState.checkOut.difference(bookingState.checkIn),
+                    ),
                     style: TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
@@ -410,30 +413,8 @@ class _DateTimePickerSheetState extends State<_DateTimePickerSheet> {
                       child: OutlinedButton.icon(
                         onPressed: () {
                           final now = DateTime.now();
-                          // Round to nearest 15 minutes
-                          final minutes = now.minute;
-                          int roundedMinutes;
-                          int hourAdjustment = 0;
-                          if (minutes < 8) {
-                            roundedMinutes = 0;
-                          } else if (minutes < 23) {
-                            roundedMinutes = 15;
-                          } else if (minutes < 38) {
-                            roundedMinutes = 30;
-                          } else if (minutes < 53) {
-                            roundedMinutes = 45;
-                          } else {
-                            roundedMinutes = 0;
-                            hourAdjustment = 1;
-                          }
-                          final roundedNow = DateTime(
-                            now.year,
-                            now.month,
-                            now.day,
-                            now.hour + hourAdjustment,
-                            roundedMinutes,
-                          );
-                          _updateDateTime(roundedNow);
+                          // Use exact current time (no rounding)
+                          _updateDateTime(now);
                           HapticFeedback.mediumImpact();
                         },
                         icon: const Icon(Icons.refresh_rounded, size: 18),
@@ -800,10 +781,8 @@ class _CircularTimePickerState extends State<_CircularTimePicker> {
   late FixedExtentScrollController _periodController;
 
   late int _selectedHour;
-  late int _selectedMinuteIndex;
+  late int _selectedMinute;
   late int _selectedPeriod;
-
-  final List<int> _minutes = [0, 15, 30, 45];
 
   @override
   void initState() {
@@ -811,14 +790,14 @@ class _CircularTimePickerState extends State<_CircularTimePicker> {
     _selectedPeriod = widget.selectedTime.hour >= 12 ? 1 : 0;
     _selectedHour = widget.selectedTime.hour % 12;
     if (_selectedHour == 0) _selectedHour = 12;
-    _selectedMinuteIndex = (widget.selectedTime.minute / 15).round() % 4;
+    _selectedMinute = widget.selectedTime.minute;
 
     // For looping, start at a large offset
     _hourController = FixedExtentScrollController(
       initialItem: 1000 * 12 + (_selectedHour - 1),
     );
     _minuteController = FixedExtentScrollController(
-      initialItem: 1000 * 4 + _selectedMinuteIndex,
+      initialItem: 1000 * 60 + _selectedMinute,
     );
     _periodController = FixedExtentScrollController(
       initialItem: _selectedPeriod, // Non-looping, use direct index
@@ -841,7 +820,7 @@ class _CircularTimePickerState extends State<_CircularTimePicker> {
       final newPeriod = widget.selectedTime.hour >= 12 ? 1 : 0;
       var newHour = widget.selectedTime.hour % 12;
       if (newHour == 0) newHour = 12;
-      final newMinuteIndex = (widget.selectedTime.minute / 15).round() % 4;
+      final newMinute = widget.selectedTime.minute;
 
       // Defer jumpToItem until after build to avoid setState during build
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -854,15 +833,15 @@ class _CircularTimePickerState extends State<_CircularTimePicker> {
 
         final minuteOffset =
             _minuteController.selectedItem -
-            ((_minuteController.selectedItem) % 4);
-        _minuteController.jumpToItem(minuteOffset + newMinuteIndex);
+            ((_minuteController.selectedItem) % 60);
+        _minuteController.jumpToItem(minuteOffset + newMinute);
 
         _periodController.jumpToItem(newPeriod);
       });
 
       // Update local state immediately
       _selectedHour = newHour;
-      _selectedMinuteIndex = newMinuteIndex;
+      _selectedMinute = newMinute;
       _selectedPeriod = newPeriod;
     }
   }
@@ -875,9 +854,7 @@ class _CircularTimePickerState extends State<_CircularTimePicker> {
       if (hour24 != 12) hour24 += 12;
     }
 
-    widget.onTimeChanged(
-      TimeOfDay(hour: hour24, minute: _minutes[_selectedMinuteIndex]),
-    );
+    widget.onTimeChanged(TimeOfDay(hour: hour24, minute: _selectedMinute));
     HapticFeedback.selectionClick();
   }
 
@@ -909,16 +886,15 @@ class _CircularTimePickerState extends State<_CircularTimePicker> {
             ),
           ),
 
-          // Minute picker (00, 15, 30, 45, circular)
+          // Minute picker (00-59, circular)
           Expanded(
             flex: 2,
             child: _buildCircularPicker(
               controller: _minuteController,
-              itemCount: 4,
-              itemBuilder: (index) =>
-                  _minutes[index % 4].toString().padLeft(2, '0'),
+              itemCount: 60,
+              itemBuilder: (index) => (index % 60).toString().padLeft(2, '0'),
               onChanged: (index) {
-                setState(() => _selectedMinuteIndex = index % 4);
+                setState(() => _selectedMinute = index % 60);
                 _updateTime();
               },
             ),

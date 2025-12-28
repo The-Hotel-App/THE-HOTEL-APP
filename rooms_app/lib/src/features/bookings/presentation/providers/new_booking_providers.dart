@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rooms/src/core/utils/tariff_calculator.dart';
 import 'package:rooms/src/features/customers/domain/entities/customer.dart';
 import 'package:rooms/src/features/rooms/data/repositories/rooms_repository.dart';
 
@@ -106,17 +107,30 @@ class NewBookingState {
     return checkOutDate.difference(checkInDate).inDays;
   }
 
-  /// Calculate total from selected rooms
+  /// Get stay duration
+  Duration get stayDuration => checkOut.difference(checkIn);
+
+  /// Get formatted stay duration (e.g., "1d 5h 30m")
+  String get formattedDuration => TariffCalculator.formatDuration(stayDuration);
+
+  /// Calculate total from selected rooms using tariff-based pricing
   double calculateTotal() {
     double total = 0;
     for (final room in selectedRooms) {
-      total += room.pricePerNight * numberOfNights;
+      final result = TariffCalculator.calculate(
+        checkIn: checkIn,
+        checkOut: checkOut,
+        tariffDurationHours: room.tariffDurationHours,
+        tariffAmount: room.tariffAmount,
+        gracePeriodHours: room.gracePeriodHours,
+      );
+      total += result.totalAmount;
     }
     return total;
   }
 }
 
-/// Represents a selected room with its price
+/// Represents a selected room with its price and tariff info
 class SelectedRoom {
   final String roomId;
   final String roomNumber;
@@ -124,12 +138,20 @@ class SelectedRoom {
   final double pricePerNight;
   final int floor;
 
+  // Tariff-based pricing fields
+  final int tariffDurationHours;
+  final double tariffAmount;
+  final double gracePeriodHours;
+
   const SelectedRoom({
     required this.roomId,
     required this.roomNumber,
     this.roomTypeName,
     required this.pricePerNight,
     required this.floor,
+    this.tariffDurationHours = 24,
+    this.tariffAmount = 0,
+    this.gracePeriodHours = 2,
   });
 
   factory SelectedRoom.fromManagedRoom(ManagedRoom room) {
@@ -139,8 +161,17 @@ class SelectedRoom {
       roomTypeName: room.roomTypeName,
       pricePerNight: room.pricePerNight ?? 0,
       floor: room.floor,
+      tariffDurationHours: room.tariffDurationHours,
+      tariffAmount: room.tariffAmount > 0
+          ? room.tariffAmount
+          : (room.pricePerNight ?? 0),
+      gracePeriodHours: room.gracePeriodHours,
     );
   }
+
+  /// Get tariff display string (e.g., "₹2500 per 24h")
+  String get tariffDisplayString =>
+      '₹${tariffAmount.toStringAsFixed(0)} per ${tariffDurationHours}h';
 }
 
 /// Notifier for managing new booking state
@@ -149,57 +180,32 @@ class NewBookingNotifier extends StateNotifier<NewBookingState> {
   static const TimeOfDay defaultCheckOutTime = TimeOfDay(hour: 11, minute: 0);
 
   NewBookingNotifier()
-      : super(NewBookingState(
-          checkIn: roundToNearest15Minutes(DateTime.now()),
+    : super(
+        NewBookingState(
+          checkIn: DateTime.now(),
           checkOut: _createDefaultCheckOut(),
-        ));
+        ),
+      );
 
-  /// Creates default checkout: tomorrow at 11:00 AM
+  /// Creates default checkout: 24 hours from now
   static DateTime _createDefaultCheckOut() {
-    final tomorrow = DateTime.now().add(const Duration(days: 1));
-    return DateTime(
-      tomorrow.year,
-      tomorrow.month,
-      tomorrow.day,
-      defaultCheckOutTime.hour,
-      defaultCheckOutTime.minute,
-    );
+    return DateTime.now().add(const Duration(hours: 24));
   }
 
-  /// Rounds a DateTime to the nearest 15-minute interval
-  /// Minutes 0-7 -> :00, 8-22 -> :15, 23-37 -> :30, 38-52 -> :45, 53-59 -> :00 (next hour)
+  /// Kept for backward compatibility - now returns exact time
+  @Deprecated('Use DateTime.now() directly for exact time')
   static DateTime roundToNearest15Minutes(DateTime dateTime) {
-    final minutes = dateTime.minute;
-    int roundedMinutes;
-    int hourAdjustment = 0;
-
-    if (minutes < 8) {
-      roundedMinutes = 0;
-    } else if (minutes < 23) {
-      roundedMinutes = 15;
-    } else if (minutes < 38) {
-      roundedMinutes = 30;
-    } else if (minutes < 53) {
-      roundedMinutes = 45;
-    } else {
-      roundedMinutes = 0;
-      hourAdjustment = 1;
-    }
-
-    return DateTime(
-      dateTime.year,
-      dateTime.month,
-      dateTime.day,
-      dateTime.hour + hourAdjustment,
-      roundedMinutes,
-    );
+    return dateTime;
   }
 
   void setDates(DateTime checkIn, DateTime checkOut) {
     // Enforce invariant: check-out must be after check-in
     DateTime adjustedCheckOut = checkOut;
-    if (checkOut.isBefore(checkIn) || checkOut.isAtSameMomentAs(checkIn) ||
-        (checkOut.year == checkIn.year && checkOut.month == checkIn.month && checkOut.day == checkIn.day)) {
+    if (checkOut.isBefore(checkIn) ||
+        checkOut.isAtSameMomentAs(checkIn) ||
+        (checkOut.year == checkIn.year &&
+            checkOut.month == checkIn.month &&
+            checkOut.day == checkIn.day)) {
       // Auto-adjust check-out to next day, preserving time
       adjustedCheckOut = DateTime(
         checkIn.year,
@@ -212,14 +218,17 @@ class NewBookingNotifier extends StateNotifier<NewBookingState> {
     state = state.copyWith(checkIn: checkIn, checkOut: adjustedCheckOut);
   }
 
-  /// Sets check-in to current time (rounded to 15 minutes)
+  /// Sets check-in to current time (exact, no rounding)
   void setCheckInToNow() {
-    final now = roundToNearest15Minutes(DateTime.now());
+    final now = DateTime.now();
     DateTime checkOut = state.checkOut;
-    
+
     // Auto-adjust check-out if it becomes invalid
-    if (checkOut.isBefore(now) || checkOut.isAtSameMomentAs(now) ||
-        (checkOut.year == now.year && checkOut.month == now.month && checkOut.day == now.day)) {
+    if (checkOut.isBefore(now) ||
+        checkOut.isAtSameMomentAs(now) ||
+        (checkOut.year == now.year &&
+            checkOut.month == now.month &&
+            checkOut.day == now.day)) {
       checkOut = DateTime(
         now.year,
         now.month,
@@ -228,7 +237,7 @@ class NewBookingNotifier extends StateNotifier<NewBookingState> {
         state.checkOut.minute,
       );
     }
-    
+
     state = state.copyWith(checkIn: now, checkOut: checkOut);
   }
 
@@ -266,9 +275,14 @@ class NewBookingNotifier extends StateNotifier<NewBookingState> {
       state.checkOut.minute,
     );
     // Only update if the new date is valid (on or after check-in date)
-    final checkInDate = DateTime(state.checkIn.year, state.checkIn.month, state.checkIn.day);
+    final checkInDate = DateTime(
+      state.checkIn.year,
+      state.checkIn.month,
+      state.checkIn.day,
+    );
     final newCheckOutDate = DateTime(date.year, date.month, date.day);
-    if (!newCheckOutDate.isBefore(checkInDate) && !newCheckOutDate.isAtSameMomentAs(checkInDate)) {
+    if (!newCheckOutDate.isBefore(checkInDate) &&
+        !newCheckOutDate.isAtSameMomentAs(checkInDate)) {
       state = state.copyWith(checkOut: newCheckOut);
     }
   }
@@ -288,7 +302,7 @@ class NewBookingNotifier extends StateNotifier<NewBookingState> {
   void setGuestCount(int count) {
     // Adjust guests list when count changes
     List<Customer?> newGuests = List.from(state.guests);
-    
+
     if (count > newGuests.length) {
       // Add null placeholders for new guests
       while (newGuests.length < count) {
@@ -298,18 +312,18 @@ class NewBookingNotifier extends StateNotifier<NewBookingState> {
       // Remove extra guests
       newGuests = newGuests.sublist(0, count);
     }
-    
+
     state = state.copyWith(guestCount: count, guests: newGuests);
   }
 
   void setGuest(int index, Customer guest) {
     List<Customer?> newGuests = List.from(state.guests);
-    
+
     // Ensure list is long enough
     while (newGuests.length <= index) {
       newGuests.add(null);
     }
-    
+
     newGuests[index] = guest;
     state = state.copyWith(guests: newGuests);
   }
@@ -319,7 +333,7 @@ class NewBookingNotifier extends StateNotifier<NewBookingState> {
     if (state.selectedRooms.any((r) => r.roomId == room.roomId)) {
       return;
     }
-    
+
     final newRooms = [...state.selectedRooms, room];
     state = state.copyWith(
       selectedRooms: newRooms,
@@ -328,7 +342,9 @@ class NewBookingNotifier extends StateNotifier<NewBookingState> {
   }
 
   void removeRoom(String roomId) {
-    final newRooms = state.selectedRooms.where((r) => r.roomId != roomId).toList();
+    final newRooms = state.selectedRooms
+        .where((r) => r.roomId != roomId)
+        .toList();
     state = state.copyWith(
       selectedRooms: newRooms,
       totalAmount: _calculateTotal(newRooms),
@@ -353,16 +369,22 @@ class NewBookingNotifier extends StateNotifier<NewBookingState> {
 
   double _calculateTotal(List<SelectedRoom> rooms) {
     double total = 0;
-    final nights = state.numberOfNights;
     for (final room in rooms) {
-      total += room.pricePerNight * nights;
+      final result = TariffCalculator.calculate(
+        checkIn: state.checkIn,
+        checkOut: state.checkOut,
+        tariffDurationHours: room.tariffDurationHours,
+        tariffAmount: room.tariffAmount,
+        gracePeriodHours: room.gracePeriodHours,
+      );
+      total += result.totalAmount;
     }
     return total;
   }
 
   void reset() {
     state = NewBookingState(
-      checkIn: roundToNearest15Minutes(DateTime.now()),
+      checkIn: DateTime.now(),
       checkOut: _createDefaultCheckOut(),
     );
   }
@@ -371,5 +393,5 @@ class NewBookingNotifier extends StateNotifier<NewBookingState> {
 /// Provider for new booking state
 final newBookingProvider =
     StateNotifierProvider<NewBookingNotifier, NewBookingState>((ref) {
-  return NewBookingNotifier();
-});
+      return NewBookingNotifier();
+    });

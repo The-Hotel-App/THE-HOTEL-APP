@@ -96,18 +96,28 @@ Extended user information beyond auth.users.
 
 Room type definitions for pricing and capacity.
 
-| Column          | Type        | Description           | Default              |
-| --------------- | ----------- | --------------------- | -------------------- |
-| `id`            | uuid        | Primary key           | `uuid_generate_v4()` |
-| `hotel_id`      | uuid        | Reference to hotels   | Required             |
-| `name`          | text        | Room type name        | Required             |
-| `base_price`    | numeric     | Base price per night  | `0`                  |
-| `max_occupancy` | integer     | Maximum guests        | `2`                  |
-| `description`   | text        | Room type description | NULL                 |
-| `created_at`    | timestamptz | Creation timestamp    | `now()`              |
-| `updated_at`    | timestamptz | Last update timestamp | `now()`              |
+| Column                  | Type        | Description                              | Default              |
+| ----------------------- | ----------- | ---------------------------------------- | -------------------- |
+| `id`                    | uuid        | Primary key                              | `uuid_generate_v4()` |
+| `hotel_id`              | uuid        | Reference to hotels                      | Required             |
+| `name`                  | text        | Room type name                           | Required             |
+| `base_price`            | numeric     | Base price per night (legacy)            | `0`                  |
+| `max_occupancy`         | integer     | Maximum guests                           | `2`                  |
+| `description`           | text        | Room type description                    | NULL                 |
+| `tariff_duration_hours` | integer     | Fixed billing period in hours (e.g., 24) | `24`                 |
+| `tariff_amount`         | numeric     | Price for one tariff cycle               | `0`                  |
+| `grace_period_hours`    | numeric     | Extra hours before next tariff applies   | `2`                  |
+| `created_at`            | timestamptz | Creation timestamp                       | `now()`              |
+| `updated_at`            | timestamptz | Last update timestamp                    | `now()`              |
+
+**Tariff-Based Pricing:**
+- Each room type has a tariff duration (e.g., 24 hours for service apartments)
+- Guests pay the tariff amount for any stay within the tariff duration
+- Grace period allows extra time after tariff expires before the next tariff applies
+- If guest exceeds grace period, the next tariff cycle is charged
 
 ---
+
 
 #### **rooms**
 
