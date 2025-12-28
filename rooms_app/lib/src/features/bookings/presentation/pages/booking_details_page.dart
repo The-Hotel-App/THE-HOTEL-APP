@@ -1003,37 +1003,6 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
     );
   }
 
-  Widget _buildCollectPaymentButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton.icon(
-        onPressed: () async {
-          final collectedAmount = await CollectPaymentDialog.show(
-            context,
-            _booking,
-          );
-          if (collectedAmount != null && collectedAmount > 0) {
-            // Update UI immediately with the collected amount
-            _updatePayment(collectedAmount);
-          }
-        },
-        icon: const Icon(Icons.add_card, size: 22),
-        label: Text(
-          'Collect ₹${_booking.pendingAmount.toStringAsFixed(0)}',
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.success,
-          foregroundColor: AppColors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          elevation: 2,
-        ),
-      ),
-    );
-  }
 
   /// Tariff timeline visualization card
   Widget _buildTariffTimelineCard() {
