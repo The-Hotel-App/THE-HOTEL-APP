@@ -6,7 +6,6 @@
 /// - tariffAmount: Price for one tariff cycle
 /// - gracePeriodHours: Extra time allowed before next tariff applies
 
-
 /// Status of the current stay relative to tariff
 enum TariffStatus {
   /// Within the tariff duration - normal billing
@@ -119,21 +118,25 @@ class TariffCalculator {
     required double gracePeriodHours,
   }) {
     final stayDuration = checkOut.difference(checkIn);
-    final stayMinutes = stayDuration.inMinutes;
-    final stayHours = stayMinutes / 60.0;
+    // Guard against negative duration (e.g., timezone issues causing checkIn to appear in future)
+    final stayMinutes = stayDuration.inMinutes < 0 ? 0 : stayDuration.inMinutes;
 
     final tariffMinutes = tariffDurationHours * 60;
     final graceMinutes = (gracePeriodHours * 60).round();
-    final tariffWithGraceMinutes = tariffMinutes + graceMinutes;
 
     // Calculate number of tariff cycles needed
+    // Each cycle is: tariff duration, then grace period before next cycle kicks in
     int cycles = 1;
-    int minutesAccountedFor = tariffWithGraceMinutes;
+    int currentCycleStart = 0;
+    int currentCycleEnd = tariffMinutes;
+    int currentGraceEnd = tariffMinutes + graceMinutes;
 
-    while (stayMinutes > minutesAccountedFor) {
+    // Keep adding cycles until we've accounted for all stay time
+    while (stayMinutes > currentGraceEnd) {
       cycles++;
-      minutesAccountedFor +=
-          tariffMinutes; // Each additional cycle adds tariff duration
+      currentCycleStart = currentGraceEnd;
+      currentCycleEnd = currentCycleStart + tariffMinutes;
+      currentGraceEnd = currentCycleEnd + graceMinutes;
     }
 
     // Determine status based on position within current cycle
@@ -142,35 +145,23 @@ class TariffCalculator {
     Duration tariffTimeRemaining = Duration.zero;
     double hoursIntoCurrentCycle = 0;
 
-    if (stayMinutes <= tariffMinutes) {
-      // Within first tariff period
+    if (stayMinutes <= currentCycleEnd) {
+      // Within the tariff period of current cycle
       status = TariffStatus.withinTariff;
-      tariffTimeRemaining = Duration(minutes: tariffMinutes - stayMinutes);
-      hoursIntoCurrentCycle = stayHours;
-    } else if (stayMinutes <= tariffWithGraceMinutes) {
-      // First tariff exceeded, but within grace
-      status = TariffStatus.inGracePeriod;
-      gracePeriodRemaining = Duration(
-        minutes: tariffWithGraceMinutes - stayMinutes,
-      );
-      hoursIntoCurrentCycle = stayHours - tariffDurationHours;
+      final minutesIntoCycle = stayMinutes - currentCycleStart;
+      tariffTimeRemaining = Duration(minutes: currentCycleEnd - stayMinutes);
+      hoursIntoCurrentCycle = minutesIntoCycle / 60.0;
     } else {
-      // Grace exceeded - additional tariffs applied
+      // In grace period of current cycle
+      status = TariffStatus.inGracePeriod;
+      gracePeriodRemaining = Duration(minutes: currentGraceEnd - stayMinutes);
+      final minutesIntoCycle = stayMinutes - currentCycleStart;
+      hoursIntoCurrentCycle = minutesIntoCycle / 60.0;
+    }
+
+    // If we've exceeded the first cycle's grace, mark as next tariff applied
+    if (cycles > 1) {
       status = TariffStatus.nextTariffApplied;
-
-      // Calculate position within current (non-first) cycle
-      final minutesAfterFirst = stayMinutes - tariffWithGraceMinutes;
-      final cyclesAfterFirst = (minutesAfterFirst / tariffMinutes).ceil();
-      final minutesIntoCurrentCycle =
-          minutesAfterFirst - ((cyclesAfterFirst - 1) * tariffMinutes);
-      hoursIntoCurrentCycle = minutesIntoCurrentCycle / 60.0;
-
-      // Time remaining in current cycle
-      if (minutesIntoCurrentCycle < tariffMinutes) {
-        tariffTimeRemaining = Duration(
-          minutes: tariffMinutes - minutesIntoCurrentCycle,
-        );
-      }
     }
 
     return TariffResult(

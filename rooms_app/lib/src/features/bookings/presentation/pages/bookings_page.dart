@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/routing/app_router.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers.dart';
 import 'package:rooms/src/features/bookings/domain/entities/booking.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/booking_details_page.dart';
@@ -89,6 +90,25 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
             const Text(
               'No bookings yet',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Create your first booking to get started',
+              style: TextStyle(fontSize: 14, color: AppColors.grey600),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => context.push(AppRoutes.bookingSearch),
+              icon: const Icon(Icons.add),
+              label: const Text('New Booking'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
           ],
         ),

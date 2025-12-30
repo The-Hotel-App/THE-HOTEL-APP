@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/logging/app_logger.dart';
 import 'package:rooms/src/core/utils/tariff_calculator.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/bookings/data/repositories/supabase_booking_repository.dart';
 import 'package:rooms/src/features/bookings/domain/entities/booking.dart';
 import 'package:rooms/src/features/bookings/presentation/providers/booking_providers.dart';
 import 'package:rooms/src/features/bookings/presentation/widgets/collect_payment_dialog.dart';
+import 'package:rooms/src/features/bookings/presentation/widgets/tariff_timeline_popup.dart';
 import 'package:rooms/src/features/rooms/data/repositories/rooms_repository.dart';
 
 /// Full-page booking details view
@@ -354,12 +356,16 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
               roomId: _booking.roomId,
               roomNumber: _booking.roomNumber,
               roomPrice: _booking.totalAmount,
+              // Use loaded tariff values instead of defaults
+              tariffDurationHours: _tariffDurationHours,
+              tariffAmount: _tariffAmount,
+              gracePeriodHours: _gracePeriodHours,
             ),
           ];
 
     // Single room - show as full-width card
     if (rooms.length == 1) {
-      return _buildRoomTariffCard(rooms.first);
+      return _buildTappableRoomCard(rooms.first);
     }
 
     // Multiple rooms - horizontally scrollable with intrinsic height
@@ -378,12 +384,123 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                 margin: EdgeInsets.only(
                   right: index < rooms.length - 1 ? 12 : 0,
                 ),
-                child: _buildRoomTariffCard(room),
+                child: _buildTappableRoomCard(room),
               );
             }).toList(),
           ),
         ),
       ),
+    );
+  }
+
+  /// Wraps room card with tap gesture to show timeline popup
+  Widget _buildTappableRoomCard(BookingRoom room) {
+    // Only make tappable for checked-in bookings
+    if (_booking.status != BookingStatus.checkedIn) {
+      return _buildRoomTariffCard(room);
+    }
+
+    // Use room-specific tariff values
+    final roomTariffDuration = room.tariffDurationHours;
+    final roomTariffAmount = room.tariffAmount > 0
+        ? room.tariffAmount
+        : room.roomPrice;
+    final roomGracePeriod = room.gracePeriodHours;
+
+    // Booking times are already in local time from repository
+    final checkIn = _booking.checkIn;
+    final now = DateTime.now();
+    final checkOut = _booking.checkOut;
+
+    // Debug logging
+    final elapsed = now.difference(checkIn);
+    AppLogger.info('=== TARIFF CALC DEBUG (Card) ===', tag: 'TariffCalc');
+    AppLogger.info('CheckIn: $checkIn, isUtc: ${checkIn.isUtc}', tag: 'TariffCalc');
+    AppLogger.info('Now: $now', tag: 'TariffCalc');
+    AppLogger.info('Elapsed: ${elapsed.inMinutes} minutes (${elapsed.inHours}h ${elapsed.inMinutes % 60}m)', tag: 'TariffCalc');
+    AppLogger.info('Tariff Duration: ${roomTariffDuration}h', tag: 'TariffCalc');
+    AppLogger.info('================================', tag: 'TariffCalc');
+
+    final currentResult = TariffCalculator.calculate(
+      checkIn: checkIn,
+      checkOut: now,
+      tariffDurationHours: roomTariffDuration,
+      tariffAmount: roomTariffAmount,
+      gracePeriodHours: roomGracePeriod,
+    );
+
+    final expectedResult = TariffCalculator.calculate(
+      checkIn: checkIn,
+      checkOut: checkOut,
+      tariffDurationHours: roomTariffDuration,
+      tariffAmount: roomTariffAmount,
+      gracePeriodHours: roomGracePeriod,
+    );
+
+    AppLogger.info('Current cycles: ${currentResult.cycles}, Status: ${currentResult.status}', tag: 'TariffCalc');
+
+    // Create a booking copy for the popup (times are already local)
+    final localBooking = _booking;
+
+    return GestureDetector(
+      onTap: () => TariffTimelinePopup.show(
+        context,
+        booking: localBooking,
+        room: room,
+        currentResult: currentResult,
+        expectedResult: expectedResult,
+      ),
+      child: Stack(
+        children: [
+          _buildRoomTariffCard(room),
+          // Tap indicator
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.info.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.timeline,
+                    size: 12,
+                    color: AppColors.info,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Tap for details',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppColors.info,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show the tariff timeline popup
+  void _showTariffTimeline(
+    BookingRoom room,
+    TariffResult currentResult,
+    TariffResult expectedResult,
+  ) {
+    TariffTimelinePopup.show(
+      context,
+      booking: _booking,
+      room: room,
+      currentResult: currentResult,
+      expectedResult: expectedResult,
     );
   }
 
@@ -407,17 +524,22 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
     IconData tariffStatusIcon = Icons.schedule;
 
     if (_booking.status == BookingStatus.checkedIn) {
+      // Times are already in local timezone from repository
+      final checkIn = _booking.checkIn;
+      final now = DateTime.now();
+      final checkOut = _booking.checkOut;
+
       currentResult = TariffCalculator.calculate(
-        checkIn: _booking.checkIn,
-        checkOut: DateTime.now(),
+        checkIn: checkIn,
+        checkOut: now,
         tariffDurationHours: roomTariffDuration,
         tariffAmount: roomTariffAmount,
         gracePeriodHours: roomGracePeriod,
       );
 
       expectedResult = TariffCalculator.calculate(
-        checkIn: _booking.checkIn,
-        checkOut: _booking.checkOut,
+        checkIn: checkIn,
+        checkOut: checkOut,
         tariffDurationHours: roomTariffDuration,
         tariffAmount: roomTariffAmount,
         gracePeriodHours: roomGracePeriod,
