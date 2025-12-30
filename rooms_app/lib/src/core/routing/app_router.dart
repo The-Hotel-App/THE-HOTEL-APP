@@ -14,6 +14,8 @@ import 'package:rooms/src/features/bookings/presentation/pages/bookings_page.dar
 import 'package:rooms/src/features/bookings/presentation/pages/new_booking_page.dart';
 import 'package:rooms/src/features/checkout/presentation/pages/checkout_flow_page.dart';
 import 'package:rooms/src/features/customers/presentation/pages/customers_page.dart';
+import 'package:rooms/src/features/customers/presentation/pages/guest_details_page.dart';
+import 'package:rooms/src/features/customers/domain/entities/customer.dart';
 import 'package:rooms/src/features/dashboards/presentation/pages/kitchen_dashboard_page.dart';
 import 'package:rooms/src/features/dashboards/presentation/pages/manager_dashboard_page.dart';
 import 'package:rooms/src/features/dashboards/presentation/pages/owner_dashboard_page.dart';
@@ -63,6 +65,7 @@ class AppRoutes {
   static const String addExistingStaff = '/add-existing-staff';
   static const String roomTypes = '/room-types';
   static const String roomsManagement = '/rooms-management';
+  static const String guestDetails = '/guest-details';
 }
 
 // NOTE: We intentionally do NOT use refreshListenable tied to auth state.
@@ -391,6 +394,31 @@ final routerProvider = Provider<GoRouter>((ref) {
           },
           transitionDuration: const Duration(milliseconds: 200),
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.guestDetails,
+        pageBuilder: (context, state) {
+          final customer = state.extra as Customer;
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: GuestDetailsPage(customer: customer),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+                  const begin = Offset(1.0, 0.0);
+                  const end = Offset.zero;
+                  const curve = Curves.easeInOut;
+                  final tween = Tween(
+                    begin: begin,
+                    end: end,
+                  ).chain(CurveTween(curve: curve));
+                  return SlideTransition(
+                    position: animation.drive(tween),
+                    child: child,
+                  );
+                },
+            transitionDuration: const Duration(milliseconds: 200),
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.daybook,

@@ -100,7 +100,7 @@ class SupabaseBookingRepository implements BookingRepository {
       final response = await _client
           .from('booking_rooms')
           .select(
-            'room_id, room_price, rooms(room_number, status, room_types(name))',
+            'room_id, room_price, rooms(room_number, status, room_type_id, room_types(name, tariff_duration_hours, tariff_amount, grace_period_hours))',
           )
           .eq('booking_id', bookingId);
 
@@ -113,6 +113,12 @@ class SupabaseBookingRepository implements BookingRepository {
           roomPrice: (json['room_price'] as num?)?.toDouble() ?? 0,
           roomTypeName: roomTypeData?['name'] as String?,
           roomStatus: roomData?['status'] as String?,
+          tariffDurationHours:
+              roomTypeData?['tariff_duration_hours'] as int? ?? 24,
+          tariffAmount:
+              (roomTypeData?['tariff_amount'] as num?)?.toDouble() ?? 0,
+          gracePeriodHours:
+              (roomTypeData?['grace_period_hours'] as num?)?.toDouble() ?? 2,
         );
       }).toList();
     } catch (e) {

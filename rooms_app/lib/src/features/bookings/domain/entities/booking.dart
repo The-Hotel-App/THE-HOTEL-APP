@@ -48,12 +48,20 @@ class BookingRoom {
   final String? roomTypeName;
   final String? roomStatus;
 
+  // Tariff settings per room type
+  final int tariffDurationHours;
+  final double tariffAmount;
+  final double gracePeriodHours;
+
   const BookingRoom({
     required this.roomId,
     required this.roomNumber,
     required this.roomPrice,
     this.roomTypeName,
     this.roomStatus,
+    this.tariffDurationHours = 24,
+    this.tariffAmount = 0,
+    this.gracePeriodHours = 2,
   });
 }
 

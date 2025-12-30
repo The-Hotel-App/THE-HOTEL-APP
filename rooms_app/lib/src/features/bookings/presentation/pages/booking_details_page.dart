@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/utils/tariff_calculator.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
@@ -112,6 +111,9 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
     final hasPendingPayment =
         !_booking.isFullyPaid && _booking.pendingAmount > 0;
 
+    final isCheckedIn = _booking.status == BookingStatus.checkedIn;
+    final showFloatingButtons = isCheckedIn && _tariffLoaded;
+
     return Scaffold(
       backgroundColor: AppColors.grey100,
       appBar: AppBar(
@@ -124,58 +126,67 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
         title: const Text('Booking Details'),
         actions: const [],
       ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Card
-              _buildHeaderCard(statusColor),
-              const SizedBox(height: 20),
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: _refresh,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                // Add bottom padding to prevent content from being hidden behind floating buttons
+                bottom: showFloatingButtons ? 100 : 32,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Card
+                  _buildHeaderCard(statusColor),
+                  const SizedBox(height: 20),
 
-              // Rooms Section
-              _buildSectionTitle('Rooms', Icons.bed),
-              const SizedBox(height: 12),
-              _buildRoomsSection(statusColor),
-              const SizedBox(height: 20),
+                  // Merged Rooms & Tariff Section (horizontally scrollable)
+                  _buildSectionTitle('Rooms & Tariff', Icons.bed),
+                  const SizedBox(height: 12),
+                  _buildRoomsAndTariffSection(),
+                  const SizedBox(height: 20),
 
-              // Guests Section
-              _buildSectionTitle('Guests', Icons.people),
-              const SizedBox(height: 12),
-              _buildGuestsSection(),
-              const SizedBox(height: 20),
+                  // Guests Section
+                  _buildSectionTitle('Guests', Icons.people),
+                  const SizedBox(height: 12),
+                  _buildGuestsSection(),
+                  const SizedBox(height: 20),
 
-              // Stay Details Section
-              _buildSectionTitle('Stay Details', Icons.calendar_today),
-              const SizedBox(height: 12),
-              _buildStayDetailsCard(),
-              const SizedBox(height: 20),
+                  // Stay Details Section
+                  _buildSectionTitle('Stay Details', Icons.calendar_today),
+                  const SizedBox(height: 12),
+                  _buildStayDetailsCard(),
+                  const SizedBox(height: 20),
 
-              // Tariff Timeline Section (for checked-in bookings)
-              if (_tariffLoaded &&
-                  _booking.status == BookingStatus.checkedIn) ...[
-                _buildSectionTitle('Tariff Cycles', Icons.timeline),
-                const SizedBox(height: 12),
-                _buildTariffTimelineCard(),
-                const SizedBox(height: 20),
-              ],
+                  // Payment Section
+                  _buildSectionTitle('Payment', Icons.payment),
+                  const SizedBox(height: 12),
+                  _buildPaymentCard(),
 
-              // Payment Section
-              _buildSectionTitle('Payment', Icons.payment),
-              const SizedBox(height: 12),
-              _buildPaymentCard(),
-
-              // Action Buttons Section
-              const SizedBox(height: 24),
-              _buildActionButtons(hasPendingPayment),
-
-              const SizedBox(height: 32),
-            ],
+                  // Payment action button (non-floating)
+                  if (hasPendingPayment) ...[
+                    const SizedBox(height: 24),
+                    _buildPaymentActionButton(),
+                  ],
+                ],
+              ),
+            ),
           ),
-        ),
+          // Floating action buttons at the bottom
+          if (showFloatingButtons)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 24,
+              child: _buildFloatingActionButtons(),
+            ),
+        ],
       ),
     );
   }
@@ -334,7 +345,8 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
     );
   }
 
-  Widget _buildRoomsSection(Color statusColor) {
+  /// Merged Rooms & Tariff section - horizontally scrollable
+  Widget _buildRoomsAndTariffSection() {
     final rooms = _booking.rooms.isNotEmpty
         ? _booking.rooms
         : [
@@ -345,22 +357,98 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
             ),
           ];
 
-    return Column(
-      children: rooms.map((room) => _buildRoomCard(room, statusColor)).toList(),
+    // Single room - show as full-width card
+    if (rooms.length == 1) {
+      return _buildRoomTariffCard(rooms.first);
+    }
+
+    // Multiple rooms - horizontally scrollable with intrinsic height
+    return SizedBox(
+      height: null, // Let content determine height
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: rooms.asMap().entries.map((entry) {
+              final index = entry.key;
+              final room = entry.value;
+              return Container(
+                width: 300,
+                margin: EdgeInsets.only(
+                  right: index < rooms.length - 1 ? 12 : 0,
+                ),
+                child: _buildRoomTariffCard(room),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildRoomCard(BookingRoom room, Color statusColor) {
+  /// Combined room info + tariff card
+  Widget _buildRoomTariffCard(BookingRoom room) {
     final roomStatusColor = _getRoomStatusColor(room.roomStatus);
     final roomStatusText = _getRoomStatusText(room.roomStatus);
+    final statusColor = _getStatusColor(_booking.status);
+
+    // Use room-specific tariff values
+    final roomTariffDuration = room.tariffDurationHours;
+    final roomTariffAmount = room.tariffAmount > 0
+        ? room.tariffAmount
+        : room.roomPrice;
+    final roomGracePeriod = room.gracePeriodHours;
+
+    // Calculate tariff if booking is checked in
+    TariffResult? currentResult;
+    TariffResult? expectedResult;
+    Color tariffStatusColor = AppColors.grey400;
+    IconData tariffStatusIcon = Icons.schedule;
+
+    if (_booking.status == BookingStatus.checkedIn) {
+      currentResult = TariffCalculator.calculate(
+        checkIn: _booking.checkIn,
+        checkOut: DateTime.now(),
+        tariffDurationHours: roomTariffDuration,
+        tariffAmount: roomTariffAmount,
+        gracePeriodHours: roomGracePeriod,
+      );
+
+      expectedResult = TariffCalculator.calculate(
+        checkIn: _booking.checkIn,
+        checkOut: _booking.checkOut,
+        tariffDurationHours: roomTariffDuration,
+        tariffAmount: roomTariffAmount,
+        gracePeriodHours: roomGracePeriod,
+      );
+
+      switch (currentResult.status) {
+        case TariffStatus.withinTariff:
+          tariffStatusColor = AppColors.success;
+          tariffStatusIcon = Icons.check_circle;
+          break;
+        case TariffStatus.inGracePeriod:
+          tariffStatusColor = AppColors.warning;
+          tariffStatusIcon = Icons.schedule;
+          break;
+        case TariffStatus.nextTariffApplied:
+          tariffStatusColor = AppColors.error;
+          tariffStatusIcon = Icons.warning_amber;
+          break;
+      }
+    }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.grey200),
+        border: Border.all(
+          color: currentResult != null
+              ? tariffStatusColor.withValues(alpha: 0.3)
+              : AppColors.grey200,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -369,50 +457,45 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: statusColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Text(
-                room.roomNumber,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
+          // Room header
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Room ${room.roomNumber}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                if (room.roomTypeName != null)
-                  Text(
-                    room.roomTypeName!,
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
+                child: Center(
+                  child: Text(
+                    room.roomNumber,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
                   ),
-                const SizedBox(height: 6),
-                Row(
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (room.roomTypeName != null)
+                      Text(
+                        room.roomTypeName!,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -433,29 +516,286 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '₹${room.roomPrice.toStringAsFixed(0)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: AppColors.success,
-                ),
-              ),
-              Text(
-                'total',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
               ),
             ],
           ),
+          const SizedBox(height: 12),
+
+          // Tariff rate info (using room-specific values)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.grey100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.attach_money, size: 14, color: AppColors.grey600),
+                const SizedBox(width: 6),
+                Text(
+                  '₹${roomTariffAmount.toStringAsFixed(0)} / ${roomTariffDuration}h',
+                  style: TextStyle(
+                    color: AppColors.grey600,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.timer_outlined, size: 14, color: AppColors.grey500),
+                const SizedBox(width: 4),
+                Text(
+                  '+${roomGracePeriod.toStringAsFixed(0)}h grace',
+                  style: TextStyle(color: AppColors.grey500, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+
+          // Tariff visualization (only for checked-in bookings)
+          if (currentResult != null && expectedResult != null) ...[
+            const SizedBox(height: 12),
+
+            // Status banner
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: tariffStatusColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                children: [
+                  Icon(tariffStatusIcon, color: tariffStatusColor, size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      currentResult.statusMessage,
+                      style: TextStyle(
+                        color: tariffStatusColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Cycle segments visualization
+            _buildCompactTimelineSegments(currentResult, expectedResult),
+            const SizedBox(height: 10),
+
+            // Cycle summary
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${currentResult.cycles} cycle${currentResult.cycles > 1 ? 's' : ''}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Text(
+                      'Stay: ${currentResult.formattedDuration}',
+                      style: TextStyle(color: AppColors.grey600, fontSize: 11),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '₹${currentResult.totalAmount.toStringAsFixed(0)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: tariffStatusColor,
+                      ),
+                    ),
+                    if (expectedResult.cycles != currentResult.cycles)
+                      Text(
+                        'Expected: ₹${expectedResult.totalAmount.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          color: AppColors.grey500,
+                          fontSize: 10,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ] else ...[
+            // For non-checked-in bookings, just show price
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Room Total',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  '₹${room.roomPrice.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: AppColors.success,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  /// Compact timeline segments for card view - horizontally scrollable
+  Widget _buildCompactTimelineSegments(
+    TariffResult current,
+    TariffResult expected,
+  ) {
+    final maxCycles = expected.cycles > current.cycles
+        ? expected.cycles
+        : current.cycles;
+
+    // Fixed width per segment ensures text doesn't overlap
+    const double segmentWidth = 28.0;
+    const double segmentSpacing = 2.0;
+
+    // Calculate if we need scrolling (more than 8 cycles for typical card width)
+    final needsScroll = maxCycles > 8;
+
+    Widget buildSegments() {
+      return Row(
+        mainAxisSize: needsScroll ? MainAxisSize.min : MainAxisSize.max,
+        children: List.generate(maxCycles, (index) {
+          final cycleNum = index + 1;
+          final isCompleted = cycleNum < current.cycles;
+          final isCurrent = cycleNum == current.cycles;
+
+          Color segmentColor;
+          if (isCompleted) {
+            segmentColor = AppColors.success;
+          } else if (isCurrent) {
+            switch (current.status) {
+              case TariffStatus.withinTariff:
+                segmentColor = AppColors.info;
+                break;
+              case TariffStatus.inGracePeriod:
+                segmentColor = AppColors.warning;
+                break;
+              case TariffStatus.nextTariffApplied:
+                segmentColor = AppColors.error;
+                break;
+            }
+          } else {
+            segmentColor = AppColors.grey200;
+          }
+
+          return Container(
+            width: needsScroll ? segmentWidth : null,
+            margin: EdgeInsets.only(
+              right: index < maxCycles - 1 ? segmentSpacing : 0,
+            ),
+            decoration: BoxDecoration(
+              color: segmentColor,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Center(
+              child: Text(
+                '$cycleNum',
+                style: TextStyle(
+                  color: segmentColor == AppColors.grey200
+                      ? AppColors.grey500
+                      : Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+          );
+        }),
+      );
+    }
+
+    // Wrap with Expanded for non-scrolling, or build scrollable container
+    if (needsScroll) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: SizedBox(
+          height: 24,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: buildSegments(),
+          ),
+        ),
+      );
+    } else {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: SizedBox(
+          height: 24,
+          child: Row(
+            children: List.generate(maxCycles, (index) {
+              final cycleNum = index + 1;
+              final isCompleted = cycleNum < current.cycles;
+              final isCurrent = cycleNum == current.cycles;
+
+              Color segmentColor;
+              if (isCompleted) {
+                segmentColor = AppColors.success;
+              } else if (isCurrent) {
+                switch (current.status) {
+                  case TariffStatus.withinTariff:
+                    segmentColor = AppColors.info;
+                    break;
+                  case TariffStatus.inGracePeriod:
+                    segmentColor = AppColors.warning;
+                    break;
+                  case TariffStatus.nextTariffApplied:
+                    segmentColor = AppColors.error;
+                    break;
+                }
+              } else {
+                segmentColor = AppColors.grey200;
+              }
+
+              return Expanded(
+                child: Container(
+                  margin: EdgeInsets.only(
+                    right: index < maxCycles - 1 ? segmentSpacing : 0,
+                  ),
+                  decoration: BoxDecoration(
+                    color: segmentColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$cycleNum',
+                      style: TextStyle(
+                        color: segmentColor == AppColors.grey200
+                            ? AppColors.grey500
+                            : Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildGuestsSection() {
@@ -1003,323 +1343,88 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
     );
   }
 
-
-  /// Tariff timeline visualization card
-  Widget _buildTariffTimelineCard() {
-    final result = TariffCalculator.calculate(
-      checkIn: _booking.checkIn,
-      checkOut: DateTime.now(), // Calculate based on current time for live view
-      tariffDurationHours: _tariffDurationHours,
-      tariffAmount: _tariffAmount,
-      gracePeriodHours: _gracePeriodHours,
-    );
-
-    // Calculate expected total if checkout now
-    final expectedResult = TariffCalculator.calculate(
-      checkIn: _booking.checkIn,
-      checkOut: _booking.checkOut,
-      tariffDurationHours: _tariffDurationHours,
-      tariffAmount: _tariffAmount,
-      gracePeriodHours: _gracePeriodHours,
-    );
-
-    // Get status color
-    Color statusColor;
-    IconData statusIcon;
-    switch (result.status) {
-      case TariffStatus.withinTariff:
-        statusColor = AppColors.success;
-        statusIcon = Icons.check_circle;
-        break;
-      case TariffStatus.inGracePeriod:
-        statusColor = AppColors.warning;
-        statusIcon = Icons.schedule;
-        break;
-      case TariffStatus.nextTariffApplied:
-        statusColor = AppColors.error;
-        statusIcon = Icons.warning_amber;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Current status banner
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(statusIcon, color: statusColor, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    result.statusMessage,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Tariff rate info
-          Row(
-            children: [
-              Icon(Icons.attach_money, size: 16, color: AppColors.grey600),
-              const SizedBox(width: 8),
-              Text(
-                'Rate: ₹${_tariffAmount.toStringAsFixed(0)} per ${_tariffDurationHours}h',
-                style: TextStyle(color: AppColors.grey600, fontSize: 13),
-              ),
-              const Spacer(),
-              Text(
-                'Grace: ${_gracePeriodHours}h',
-                style: TextStyle(color: AppColors.grey500, fontSize: 12),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Timeline visualization
-          _buildTimelineSegments(result, expectedResult),
-          const SizedBox(height: 16),
-
-          // Cycle info
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Current: ${result.cycles} cycle${result.cycles > 1 ? 's' : ''}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  Text(
-                    'Stay: ${result.formattedDuration}',
-                    style: TextStyle(color: AppColors.grey600, fontSize: 12),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '₹${result.totalAmount.toStringAsFixed(0)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: statusColor,
-                    ),
-                  ),
-                  if (expectedResult.cycles != result.cycles)
-                    Text(
-                      'Expected: ₹${expectedResult.totalAmount.toStringAsFixed(0)}',
-                      style: TextStyle(color: AppColors.grey500, fontSize: 11),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build timeline segments showing cycles
-  Widget _buildTimelineSegments(TariffResult current, TariffResult expected) {
-    final maxCycles = expected.cycles > current.cycles
-        ? expected.cycles
-        : current.cycles;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.login, size: 14, color: AppColors.grey600),
-            const SizedBox(width: 4),
-            Text(
-              DateFormat('d MMM, h:mm a').format(_booking.checkIn),
-              style: TextStyle(fontSize: 11, color: AppColors.grey600),
-            ),
-            const Spacer(),
-            Icon(Icons.logout, size: 14, color: AppColors.grey600),
-            const SizedBox(width: 4),
-            Text(
-              DateFormat('d MMM, h:mm a').format(_booking.checkOut),
-              style: TextStyle(fontSize: 11, color: AppColors.grey600),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-
-        // Cycle segments
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: SizedBox(
-            height: 32,
-            child: Row(
-              children: List.generate(maxCycles, (index) {
-                final cycleNum = index + 1;
-                final isCompleted = cycleNum < current.cycles;
-                final isCurrent = cycleNum == current.cycles;
-
-                Color segmentColor;
-                if (isCompleted) {
-                  segmentColor = AppColors.success;
-                } else if (isCurrent) {
-                  switch (current.status) {
-                    case TariffStatus.withinTariff:
-                      segmentColor = AppColors.info;
-                      break;
-                    case TariffStatus.inGracePeriod:
-                      segmentColor = AppColors.warning;
-                      break;
-                    case TariffStatus.nextTariffApplied:
-                      segmentColor = AppColors.error;
-                      break;
-                  }
-                } else {
-                  segmentColor = AppColors.grey200;
-                }
-
-                return Expanded(
-                  child: Container(
-                    margin: EdgeInsets.only(
-                      right: index < maxCycles - 1 ? 2 : 0,
-                    ),
-                    decoration: BoxDecoration(color: segmentColor),
-                    child: Center(
-                      child: Text(
-                        '$cycleNum',
-                        style: TextStyle(
-                          color: segmentColor == AppColors.grey200
-                              ? AppColors.grey500
-                              : Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ),
-          ),
-        ),
-
-        // Legend row
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildLegendItem(AppColors.success, 'Completed'),
-            const SizedBox(width: 12),
-            _buildLegendItem(AppColors.info, 'Current'),
-            const SizedBox(width: 12),
-            _buildLegendItem(AppColors.grey200, 'Expected'),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLegendItem(Color color, String label) {
+  /// Floating action buttons for Extend Stay and Checkout
+  Widget _buildFloatingActionButtons() {
     return Row(
       children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
+        // Extend Stay button
+        Expanded(
+          child: _buildFloatingButton(
+            icon: Icons.more_time,
+            label: 'Extend',
+            color: AppColors.info,
+            onPressed: _navigateToExtendStay,
           ),
         ),
-        const SizedBox(width: 4),
-        Text(label, style: TextStyle(fontSize: 10, color: AppColors.grey600)),
+        const SizedBox(width: 12),
+        // Checkout button
+        Expanded(
+          child: _buildFloatingButton(
+            icon: Icons.logout,
+            label: 'Checkout',
+            color: AppColors.warning,
+            onPressed: _performCheckout,
+          ),
+        ),
       ],
     );
   }
 
-  /// Action buttons section
-  Widget _buildActionButtons(bool hasPendingPayment) {
-    final isCheckedIn = _booking.status == BookingStatus.checkedIn;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Primary actions for checked-in bookings
-        if (isCheckedIn && _tariffLoaded) ...[
-          Row(
-            children: [
-              // Extend Stay button
-              Expanded(
-                child: _buildActionButton(
-                  icon: Icons.more_time,
-                  label: 'Extend Stay',
-                  color: AppColors.info,
-                  onPressed: _navigateToExtendStay,
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Checkout button
-              Expanded(
-                child: _buildActionButton(
-                  icon: Icons.logout,
-                  label: 'Checkout',
-                  color: AppColors.warning,
-                  onPressed: _performCheckout,
-                ),
-              ),
-            ],
+  /// Build a floating action button with shadow
+  Widget _buildFloatingButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.4),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
-          const SizedBox(height: 12),
         ],
-
-        // Payment action - always show if pending
-        if (hasPendingPayment)
-          _buildActionButton(
-            icon: Icons.payment,
-            label: 'Collect ₹${_booking.pendingAmount.toStringAsFixed(0)}',
-            color: AppColors.success,
-            onPressed: () async {
-              final collectedAmount = await CollectPaymentDialog.show(
-                context,
-                _booking,
-              );
-              if (collectedAmount != null && collectedAmount > 0) {
-                _updatePayment(collectedAmount);
-              }
-            },
-            isFullWidth: true,
+      ),
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 22),
+        label: Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
-      ],
+          elevation: 0,
+          minimumSize: const Size(double.infinity, 56),
+        ),
+      ),
+    );
+  }
+
+  /// Payment action button (non-floating)
+  Widget _buildPaymentActionButton() {
+    return _buildActionButton(
+      icon: Icons.payment,
+      label: 'Collect ₹${_booking.pendingAmount.toStringAsFixed(0)}',
+      color: AppColors.success,
+      onPressed: () async {
+        final collectedAmount = await CollectPaymentDialog.show(
+          context,
+          _booking,
+        );
+        if (collectedAmount != null && collectedAmount > 0) {
+          _updatePayment(collectedAmount);
+        }
+      },
+      isFullWidth: true,
     );
   }
 

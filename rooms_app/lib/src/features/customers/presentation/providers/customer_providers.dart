@@ -77,3 +77,25 @@ final customerByIdProvider = FutureProvider.family<Customer?, String>((
   final repo = ref.watch(customerRepositoryProvider);
   return repo.getCustomerById(customerId);
 });
+
+/// Provider for customer's booking history
+final customerBookingsProvider = FutureProvider.family<List<dynamic>, String>((
+  ref,
+  customerId,
+) async {
+  final client =
+      ref.watch(supabaseCustomerRepositoryProvider)
+          as SupabaseCustomerRepository;
+  return client.getBookingsForCustomer(customerId);
+});
+
+/// Provider for co-guests who have shared bookings with a customer
+final customerCoGuestsProvider = FutureProvider.family<List<Customer>, String>((
+  ref,
+  customerId,
+) async {
+  final repo =
+      ref.watch(supabaseCustomerRepositoryProvider)
+          as SupabaseCustomerRepository;
+  return repo.getCoGuests(customerId);
+});

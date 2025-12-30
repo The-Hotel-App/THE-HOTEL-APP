@@ -220,6 +220,12 @@ class _GuestFormState extends ConsumerState<_GuestForm>
   bool _isProcessingOcr = false;
   String? _idImagePath;
 
+  // Guest search related
+  final _searchController = TextEditingController();
+  List<Customer> _searchResults = [];
+  bool _isSearching = false;
+  bool _showSearchResults = false;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -252,8 +258,53 @@ class _GuestFormState extends ConsumerState<_GuestForm>
     _idNumberController.dispose();
     _ageController.dispose();
     _addressController.dispose();
+    _searchController.dispose();
     _ocrService.dispose();
     super.dispose();
+  }
+
+  Future<void> _searchGuests(String query) async {
+    if (query.length < 2) {
+      setState(() {
+        _searchResults = [];
+        _showSearchResults = false;
+      });
+      return;
+    }
+
+    setState(() => _isSearching = true);
+
+    try {
+      final hotel = ref.read(currentHotelProvider);
+      if (hotel == null) return;
+
+      final repo = ref.read(supabaseCustomerRepositoryProvider);
+      final results = await repo.searchCustomers(hotel.hotelId, query);
+
+      setState(() {
+        _searchResults = results;
+        _showSearchResults = results.isNotEmpty;
+        _isSearching = false;
+      });
+    } catch (e) {
+      setState(() => _isSearching = false);
+    }
+  }
+
+  void _populateFromGuest(Customer guest) {
+    setState(() {
+      _nameController.text = guest.name;
+      _phoneController.text = guest.phone;
+      _emailController.text = guest.email ?? '';
+      _idNumberController.text = guest.idNumber;
+      _ageController.text = guest.age?.toString() ?? '';
+      _addressController.text = guest.address ?? '';
+      _selectedGender = guest.gender;
+      _selectedIdType = guest.idType;
+      _searchController.clear();
+      _searchResults = [];
+      _showSearchResults = false;
+    });
   }
 
   Future<void> _saveGuest() async {
@@ -370,6 +421,12 @@ class _GuestFormState extends ConsumerState<_GuestForm>
                   ],
                 ),
               ),
+
+            // Guest Search Section - Only show if not already saved
+            if (!_isSaved) ...[
+              _buildGuestSearchSection(),
+              const SizedBox(height: 16),
+            ],
 
             // Personal Details Section
             _buildSectionCard(
@@ -491,6 +548,156 @@ class _GuestFormState extends ConsumerState<_GuestForm>
             const SizedBox(height: 100), // Space for bottom bar
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildGuestSearchSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.search, color: AppColors.info, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Returning Guest?',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.info,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _searchController,
+            onChanged: _searchGuests,
+            decoration: InputDecoration(
+              hintText: 'Search by name, phone, or email...',
+              hintStyle: TextStyle(color: AppColors.grey400, fontSize: 14),
+              prefixIcon: Icon(
+                Icons.person_search,
+                color: AppColors.grey500,
+                size: 20,
+              ),
+              suffixIcon: _isSearching
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.clear, color: AppColors.grey500),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _searchResults = [];
+                          _showSearchResults = false;
+                        });
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: AppColors.grey100,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+            ),
+          ),
+          if (_showSearchResults && _searchResults.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 200),
+              decoration: BoxDecoration(
+                color: AppColors.grey100,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.grey200),
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: _searchResults.length,
+                separatorBuilder: (_, _) =>
+                    Divider(height: 1, color: AppColors.grey200),
+                itemBuilder: (context, index) {
+                  final guest = _searchResults[index];
+                  return ListTile(
+                    dense: true,
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: guest.gender == Gender.male
+                            ? AppColors.info.withValues(alpha: 0.15)
+                            : AppColors.error.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          guest.name.isNotEmpty
+                              ? guest.name[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            color: guest.gender == Gender.male
+                                ? AppColors.info
+                                : AppColors.error,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      guest.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    subtitle: Text(
+                      guest.phone,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    trailing: Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: AppColors.grey400,
+                    ),
+                    onTap: () => _populateFromGuest(guest),
+                  );
+                },
+              ),
+            ),
+          ],
+          if (_searchController.text.length >= 2 &&
+              !_isSearching &&
+              _searchResults.isEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'No matching guests found',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+          ],
+        ],
       ),
     );
   }
