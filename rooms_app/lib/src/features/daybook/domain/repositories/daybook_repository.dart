@@ -42,4 +42,11 @@ abstract class DayBookRepository {
   /// Also updates the closing balance by the same difference.
   /// Only owners should be allowed to update opening balance.
   Future<void> updateOpeningBalance(String daybookId, double newOpeningBalance);
+
+  /// Get daybook summary for a specific date (historical viewing)
+  ///
+  /// Returns null if no daybook exists for that date.
+  /// Does NOT create a new daybook (unlike getTodaySummary).
+  /// Used for viewing historical records in read-only mode.
+  Future<DayBookSummary?> getSummaryForDate(String hotelId, DateTime date);
 }

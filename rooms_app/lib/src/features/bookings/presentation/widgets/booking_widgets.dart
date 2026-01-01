@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
+import 'package:rooms/src/core/utils/tariff_calculator.dart';
 import 'package:rooms/src/features/bookings/domain/entities/booking.dart';
 import 'package:rooms/src/features/bookings/presentation/widgets/collect_payment_dialog.dart';
 
@@ -141,13 +142,15 @@ class BookingCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 12),
                             Icon(
-                              Icons.nights_stay,
+                              Icons.schedule,
                               size: 14,
                               color: AppColors.textSecondary,
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${booking.stayDuration} nights',
+                              TariffCalculator.formatDuration(
+                                booking.checkOut.difference(booking.checkIn),
+                              ),
                               style: TextStyle(
                                 color: AppColors.textSecondary,
                                 fontSize: 12,
@@ -649,9 +652,11 @@ class BookingDetailsSheet extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _buildDetailRow(
-            Icons.nights_stay,
+            Icons.schedule,
             'Duration',
-            '${booking.stayDuration} night(s)',
+            TariffCalculator.formatDuration(
+              booking.checkOut.difference(booking.checkIn),
+            ),
           ),
           const SizedBox(height: 12),
           _buildDetailRow(

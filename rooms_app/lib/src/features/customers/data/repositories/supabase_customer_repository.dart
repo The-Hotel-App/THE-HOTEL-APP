@@ -212,6 +212,164 @@ class SupabaseCustomerRepository implements CustomerRepository {
         return IdType.other;
     }
   }
+
+  /// Get all bookings for a customer
+  Future<List<Map<String, dynamic>>> getBookingsForCustomer(
+    String customerId,
+  ) async {
+    try {
+      AppLogger.debug(
+        'Fetching bookings for guest: $customerId',
+        tag: 'Customers',
+      );
+
+      // Get bookings where this guest is the primary guest
+      final bookingsResponse = await _client
+          .from('bookings')
+          .select('''
+            id,
+            room_id,
+            check_in,
+            check_out,
+            total_amount,
+            amount_paid,
+            status,
+            booking_source,
+            created_at,
+            rooms!bookings_room_id_fkey(room_number, room_type_id, room_types(name))
+          ''')
+          .eq('guest_id', customerId)
+          .order('check_in', ascending: false);
+
+      // Also get bookings where this guest is in booking_guests table
+      final bookingGuestsResponse = await _client
+          .from('booking_guests')
+          .select('''
+            booking_id,
+            is_primary,
+            bookings(
+              id,
+              room_id,
+              check_in,
+              check_out,
+              total_amount,
+              amount_paid,
+              status,
+              booking_source,
+              created_at,
+              rooms!bookings_room_id_fkey(room_number, room_type_id, room_types(name))
+            )
+          ''')
+          .eq('guest_id', customerId);
+
+      // Combine and deduplicate bookings
+      final allBookings = <String, Map<String, dynamic>>{};
+
+      for (final booking in bookingsResponse as List) {
+        allBookings[booking['id'] as String] = booking;
+      }
+
+      for (final bg in bookingGuestsResponse as List) {
+        final booking = bg['bookings'];
+        if (booking != null) {
+          allBookings[booking['id'] as String] = booking;
+        }
+      }
+
+      final result = allBookings.values.toList();
+      AppLogger.success(
+        'Found ${result.length} bookings for guest',
+        tag: 'Customers',
+      );
+      return result;
+    } catch (e) {
+      AppLogger.error(
+        'Error fetching bookings for guest',
+        tag: 'Customers',
+        error: e,
+      );
+      return [];
+    }
+  }
+
+  /// Get all co-guests (guests who have shared bookings with this customer)
+  Future<List<Customer>> getCoGuests(String customerId) async {
+    try {
+      AppLogger.debug('Fetching co-guests for: $customerId', tag: 'Customers');
+
+      // Get all booking IDs where this guest was involved
+      final bookingIdsFromPrimary = await _client
+          .from('bookings')
+          .select('id')
+          .eq('guest_id', customerId);
+
+      final bookingIdsFromGuests = await _client
+          .from('booking_guests')
+          .select('booking_id')
+          .eq('guest_id', customerId);
+
+      final allBookingIds = <String>{};
+      for (final b in bookingIdsFromPrimary as List) {
+        allBookingIds.add(b['id'] as String);
+      }
+      for (final bg in bookingIdsFromGuests as List) {
+        allBookingIds.add(bg['booking_id'] as String);
+      }
+
+      if (allBookingIds.isEmpty) {
+        return [];
+      }
+
+      // Get all guest IDs from these bookings (excluding current customer)
+      final coGuestIds = <String>{};
+
+      // From booking_guests table
+      for (final bookingId in allBookingIds) {
+        final guestsResponse = await _client
+            .from('booking_guests')
+            .select('guest_id')
+            .eq('booking_id', bookingId)
+            .neq('guest_id', customerId);
+
+        for (final g in guestsResponse as List) {
+          coGuestIds.add(g['guest_id'] as String);
+        }
+      }
+
+      // From bookings table (primary guest)
+      for (final bookingId in allBookingIds) {
+        final bookingResponse = await _client
+            .from('bookings')
+            .select('guest_id')
+            .eq('id', bookingId)
+            .neq('guest_id', customerId)
+            .maybeSingle();
+
+        if (bookingResponse != null) {
+          coGuestIds.add(bookingResponse['guest_id'] as String);
+        }
+      }
+
+      if (coGuestIds.isEmpty) {
+        return [];
+      }
+
+      // Fetch all co-guest details
+      final coGuests = <Customer>[];
+      for (final guestId in coGuestIds) {
+        final guest = await getCustomerById(guestId);
+        if (guest != null) {
+          coGuests.add(guest);
+        }
+      }
+
+      AppLogger.success('Found ${coGuests.length} co-guests', tag: 'Customers');
+      return coGuests;
+    } catch (e) {
+      AppLogger.error('Error fetching co-guests', tag: 'Customers', error: e);
+      return [];
+    }
+  }
 }
 
 /// Provider for Supabase customer repository

@@ -125,6 +125,8 @@ class RoomType {
   final double basePrice;
   final int maxOccupancy;
   final String? description;
+  final double tariffAmount;
+  final int tariffDurationHours;
 
   const RoomType({
     required this.id,
@@ -133,16 +135,21 @@ class RoomType {
     required this.basePrice,
     required this.maxOccupancy,
     this.description,
-  });
+    double? tariffAmount,
+    this.tariffDurationHours = 24,
+  }) : tariffAmount = tariffAmount ?? basePrice;
 
   factory RoomType.fromJson(Map<String, dynamic> json) {
+    final basePrice = (json['base_price'] as num).toDouble();
     return RoomType(
       id: json['id'] as String,
       hotelId: json['hotel_id'] as String,
       name: json['name'] as String,
-      basePrice: (json['base_price'] as num).toDouble(),
+      basePrice: basePrice,
       maxOccupancy: json['max_occupancy'] as int,
       description: json['description'] as String?,
+      tariffAmount: (json['tariff_amount'] as num?)?.toDouble() ?? basePrice,
+      tariffDurationHours: json['tariff_duration_hours'] as int? ?? 24,
     );
   }
 
@@ -154,6 +161,8 @@ class RoomType {
       'base_price': basePrice,
       'max_occupancy': maxOccupancy,
       'description': description,
+      'tariff_amount': tariffAmount,
+      'tariff_duration_hours': tariffDurationHours,
     };
   }
 
@@ -164,6 +173,8 @@ class RoomType {
     double? basePrice,
     int? maxOccupancy,
     String? description,
+    double? tariffAmount,
+    int? tariffDurationHours,
   }) {
     return RoomType(
       id: id ?? this.id,
@@ -172,6 +183,8 @@ class RoomType {
       basePrice: basePrice ?? this.basePrice,
       maxOccupancy: maxOccupancy ?? this.maxOccupancy,
       description: description ?? this.description,
+      tariffAmount: tariffAmount ?? this.tariffAmount,
+      tariffDurationHours: tariffDurationHours ?? this.tariffDurationHours,
     );
   }
 }

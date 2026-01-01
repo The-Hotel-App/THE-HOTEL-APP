@@ -14,6 +14,54 @@ final dayBookRepositoryProvider = Provider<DayBookRepository>((ref) {
 /// Provider for current daybook ID (set when summary is loaded)
 final currentDaybookIdProvider = StateProvider<String?>((ref) => null);
 
+/// Provider for selected date in daybook view (defaults to today)
+final selectedDateProvider = StateProvider<DateTime>((ref) {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day);
+});
+
+/// Helper to check if selected date is today
+bool isSameDay(DateTime a, DateTime b) {
+  return a.year == b.year && a.month == b.month && a.day == b.day;
+}
+
+/// Provider to check if selected date is today
+final isSelectedDateTodayProvider = Provider<bool>((ref) {
+  final selectedDate = ref.watch(selectedDateProvider);
+  final now = DateTime.now();
+  return isSameDay(selectedDate, now);
+});
+
+/// Provider for daybook summary based on selected date
+/// Returns null if no daybook exists for historical dates
+final dayBookSummaryProvider = FutureProvider<DayBookSummary?>((ref) async {
+  final repo = ref.watch(dayBookRepositoryProvider);
+  final hotelId = ref.watch(selectedHotelIdProvider);
+  final selectedDate = ref.watch(selectedDateProvider);
+  final isToday = ref.watch(isSelectedDateTodayProvider);
+
+  if (hotelId == null) {
+    return null;
+  }
+
+  AppLogger.debug(
+    'Fetching daybook for date: $selectedDate, isToday: $isToday',
+    tag: 'DayBook',
+  );
+
+  if (isToday) {
+    // Use getTodaySummary which creates if not exists
+    final summary = await repo.getTodaySummary(hotelId);
+    ref.read(currentDaybookIdProvider.notifier).state = summary.id;
+    return summary;
+  } else {
+    // Use getSummaryForDate which returns null if not exists
+    final summary = await repo.getSummaryForDate(hotelId, selectedDate);
+    ref.read(currentDaybookIdProvider.notifier).state = summary?.id;
+    return summary;
+  }
+});
+
 /// Provider for today's day book summary - with realtime updates
 final todayDayBookProvider = StreamProvider<DayBookSummary>((ref) {
   final repo = ref.watch(dayBookRepositoryProvider);

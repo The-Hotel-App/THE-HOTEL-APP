@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/widgets/custom_dialog.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/booking_guests_page.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/booking_payment_page.dart';
 import 'package:rooms/src/features/bookings/presentation/pages/booking_rooms_page.dart';
 import 'package:rooms/src/features/bookings/presentation/providers/new_booking_providers.dart';
+import 'package:rooms/src/features/bookings/presentation/widgets/stay_dates_section.dart';
 
 /// New Booking Page - Hub for the booking flow
 class NewBookingPage extends ConsumerStatefulWidget {
@@ -18,11 +18,6 @@ class NewBookingPage extends ConsumerStatefulWidget {
 }
 
 class _NewBookingPageState extends ConsumerState<NewBookingPage> {
-  /// Format date to short format like "24 Dec"
-  String _formatShortDate(DateTime date) {
-    return DateFormat('d MMM').format(date);
-  }
-
   @override
   void initState() {
     super.initState();
@@ -52,8 +47,8 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Stay Dates Section
-            _buildDatesSection(bookingState),
+            // Stay Dates Section - New improved UI with time support
+            const StayDatesSection(),
             const SizedBox(height: 16),
             // Number of Guests Section
             _buildGuestsSection(bookingState),
@@ -85,105 +80,6 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
               isEnabled:
                   bookingState.allGuestsFilled && bookingState.hasRoomsSelected,
               onTap: () => _navigateToPayment(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDatesSection(NewBookingState state) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Stay Dates',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: _buildDateCard('Check In', state.checkIn, true)),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                child: Icon(Icons.arrow_forward, color: AppColors.grey400),
-              ),
-              Expanded(
-                child: _buildDateCard('Check Out', state.checkOut, false),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '${state.numberOfNights} ${state.numberOfNights == 1 ? 'Night' : 'Nights'}',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateCard(String label, DateTime date, bool isCheckIn) {
-    return InkWell(
-      onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: date,
-          firstDate: isCheckIn
-              ? DateTime.now()
-              : ref.read(newBookingProvider).checkIn,
-          lastDate: DateTime.now().add(const Duration(days: 365)),
-        );
-        if (picked != null) {
-          final notifier = ref.read(newBookingProvider.notifier);
-          if (isCheckIn) {
-            var checkOut = ref.read(newBookingProvider).checkOut;
-            if (checkOut.isBefore(picked) ||
-                checkOut.isAtSameMomentAs(picked)) {
-              checkOut = picked.add(const Duration(days: 1));
-            }
-            notifier.setDates(picked, checkOut);
-          } else {
-            notifier.setDates(ref.read(newBookingProvider).checkIn, picked);
-          }
-        }
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.grey100,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(fontSize: 11, color: AppColors.grey600),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              _formatShortDate(date),
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
           ],
         ),

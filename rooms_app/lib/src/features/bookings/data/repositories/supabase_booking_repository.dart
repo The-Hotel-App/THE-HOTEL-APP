@@ -64,6 +64,45 @@ class SupabaseBookingRepository implements BookingRepository {
     // Fetch all guests for this booking
     final guestsData = await _fetchBookingGuests(bookingId);
 
+    // Parse times - the database stores LOCAL times but with +00:00 suffix (incorrect)
+    // We need to extract just the date/time components and treat them as local
+    final checkInRaw = json['check_in'] as String;
+    final checkOutRaw = json['check_out'] as String;
+    
+    // Parse the datetime - this will be marked as UTC due to +00:00 suffix
+    final checkInParsed = DateTime.parse(checkInRaw);
+    final checkOutParsed = DateTime.parse(checkOutRaw);
+    
+    // IMPORTANT: The DB stores local time with wrong +00:00 suffix
+    // Extract the components and create a LOCAL DateTime (don't convert!)
+    final checkIn = DateTime(
+      checkInParsed.year,
+      checkInParsed.month,
+      checkInParsed.day,
+      checkInParsed.hour,
+      checkInParsed.minute,
+      checkInParsed.second,
+      checkInParsed.millisecond,
+      checkInParsed.microsecond,
+    );
+    final checkOut = DateTime(
+      checkOutParsed.year,
+      checkOutParsed.month,
+      checkOutParsed.day,
+      checkOutParsed.hour,
+      checkOutParsed.minute,
+      checkOutParsed.second,
+      checkOutParsed.millisecond,
+      checkOutParsed.microsecond,
+    );
+    
+    AppLogger.info('=== BOOKING TIME DEBUG ===', tag: 'BookingRepo');
+    AppLogger.info('Booking ID: $bookingId', tag: 'BookingRepo');
+    AppLogger.info('CheckIn (raw from DB): $checkInRaw', tag: 'BookingRepo');
+    AppLogger.info('CheckIn (final local): $checkIn, isUtc: ${checkIn.isUtc}', tag: 'BookingRepo');
+    AppLogger.info('Now: ${DateTime.now()}', tag: 'BookingRepo');
+    AppLogger.info('==========================', tag: 'BookingRepo');
+
     return Booking(
       id: bookingId,
       hotelId: json['hotel_id'] as String,
@@ -73,8 +112,8 @@ class SupabaseBookingRepository implements BookingRepository {
       customerName: guest?['name'] as String? ?? 'Guest',
       customerPhone: guest?['phone'] as String?,
       customerEmail: guest?['email'] as String?,
-      checkIn: DateTime.parse(json['check_in'] as String),
-      checkOut: DateTime.parse(json['check_out'] as String),
+      checkIn: checkIn,
+      checkOut: checkOut,
       guestCount: json['number_of_guests'] as int? ?? 1,
       totalAmount: totalAmount,
       paidAmount: paidAmount,
@@ -100,7 +139,7 @@ class SupabaseBookingRepository implements BookingRepository {
       final response = await _client
           .from('booking_rooms')
           .select(
-            'room_id, room_price, rooms(room_number, status, room_types(name))',
+            'room_id, room_price, rooms(room_number, status, room_type_id, room_types(name, tariff_duration_hours, tariff_amount, grace_period_hours))',
           )
           .eq('booking_id', bookingId);
 
@@ -113,6 +152,12 @@ class SupabaseBookingRepository implements BookingRepository {
           roomPrice: (json['room_price'] as num?)?.toDouble() ?? 0,
           roomTypeName: roomTypeData?['name'] as String?,
           roomStatus: roomData?['status'] as String?,
+          tariffDurationHours:
+              roomTypeData?['tariff_duration_hours'] as int? ?? 24,
+          tariffAmount:
+              (roomTypeData?['tariff_amount'] as num?)?.toDouble() ?? 0,
+          gracePeriodHours:
+              (roomTypeData?['grace_period_hours'] as num?)?.toDouble() ?? 2,
         );
       }).toList();
     } catch (e) {
@@ -317,6 +362,7 @@ class SupabaseBookingRepository implements BookingRepository {
             'hotel_id': booking.hotelId,
             'guest_id': booking.customerId,
             'room_id': booking.roomId,
+            // Store times as local ISO strings (no UTC conversion)
             'check_in': booking.checkIn.toIso8601String(),
             'check_out': booking.checkOut.toIso8601String(),
             'number_of_guests': booking.guestCount,
@@ -348,6 +394,7 @@ class SupabaseBookingRepository implements BookingRepository {
       await _client
           .from('bookings')
           .update({
+            // Store times as local ISO strings (no UTC conversion)
             'check_in': booking.checkIn.toIso8601String(),
             'check_out': booking.checkOut.toIso8601String(),
             'number_of_guests': booking.guestCount,
@@ -359,6 +406,41 @@ class SupabaseBookingRepository implements BookingRepository {
       AppLogger.success('Booking updated', tag: 'Bookings');
     } catch (e) {
       AppLogger.error('Error updating booking', tag: 'Bookings', error: e);
+      rethrow;
+    }
+  }
+
+  /// Update specific booking fields without requiring full booking object
+  /// Useful for extending stays, updating checkout times, etc.
+  Future<void> updateBookingFields({
+    required String bookingId,
+    DateTime? checkIn,
+    DateTime? checkOut,
+    double? totalAmount,
+    double? paidAmount,
+    int? guestCount,
+  }) async {
+    try {
+      final updates = <String, dynamic>{};
+      // Store times as local ISO strings (no UTC conversion)
+      if (checkIn != null)
+        updates['check_in'] = checkIn.toIso8601String();
+      if (checkOut != null)
+        updates['check_out'] = checkOut.toIso8601String();
+      if (totalAmount != null) updates['total_amount'] = totalAmount;
+      if (paidAmount != null) updates['amount_paid'] = paidAmount;
+      if (guestCount != null) updates['number_of_guests'] = guestCount;
+
+      if (updates.isEmpty) return;
+
+      await _client.from('bookings').update(updates).eq('id', bookingId);
+      AppLogger.success('Booking fields updated', tag: 'Bookings');
+    } catch (e) {
+      AppLogger.error(
+        'Error updating booking fields',
+        tag: 'Bookings',
+        error: e,
+      );
       rethrow;
     }
   }

@@ -335,4 +335,79 @@ class SupabaseDayBookRepository implements DayBookRepository {
       rethrow;
     }
   }
+
+  @override
+  Future<DayBookSummary?> getSummaryForDate(String hotelId, DateTime date) async {
+    try {
+      final targetDate = _startOfDay(date);
+      final dateStr = _formatDate(targetDate);
+
+      AppLogger.debug(
+        'Fetching daybook for hotel: $hotelId, date: $dateStr',
+        tag: 'DayBook',
+      );
+
+      // Try to get existing daybook for the specified date
+      final daybookResponse = await _client
+          .from('daybooks')
+          .select()
+          .eq('hotel_id', hotelId)
+          .eq('date', dateStr)
+          .maybeSingle();
+
+      // Return null if no daybook exists for this date
+      if (daybookResponse == null) {
+        AppLogger.debug('No daybook found for date: $dateStr', tag: 'DayBook');
+        return null;
+      }
+
+      final daybookId = daybookResponse['id'] as String;
+      final openingBalance =
+          (daybookResponse['opening_balance'] as num).toDouble();
+
+      // Fetch transactions for this daybook
+      final transactionsResponse = await _client
+          .from('daybook_transactions')
+          .select()
+          .eq('daybook_id', daybookId)
+          .order('created_at', ascending: false);
+
+      final transactions = (transactionsResponse as List)
+          .map((json) => Transaction.fromJson(json))
+          .toList();
+
+      // Calculate totals
+      double totalIncome = 0;
+      double totalExpense = 0;
+
+      for (final t in transactions) {
+        if (t.type == TransactionType.income) {
+          totalIncome += t.amount;
+        } else {
+          totalExpense += t.amount;
+        }
+      }
+
+      AppLogger.success(
+        'Fetched historical daybook: ${transactions.length} transactions',
+        tag: 'DayBook',
+      );
+
+      return DayBookSummary(
+        id: daybookId,
+        date: targetDate,
+        openingBalance: openingBalance,
+        totalIncome: totalIncome,
+        totalExpense: totalExpense,
+        transactions: transactions,
+      );
+    } catch (e) {
+      AppLogger.error(
+        'Error fetching daybook for date',
+        tag: 'DayBook',
+        error: e,
+      );
+      rethrow;
+    }
+  }
 }

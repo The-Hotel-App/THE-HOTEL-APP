@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:rooms/src/core/constants/app_colors.dart';
 import 'package:rooms/src/core/services/supabase_service.dart';
+import 'package:rooms/src/core/utils/tariff_calculator.dart';
 import 'package:rooms/src/features/auth/presentation/providers/auth_providers_new.dart';
 import 'package:rooms/src/features/auth/presentation/providers/biometric_providers.dart';
 import 'package:rooms/src/features/bookings/domain/entities/booking.dart';
@@ -75,6 +77,23 @@ class _BookingPaymentPageState extends ConsumerState<BookingPaymentPage> {
   }
 
   Widget _buildSummaryCard(NewBookingState state) {
+    final dateTimeFormat = DateFormat('dd MMM, hh:mm a');
+    final timeFormat = DateFormat('hh:mm a');
+
+    // Calculate checkout deadline (without next tariff)
+    DateTime? checkoutDeadline;
+    double? gracePeriodHours;
+    if (state.selectedRooms.isNotEmpty) {
+      final firstRoom = state.selectedRooms.first;
+      gracePeriodHours = firstRoom.gracePeriodHours;
+      checkoutDeadline = state.checkIn.add(
+        Duration(
+          hours: firstRoom.tariffDurationHours,
+          minutes: (gracePeriodHours * 60).round(),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -85,36 +104,157 @@ class _BookingPaymentPageState extends ConsumerState<BookingPaymentPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Booking Summary',
+            'Stay Details',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          _buildSummaryRow(
-            'Check In',
-            '${state.checkIn.day}/${state.checkIn.month}/${state.checkIn.year}',
+          // Check-in with date and time
+          _buildDetailRow(
+            icon: Icons.login,
+            label: 'Check In',
+            value: dateTimeFormat.format(state.checkIn),
+            color: AppColors.success,
           ),
-          _buildSummaryRow(
-            'Check Out',
-            '${state.checkOut.day}/${state.checkOut.month}/${state.checkOut.year}',
+          const SizedBox(height: 12),
+          // Check-out with date and time
+          _buildDetailRow(
+            icon: Icons.logout,
+            label: 'Check Out',
+            value: dateTimeFormat.format(state.checkOut),
+            color: AppColors.error,
           ),
-          _buildSummaryRow('Nights', '${state.numberOfNights}'),
-          _buildSummaryRow('Guests', '${state.guestCount}'),
-          _buildSummaryRow('Rooms', '${state.selectedRooms.length}'),
+          const SizedBox(height: 12),
+          const Divider(),
+          const SizedBox(height: 12),
+          // Stay duration
+          _buildDetailRow(
+            icon: Icons.schedule,
+            label: 'Stay Duration',
+            value: state.formattedDuration,
+            color: AppColors.info,
+          ),
+          const SizedBox(height: 12),
+          // Guests and Rooms
+          Row(
+            children: [
+              Expanded(
+                child: _buildDetailRow(
+                  icon: Icons.people,
+                  label: 'Guests',
+                  value: '${state.guestCount}',
+                  color: AppColors.grey600,
+                ),
+              ),
+              Expanded(
+                child: _buildDetailRow(
+                  icon: Icons.bed,
+                  label: 'Rooms',
+                  value: '${state.selectedRooms.length}',
+                  color: AppColors.grey600,
+                ),
+              ),
+            ],
+          ),
+          // Checkout deadline info
+          if (checkoutDeadline != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.warning.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 18,
+                        color: AppColors.warning,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Checkout Deadline',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.warning,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'To avoid extra tariff, checkout by:',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${DateFormat('dd MMM yyyy').format(checkoutDeadline)} at ${timeFormat.format(checkoutDeadline)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  if (gracePeriodHours != null && gracePeriodHours > 0) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '(includes ${gracePeriodHours.toStringAsFixed(0)}h grace period)',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildSummaryRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: TextStyle(color: AppColors.textSecondary)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
-        ],
-      ),
+  Widget _buildDetailRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 16, color: color),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+            ),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -128,52 +268,127 @@ class _BookingPaymentPageState extends ConsumerState<BookingPaymentPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Room Details',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Room Charges',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.info.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  state.formattedDuration,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.info,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          ...state.selectedRooms.map(
-            (room) => Padding(
+          ...state.selectedRooms.map((room) {
+            // Calculate tariff for this room
+            final tariffResult = TariffCalculator.calculate(
+              checkIn: state.checkIn,
+              checkOut: state.checkOut,
+              tariffDurationHours: room.tariffDurationHours,
+              tariffAmount: room.tariffAmount,
+              gracePeriodHours: room.gracePeriodHours,
+            );
+
+            return Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.grey100,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.bed, color: AppColors.grey600),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.grey100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Row(
                       children: [
-                        Text(
-                          'Room ${room.roomNumber}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.bed, color: AppColors.black),
                         ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Room ${room.roomNumber}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                room.roomTypeName ?? 'Standard',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '₹${tariffResult.totalAmount.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              '${tariffResult.cycles} × ₹${room.tariffAmount.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
                         Text(
-                          room.roomTypeName ?? 'Standard',
+                          '${tariffResult.cycles} tariff ${tariffResult.cycles == 1 ? 'cycle' : 'cycles'} (₹${room.tariffAmount.toStringAsFixed(0)} per ${room.tariffDurationHours}h)',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             color: AppColors.textSecondary,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  Text(
-                    '₹${(room.pricePerNight * state.numberOfNights).toStringAsFixed(0)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          }),
           const Divider(),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

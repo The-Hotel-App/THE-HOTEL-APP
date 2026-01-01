@@ -157,8 +157,10 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
           children: [
             const SizedBox(height: 4),
             Text(
-              '₹${roomType.basePrice.toStringAsFixed(0)}/night • Max ${roomType.maxOccupancy} guests',
+              '₹${roomType.tariffAmount.toStringAsFixed(0)} for ${roomType.tariffDurationHours}h',
+              style: const TextStyle(fontWeight: FontWeight.w500),
             ),
+
             if (roomType.description != null &&
                 roomType.description!.isNotEmpty)
               Text(
@@ -229,6 +231,16 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
     final descriptionController = TextEditingController(
       text: roomType?.description ?? '',
     );
+    // Tariff fields
+    final tariffDurationController = TextEditingController(
+      text: roomType?.tariffDurationHours.toString() ?? '24',
+    );
+    final tariffAmountController = TextEditingController(
+      text: roomType?.tariffAmount.toStringAsFixed(0) ?? '',
+    );
+    final gracePeriodController = TextEditingController(
+      text: roomType?.gracePeriodHours.toString() ?? '2',
+    );
     final formKey = GlobalKey<FormState>();
     bool isSaving = false;
 
@@ -242,33 +254,60 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextFormField(
                     controller: nameController,
                     decoration: const InputDecoration(
                       labelText: 'Name',
-                      hintText: 'Deluxe, Suite...',
+                      hintText: 'Deluxe, Suite, Service Apartment...',
                     ),
                     validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: priceController,
-                    decoration: const InputDecoration(
-                      labelText: 'Price/Night (₹)',
-                      hintText: '1500',
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: TextFormField(
+                          controller: tariffDurationController,
+                          decoration: const InputDecoration(
+                            labelText: 'Duration',
+                            hintText: '24',
+                            suffixText: 'hr',
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (v) =>
+                              v?.isEmpty ?? true ? 'Required' : null,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 3,
+                        child: TextFormField(
+                          controller: tariffAmountController,
+                          decoration: const InputDecoration(
+                            labelText: 'Amount (₹)',
+                            hintText: '2500',
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (v) =>
+                              v?.isEmpty ?? true ? 'Required' : null,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
-                    controller: occupancyController,
+                    controller: gracePeriodController,
                     decoration: const InputDecoration(
-                      labelText: 'Max Guests',
+                      labelText: 'Grace Period (hours)',
                       hintText: '2',
+                      helperText: 'Extra time allowed before next tariff',
                     ),
-                    keyboardType: TextInputType.number,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                   ),
                   const SizedBox(height: 12),
@@ -295,21 +334,36 @@ class _RoomTypesPageState extends ConsumerState<RoomTypesPage> {
               final hotel = ref.read(currentHotelProvider);
               final repository = ref.read(roomTypesRepositoryProvider);
 
+              final tariffAmount =
+                  double.tryParse(tariffAmountController.text) ?? 0;
+              final basePrice =
+                  double.tryParse(priceController.text) ?? tariffAmount;
+
               if (isEditing) {
                 await repository.updateRoomType(
                   id: roomType.id,
                   name: nameController.text.trim(),
-                  basePrice: double.tryParse(priceController.text) ?? 0,
+                  basePrice: basePrice,
                   maxOccupancy: int.tryParse(occupancyController.text) ?? 2,
                   description: descriptionController.text.trim(),
+                  tariffDurationHours:
+                      int.tryParse(tariffDurationController.text) ?? 24,
+                  tariffAmount: tariffAmount,
+                  gracePeriodHours:
+                      double.tryParse(gracePeriodController.text) ?? 2,
                 );
               } else {
                 await repository.createRoomType(
                   hotelId: hotel!.hotelId,
                   name: nameController.text.trim(),
-                  basePrice: double.tryParse(priceController.text) ?? 0,
+                  basePrice: basePrice,
                   maxOccupancy: int.tryParse(occupancyController.text) ?? 2,
                   description: descriptionController.text.trim(),
+                  tariffDurationHours:
+                      int.tryParse(tariffDurationController.text) ?? 24,
+                  tariffAmount: tariffAmount,
+                  gracePeriodHours:
+                      double.tryParse(gracePeriodController.text) ?? 2,
                 );
               }
 

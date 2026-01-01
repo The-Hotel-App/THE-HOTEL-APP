@@ -188,7 +188,7 @@ class _BookingRoomsPageState extends ConsumerState<BookingRoomsPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Up to ${type.maxOccupancy} guests • ₹${type.basePrice.toStringAsFixed(0)}/night',
+                      '₹${type.tariffAmount.toStringAsFixed(0)} per ${type.tariffDurationHours}h',
                       style: TextStyle(
                         fontSize: 13,
                         color: hasRooms
@@ -341,7 +341,7 @@ class _BookingRoomsPageState extends ConsumerState<BookingRoomsPage> {
                               ),
                             ),
                             Text(
-                              '₹${type.basePrice.toStringAsFixed(0)}/night',
+                              '₹${type.tariffAmount.toStringAsFixed(0)} per ${type.tariffDurationHours}h',
                               style: TextStyle(color: AppColors.textSecondary),
                             ),
                           ],
