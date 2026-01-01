@@ -246,8 +246,8 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                         height: 44,
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? AppColors.success.withValues(alpha: 0.15)
-                              : AppColors.warning.withValues(alpha: 0.15),
+                              ? AppColors.black
+                              : AppColors.grey100,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Center(
@@ -255,8 +255,8 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                             firstLetter,
                             style: TextStyle(
                               color: isSelected
-                                  ? AppColors.success
-                                  : AppColors.warning,
+                                  ? AppColors.white
+                                  : AppColors.grey700,
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
                             ),
@@ -269,9 +269,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                           fontWeight: isSelected
                               ? FontWeight.bold
                               : FontWeight.w500,
-                          color: isSelected
-                              ? AppColors.success
-                              : AppColors.black,
+                          color: AppColors.black,
                         ),
                       ),
                       subtitle: Container(
@@ -285,17 +283,15 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: _getRoleColor(
-                                  hotel.role,
-                                ).withValues(alpha: 0.1),
+                                color: AppColors.grey200,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 hotel.role.displayName,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: _getRoleColor(hotel.role),
+                                  color: AppColors.black,
                                 ),
                               ),
                             ),
@@ -305,7 +301,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                       trailing: isSelected
                           ? const Icon(
                               Icons.check_circle,
-                              color: AppColors.success,
+                              color: AppColors.black,
                             )
                           : const Icon(
                               Icons.arrow_forward_ios,

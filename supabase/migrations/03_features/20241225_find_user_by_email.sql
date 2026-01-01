@@ -15,10 +15,17 @@ DECLARE
     v_is_already_staff BOOLEAN;
 BEGIN
     -- Verify the requester is the owner of the hotel
+    -- Check both: hotels.owner_id (original creator) OR hotel_staff with role='owner'
     SELECT EXISTS (
         SELECT 1 FROM hotels
         WHERE id = p_hotel_id
         AND owner_id = p_requester_id
+        UNION
+        SELECT 1 FROM hotel_staff
+        WHERE hotel_id = p_hotel_id
+        AND user_id = p_requester_id
+        AND role = 'owner'
+        AND is_active = TRUE
     ) INTO v_is_owner;
     
     IF NOT v_is_owner THEN

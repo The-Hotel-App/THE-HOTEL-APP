@@ -19,6 +19,11 @@ class BookingsPage extends ConsumerStatefulWidget {
 }
 
 class _BookingsPageState extends ConsumerState<BookingsPage> {
+  // Track expansion state for each section
+  bool _isActiveExpanded = true;
+  bool _isUpcomingExpanded = true;
+  bool _isPastExpanded = false; // Past collapsed by default
+
   Future<void> _refresh() async {
     ref.invalidate(bookingsProvider);
     await Future.delayed(const Duration(milliseconds: 500));
@@ -113,53 +118,153 @@ class _BookingsPageState extends ConsumerState<BookingsPage> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Active (Checked In) - Collapsible
         if (activeBookings.isNotEmpty) ...[
-          BookingSectionHeader(
+          _buildCollapsibleSection(
             title: 'Active (Checked In)',
             icon: Icons.hotel,
             color: AppColors.roomOccupied,
             count: activeBookings.length,
+            isExpanded: _isActiveExpanded,
+            onToggle: () =>
+                setState(() => _isActiveExpanded = !_isActiveExpanded),
+            bookings: activeBookings,
+            canViewMoney: canViewMoney,
           ),
-          ...activeBookings.map(
-            (b) => BookingCard(
-              booking: b,
-              canViewMoney: canViewMoney,
-              onTap: () => _showBookingDetails(context, b, canViewMoney),
-            ),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
         ],
+
+        // Upcoming - Collapsible
         if (confirmedBookings.isNotEmpty) ...[
-          BookingSectionHeader(
+          _buildCollapsibleSection(
             title: 'Upcoming',
             icon: Icons.event,
             color: AppColors.info,
             count: confirmedBookings.length,
+            isExpanded: _isUpcomingExpanded,
+            onToggle: () =>
+                setState(() => _isUpcomingExpanded = !_isUpcomingExpanded),
+            bookings: confirmedBookings,
+            canViewMoney: canViewMoney,
           ),
-          ...confirmedBookings.map(
-            (b) => BookingCard(
-              booking: b,
-              canViewMoney: canViewMoney,
-              onTap: () => _showBookingDetails(context, b, canViewMoney),
-            ),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
         ],
+
+        // Past - Collapsible (collapsed by default)
         if (pastBookings.isNotEmpty) ...[
-          BookingSectionHeader(
+          _buildCollapsibleSection(
             title: 'Past',
             icon: Icons.history,
             color: AppColors.grey600,
             count: pastBookings.length,
-          ),
-          ...pastBookings.map(
-            (b) => BookingCard(
-              booking: b,
-              canViewMoney: canViewMoney,
-              onTap: () => _showBookingDetails(context, b, canViewMoney),
-            ),
+            isExpanded: _isPastExpanded,
+            onToggle: () => setState(() => _isPastExpanded = !_isPastExpanded),
+            bookings: pastBookings,
+            canViewMoney: canViewMoney,
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildCollapsibleSection({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required int count,
+    required bool isExpanded,
+    required VoidCallback onToggle,
+    required List<Booking> bookings,
+    required bool canViewMoney,
+  }) {
+    return Column(
+      children: [
+        // Collapsible Header - clean and simple
+        GestureDetector(
+          onTap: onToggle,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Icon(icon, color: color, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Only arrow has touch feedback
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onToggle,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: AnimatedRotation(
+                        turns: isExpanded ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Icon(
+                          Icons.keyboard_arrow_down,
+                          color: color,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Animated content
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Column(
+              children: bookings
+                  .map(
+                    (b) => BookingCard(
+                      booking: b,
+                      canViewMoney: canViewMoney,
+                      onTap: () =>
+                          _showBookingDetails(context, b, canViewMoney),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          crossFadeState: isExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 200),
+        ),
       ],
     );
   }

@@ -72,31 +72,34 @@ class BookingCard extends StatelessWidget {
     final roomCount = booking.rooms.isNotEmpty ? booking.rooms.length : 1;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withValues(alpha: 0.3), width: 2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Column(
             children: [
               Row(
                 children: [
-                  // Room indicator - shows count if multiple rooms
+                  // Room indicator - compact
                   _buildRoomIndicator(statusColor, roomCount),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,11 +107,11 @@ class BookingCard extends StatelessWidget {
                         Text(
                           booking.customerName,
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         // Show room numbers
                         Text(
                           roomCount > 1
@@ -116,11 +119,11 @@ class BookingCard extends StatelessWidget {
                               : 'Room ${booking.allRoomNumbers}',
                           style: TextStyle(
                             color: statusColor,
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Row(
                           children: [
                             Icon(
@@ -157,7 +160,7 @@ class BookingCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -221,11 +224,11 @@ class BookingCard extends StatelessWidget {
   Widget _buildRoomIndicator(Color statusColor, int roomCount) {
     if (roomCount == 1) {
       return Container(
-        width: 50,
-        height: 50,
+        width: 40,
+        height: 40,
         decoration: BoxDecoration(
           color: statusColor,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Center(
           child: Text(
@@ -233,7 +236,7 @@ class BookingCard extends StatelessWidget {
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontSize: 16,
+              fontSize: 14,
             ),
           ),
         ),
@@ -242,22 +245,22 @@ class BookingCard extends StatelessWidget {
 
     // Multiple rooms - show count with icon
     return Container(
-      width: 50,
-      height: 50,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
         color: statusColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.bed, color: Colors.white, size: 20),
+          const Icon(Icons.bed, color: Colors.white, size: 16),
           Text(
             '×$roomCount',
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontSize: 12,
+              fontSize: 10,
             ),
           ),
         ],

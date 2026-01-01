@@ -103,16 +103,15 @@ class _HotelSwitcherSheet extends StatelessWidget {
     required this.onAddNewHotel,
   });
 
+  // Unified black color for all role chips
   Color _getRoleColor(UserRole role) {
+    // Using black for all roles for a clean, unified look
     switch (role) {
       case UserRole.owner:
-        return AppColors.warning;
       case UserRole.manager:
-        return AppColors.info;
       case UserRole.staff:
-        return AppColors.success;
       case UserRole.kitchenManager:
-        return Colors.orange;
+        return AppColors.black;
     }
   }
 
@@ -137,7 +136,7 @@ class _HotelSwitcherSheet extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            
+
             // Header
             Padding(
               padding: const EdgeInsets.all(20),
@@ -154,9 +153,9 @@ class _HotelSwitcherSheet extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const Divider(height: 1),
-            
+
             // Hotel list
             ConstrainedBox(
               constraints: BoxConstraints(
@@ -169,28 +168,28 @@ class _HotelSwitcherSheet extends StatelessWidget {
                   final hotel = hotels[index];
                   final isSelected = hotel.hotelId == currentHotelId;
                   final roleColor = _getRoleColor(hotel.role);
-                  
+
                   return ListTile(
                     onTap: () => onSelect(hotel),
                     leading: Container(
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: isSelected 
-                            ? AppColors.success.withValues(alpha: 0.1)
-                            : AppColors.grey100,
+                        color: isSelected ? AppColors.black : AppColors.grey100,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         Icons.hotel,
-                        color: isSelected ? AppColors.success : AppColors.grey600,
+                        color: isSelected ? AppColors.white : AppColors.grey600,
                       ),
                     ),
                     title: Text(
                       hotel.hotelName,
                       style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: isSelected ? AppColors.success : AppColors.black,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
+                        color: AppColors.black,
                       ),
                     ),
                     subtitle: Container(
@@ -220,35 +219,36 @@ class _HotelSwitcherSheet extends StatelessWidget {
                       ),
                     ),
                     trailing: isSelected
-                        ? const Icon(Icons.check_circle, color: AppColors.success)
-                        : const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.grey400),
+                        ? const Icon(Icons.check_circle, color: AppColors.black)
+                        : const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                            color: AppColors.grey400,
+                          ),
                   );
                 },
               ),
             ),
-            
+
             const Divider(height: 1),
-            
-            // Add New Hotel button
+
+            // Add New Hotel button - kept blue as accent
             ListTile(
               onTap: onAddNewHotel,
               leading: Container(
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withValues(alpha: 0.1),
+                  color: AppColors.info.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
-                  Icons.add_business,
-                  color: AppColors.warning,
-                ),
+                child: const Icon(Icons.add_business, color: AppColors.info),
               ),
               title: const Text(
                 'Add New Hotel',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: AppColors.warning,
+                  color: AppColors.info,
                 ),
               ),
               subtitle: const Text(
@@ -258,10 +258,10 @@ class _HotelSwitcherSheet extends StatelessWidget {
               trailing: const Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: AppColors.warning,
+                color: AppColors.info,
               ),
             ),
-            
+
             const SizedBox(height: 16),
           ],
         ),

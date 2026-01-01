@@ -60,7 +60,6 @@ class _AddExistingStaffPageState extends ConsumerState<AddExistingStaffPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Info Card
-              _buildInfoCard(),
               const SizedBox(height: 24),
               // Search Card
               _buildSearchCard(),
@@ -72,34 +71,6 @@ class _AddExistingStaffPageState extends ConsumerState<AddExistingStaffPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.info.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline, color: AppColors.info, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Use this to add someone who already has an account in the system. '
-              'For new users, go back and select "Create New Account".',
-              style: TextStyle(
-                color: AppColors.grey700,
-                fontSize: 13,
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -237,18 +208,16 @@ class _AddExistingStaffPageState extends ConsumerState<AddExistingStaffPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.success.withValues(alpha: 0.1),
+              color: AppColors.info.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.success.withValues(alpha: 0.3),
-              ),
+              border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.2),
+                    color: AppColors.info.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Text(
@@ -256,7 +225,7 @@ class _AddExistingStaffPageState extends ConsumerState<AddExistingStaffPage> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.success,
+                      color: AppColors.info,
                     ),
                   ),
                 ),
