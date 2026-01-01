@@ -423,10 +423,12 @@ class SupabaseBookingRepository implements BookingRepository {
     try {
       final updates = <String, dynamic>{};
       // Store times as local ISO strings (no UTC conversion)
-      if (checkIn != null)
+      if (checkIn != null) {
         updates['check_in'] = checkIn.toIso8601String();
-      if (checkOut != null)
+      }
+      if (checkOut != null) {
         updates['check_out'] = checkOut.toIso8601String();
+      }
       if (totalAmount != null) updates['total_amount'] = totalAmount;
       if (paidAmount != null) updates['amount_paid'] = paidAmount;
       if (guestCount != null) updates['number_of_guests'] = guestCount;

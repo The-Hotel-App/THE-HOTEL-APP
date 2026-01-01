@@ -488,22 +488,6 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
       ),
     );
   }
-
-  /// Show the tariff timeline popup
-  void _showTariffTimeline(
-    BookingRoom room,
-    TariffResult currentResult,
-    TariffResult expectedResult,
-  ) {
-    TariffTimelinePopup.show(
-      context,
-      booking: _booking,
-      room: room,
-      currentResult: currentResult,
-      expectedResult: expectedResult,
-    );
-  }
-
   /// Combined room info + tariff card
   Widget _buildRoomTariffCard(BookingRoom room) {
     final roomStatusColor = _getRoomStatusColor(room.roomStatus);
